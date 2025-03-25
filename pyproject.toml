@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prompt_ops"
+version = "0.1.0"
+description = "A tool for migrating and optimizing prompts across different LLM providers"
+readme = "README.md"
+authors = []
+license = {text = "Proprietary"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "License :: Other/Proprietary License",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "click>=8.0.0",
+    "requests>=2.25.0",
+    "dspy>=2.6.0",
+    "numpy>=2.2.0",
+    "scipy>=1.15.0",
+    "pandas>=2.2.0",
+    "python-dotenv>=1.0.0",
+    "pyyaml>=6.0.0",
+    "tiktoken>=0.9.0",
+    "openai>=1.65.0",
+    "litellm>=1.63.0",
+    "huggingface-hub>=0.29.0",
+    "datasets>=2.21.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "black>=25.1.0",
+    "isort>=6.0.0",
+    "mypy>=1.15.0",
+    "tqdm>=4.67.0",
+    "jsonschema>=4.23.0",
+]
+
+[project.scripts]
+prompt-ops = "prompt_ops.interfaces.cli:cli"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["prompt_ops"]
+
+[tool.black]
+line-length = 88
+target-version = ["py39"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
