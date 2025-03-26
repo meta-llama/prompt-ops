@@ -88,8 +88,6 @@ coverage/
 /logs
 
 /misc
-/dataset
-/datasets
 /results
 /.pytest_cache
 
