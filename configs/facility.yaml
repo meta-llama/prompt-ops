@@ -4,15 +4,28 @@ model:
   name: "openrouter/meta-llama/llama-3.3-70b-instruct"
   api_base: "https://openrouter.ai/api/v1"
   temperature: 0.0
+  # max_tokens: 2048       # Maximum number of tokens to generate
+  # top_p: 0.9             # Nucleus sampling parameter
+  # top_k: 40              # Top-k sampling parameter
+  # frequency_penalty: 0.0 # Penalize repeated tokens
+  # presence_penalty: 0.0  # Penalize tokens already in the context
   
 dataset:
   adapter_class: "prompt_ops.core.datasets.StandardJSONAdapter"
   path: "/Users/justinai/Documents/Code/prompt-ops/dataset/facility-synth/facility_v2_test.json"
   train_size: 0.7
   validation_size: 0.15
+  # seed: 42               # Random seed for dataset splitting
+  # shuffle: true          # Whether to shuffle the dataset before splitting
   adapter_params:
-    input_field: ["fields", "input"]
-    output_field: "answer"
+    # Required parameters
+    input_field: ["fields", "input"]  # Field to use as input (string, list, or dict)
+    output_field: "answer"           # Field to use as output (string, list, or dict)
+    
+    # Optional parameters
+    # file_format: "json"             # Format of the dataset file (json, csv, yaml)
+    # input_transform: null           # Function to transform input values (defined in code)
+    # output_transform: null          # Function to transform output values (defined in code)
   
 prompt:
   text: |
@@ -31,9 +44,23 @@ prompt:
 metric:
   class: "facility"
   params: {}
+  # Alternative metric configuration using DSPyMetricAdapter
+  # class: "similarity"
+  # params:
+  #   score_range: [1, 10]           # Input score range
+  #   normalize_to: [0, 1]           # Output score range for normalization
+  #   signature_name: "similarity"    # Predefined signature template
+  #   custom_instructions: null       # Custom evaluation instructions
 
 optimization:
-  strategy: "light"
-  max_rounds: 3
-  max_examples_per_round: 5
-  max_prompt_length: 2048
+  strategy: "light"                 # Strategy to use (light, full, custom)
+  max_rounds: 3                     # Maximum number of optimization rounds
+  max_examples_per_round: 5         # Maximum examples to use per round
+  max_prompt_length: 2048           # Maximum length of the optimized prompt
+  # num_candidates: 5               # Number of candidate prompts to generate
+  # bootstrap_examples: 4           # Number of examples to bootstrap
+  # num_threads: 36                 # Number of threads for parallel processing
+  # max_errors: 5                   # Maximum number of errors before stopping
+  # disable_progress_bar: false     # Whether to disable the progress bar
+  # save_intermediate: false        # Whether to save intermediate results
+  # model_family: "llama"           # Model family for optimization strategies
