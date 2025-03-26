@@ -9,6 +9,7 @@ model:
   # top_k: 40              # Top-k sampling parameter
   # frequency_penalty: 0.0 # Penalize repeated tokens
   # presence_penalty: 0.0  # Penalize tokens already in the context
+  # cache: false           # Whether to cache responses
   
 dataset:
   adapter_class: "prompt_ops.core.datasets.StandardJSONAdapter"
@@ -42,8 +43,33 @@ prompt:
   outputs: ["answer"]
 
 metric:
-  class: "facility"
-  params: {}
+  class: "prompt_ops.core.metrics.StandardJSONMetric"
+  params:
+    # Fields to evaluate (with optional weights)
+    fields: ["urgency", "sentiment"]
+    # Nested fields to evaluate
+    nested_fields:
+      categories: [
+        "emergency_repair_services", 
+        "routine_maintenance_requests", 
+        "quality_and_safety_concerns", 
+        "specialized_cleaning_services", 
+        "general_inquiries", 
+        "sustainability_and_environmental_practices", 
+        "training_and_support_requests", 
+        "cleaning_services_scheduling", 
+        "customer_feedback_and_complaints", 
+        "facility_management_issues"
+      ]
+    # Fields that must be present for a valid prediction
+    required_fields: ["urgency", "sentiment", "categories"]
+    # Optional field weights (default is 1.0 for each field)
+    field_weights:
+      urgency: 1.0
+      sentiment: 1.0
+      categories: 1.0
+    # Whether to use strict JSON parsing (no code block extraction)
+    strict_json: false
   # Alternative metric configuration using DSPyMetricAdapter
   # class: "similarity"
   # params:

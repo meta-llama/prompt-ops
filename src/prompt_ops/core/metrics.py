@@ -505,20 +505,229 @@ def _flatten_keys(obj: Any, prefix: str = "") -> List[str]:
     keys = []
     
     if isinstance(obj, dict):
-        for key, value in obj.items():
-            new_key = f"{prefix}.{key}" if prefix else key
-            if isinstance(value, (dict, list)) and value:  # Non-empty container
-                keys.extend(_flatten_keys(value, new_key))
+        for k, v in obj.items():
+            key = f"{prefix}.{k}" if prefix else k
+            if isinstance(v, (dict, list)) and v:  # Only recurse if non-empty
+                keys.extend(_flatten_keys(v, key))
             else:
-                keys.append(new_key)
+                keys.append(key)
     elif isinstance(obj, list):
-        for i, value in enumerate(obj):
-            new_key = f"{prefix}[{i}]"
-            if isinstance(value, (dict, list)) and value:  # Non-empty container
-                keys.extend(_flatten_keys(value, new_key))
+        for i, v in enumerate(obj):
+            key = f"{prefix}[{i}]"
+            if isinstance(v, (dict, list)) and v:  # Only recurse if non-empty
+                keys.extend(_flatten_keys(v, key))
             else:
-                keys.append(new_key)
+                keys.append(key)
     else:
         keys.append(prefix)
         
     return keys
+
+
+class StandardJSONMetric:
+    """
+    A standardized metric for evaluating JSON predictions against ground truth.
+    
+    This metric can be configured through YAML to evaluate different aspects of JSON
+    predictions, such as field presence, value equality, and structural similarity.
+    It supports flexible field mapping and custom scoring logic.
+    """
+    
+    def __init__(self, 
+                 fields: Optional[Union[List[str], Dict[str, float]]] = None,
+                 required_fields: Optional[List[str]] = None,
+                 nested_fields: Optional[Dict[str, List[str]]] = None,
+                 field_weights: Optional[Dict[str, float]] = None,
+                 strict_json: bool = False,
+                 **kwargs):
+        """
+        Initialize the StandardJSONMetric.
+        
+        Args:
+            fields: Fields to evaluate. Can be a list of field names or a dict mapping
+                   field names to weights.
+            required_fields: Fields that must be present for a valid prediction.
+            nested_fields: Nested fields to evaluate, with parent field as key and
+                          list of child fields as value.
+            field_weights: Weights for each field in the evaluation.
+            strict_json: Whether to use strict JSON parsing (no code block extraction).
+            **kwargs: Additional parameters for customization.
+        """
+        self.name = "standard_json_metric"
+        
+        # Set up fields to evaluate
+        if isinstance(fields, dict):
+            self.fields = list(fields.keys())
+            self.field_weights = fields
+        else:
+            self.fields = fields or []
+            self.field_weights = field_weights or {}
+            
+        # Set default weights for fields not explicitly weighted
+        for field in self.fields:
+            if field not in self.field_weights:
+                self.field_weights[field] = 1.0
+                
+        self.required_fields = required_fields or []
+        self.nested_fields = nested_fields or {}
+        self.strict_json = strict_json
+        
+    def __call__(self, example, prediction, **kwargs) -> Dict[str, Any]:
+        """
+        Evaluate a prediction against the ground truth.
+        
+        Args:
+            example: The example with ground truth
+            prediction: The model's prediction
+            **kwargs: Additional arguments
+            
+        Returns:
+            Dictionary with evaluation results
+        """
+        ground_truth = example.outputs.get("answer", "")
+        return self.evaluate(ground_truth, prediction, **kwargs)
+    
+    @staticmethod
+    def parse_json(input_string: str):
+        """
+        Attempts to parse the given string as JSON. If direct parsing fails,
+        it tries to extract a JSON snippet from code blocks formatted as:
+            ```json
+            ... JSON content ...
+            ```
+        or any code block delimited by triple backticks and then parses that content.
+
+        Parameters:
+            input_string (str): The input string which may contain JSON.
+
+        Returns:
+            The parsed JSON object.
+
+        Raises:
+            ValueError: If parsing fails even after attempting to extract a JSON snippet.
+        """
+        # Try to parse the string directly.
+        try:
+            return json.loads(input_string)
+        except json.JSONDecodeError as err:
+            error = err  # Proceed to try extracting a JSON snippet.
+
+        # Define patterns to search for a JSON code block.
+        patterns = [
+            re.compile(r"```json\s*(.*?)\s*```", re.DOTALL | re.IGNORECASE),  # code block with "json" label
+            re.compile(r"```(.*?)```", re.DOTALL)  # any code block delimited by triple backticks
+        ]
+        
+        # Attempt extraction using each pattern in order.
+        for pattern in patterns:
+            match = pattern.search(input_string)
+            if match:
+                json_candidate = match.group(1).strip()
+                try:
+                    return json.loads(json_candidate)
+                except json.JSONDecodeError:
+                    # Continue trying if extraction from the code block didn't result in valid JSON.
+                    continue
+
+        # If all attempts fail, raise an error.
+        raise error
+    
+    def evaluate(self, ground_truth: Any, predictions: Any, **kwargs) -> Dict[str, Any]:
+        """
+        Evaluate a prediction against the ground truth.
+        
+        Args:
+            ground_truth: The ground truth
+            predictions: The model's prediction
+            **kwargs: Additional arguments
+            
+        Returns:
+            Dictionary with evaluation results
+        """
+        # Initialize result dictionary
+        result = {
+            "is_valid_json": False,
+        }
+        
+        # Add field-specific results
+        for field in self.fields:
+            result[f"correct_{field}"] = False
+            
+        # Add nested field results
+        for parent_field, child_fields in self.nested_fields.items():
+            for child in child_fields:
+                result[f"correct_{parent_field}_{child}"] = False
+            
+            # Track overall correctness for the parent field
+            if child_fields:
+                result[f"correct_{parent_field}_overall"] = 0.0
+        
+        try:
+            # Parse JSON
+            gt = ground_truth if isinstance(ground_truth, dict) else (
+                json.loads(ground_truth) if self.strict_json else self.parse_json(ground_truth)
+            )
+            pred = predictions if isinstance(predictions, dict) else (
+                json.loads(predictions) if self.strict_json else self.parse_json(predictions)
+            )
+        except (json.JSONDecodeError, ValueError):
+            # Invalid JSON, return early with default scores
+            result["total"] = 0.0
+            return result
+            
+        # Mark as valid JSON
+        result["is_valid_json"] = True
+        
+        # Check required fields
+        missing_required = [field for field in self.required_fields if field not in pred]
+        result["has_required_fields"] = len(missing_required) == 0
+        
+        # Evaluate top-level fields
+        for field in self.fields:
+            if field in gt and field in pred:
+                result[f"correct_{field}"] = gt[field] == pred[field]
+                
+        # Evaluate nested fields
+        for parent_field, child_fields in self.nested_fields.items():
+            if parent_field in gt and parent_field in pred:
+                correct_children = 0
+                for child in child_fields:
+                    # Handle nested dictionaries
+                    if isinstance(gt[parent_field], dict) and isinstance(pred[parent_field], dict):
+                        if child in gt[parent_field] and child in pred[parent_field]:
+                            is_correct = gt[parent_field][child] == pred[parent_field][child]
+                            result[f"correct_{parent_field}_{child}"] = is_correct
+                            if is_correct:
+                                correct_children += 1
+                                
+                # Calculate overall correctness for the parent field
+                if child_fields:
+                    result[f"correct_{parent_field}_overall"] = correct_children / len(child_fields)
+        
+        # Calculate total score with weights
+        total_weight = 0.0
+        weighted_sum = 0.0
+        
+        # Add top-level field scores
+        for field in self.fields:
+            key = f"correct_{field}"
+            if key in result:
+                weight = self.field_weights.get(field, 1.0)
+                weighted_sum += float(result[key]) * weight
+                total_weight += weight
+                
+        # Add nested field overall scores
+        for parent_field in self.nested_fields:
+            key = f"correct_{parent_field}_overall"
+            if key in result:
+                weight = self.field_weights.get(parent_field, 1.0)
+                weighted_sum += result[key] * weight
+                total_weight += weight
+                
+        # Calculate final score
+        if total_weight > 0:
+            result["total"] = weighted_sum / total_weight
+        else:
+            result["total"] = 0.0
+            
+        return result

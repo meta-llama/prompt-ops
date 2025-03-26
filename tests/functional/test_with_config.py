@@ -65,7 +65,7 @@ from prompt_ops.core.prompt_strategies import (
     LightOptimizationStrategy, OptimizationError
 )
 from prompt_ops.core.model_strategies import LlamaStrategy
-from prompt_ops.core.metrics import DSPyMetricAdapter
+from prompt_ops.core.metrics import DSPyMetricAdapter, StandardJSONMetric
 from prompt_ops.core.datasets import DatasetAdapter, load_dataset
 from prompt_ops.core.model import setup_model
 
@@ -75,20 +75,17 @@ SEED = 42
 # Default adapter class map for convenience
 ADAPTER_CLASS_MAP = {
     "standard_json": "prompt_ops.core.datasets.StandardJSONAdapter",
-    "facility": "prompt_ops.datasets.facility.FacilityAdapter",
 }
 
 # Default metric class map for convenience
 METRIC_CLASS_MAP = {
     "similarity": "prompt_ops.core.metrics.DSPyMetricAdapter",
-    "facility": "prompt_ops.datasets.facility.FacilityMetric",
 }
 
 # Default strategy class map for convenience
 STRATEGY_CLASS_MAP = {
     "light": "prompt_ops.core.prompt_strategies.LightOptimizationStrategy",
 
-    "facility": "prompt_ops.datasets.facility.FacilityMetric",
 }
 
 
