@@ -45,6 +45,7 @@ prompt:
 metric:
   class: "prompt_ops.core.metrics.StandardJSONMetric"
   params:
+    evaluation_mode: "flattened"
     # Fields to evaluate (with optional weights)
     fields: ["urgency", "sentiment"]
     # Nested fields to evaluate

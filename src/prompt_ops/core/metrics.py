@@ -539,6 +539,7 @@ class StandardJSONMetric:
                  nested_fields: Optional[Dict[str, List[str]]] = None,
                  field_weights: Optional[Dict[str, float]] = None,
                  strict_json: bool = False,
+                 evaluation_mode: str = "field_based",
                  **kwargs):
         """
         Initialize the StandardJSONMetric.
@@ -554,6 +555,11 @@ class StandardJSONMetric:
             **kwargs: Additional parameters for customization.
         """
         self.name = "standard_json_metric"
+        
+        # Set up evaluation mode
+        self.evaluation_mode = evaluation_mode
+        if evaluation_mode not in ["field_based", "flattened"]:
+            raise ValueError(f"Invalid evaluation mode: {evaluation_mode}. Must be 'field_based' or 'flattened'.")
         
         # Set up fields to evaluate
         if isinstance(fields, dict):
@@ -632,7 +638,123 @@ class StandardJSONMetric:
         # If all attempts fail, raise an error.
         raise error
     
+    def flatten_json(self, json_obj: Any, parent: str = "", sep: str = ".") -> dict:
+        """
+        Recursively flattens a nested JSON object into a dictionary whose keys are the
+        paths to each value in the original JSON.
+        
+        Args:
+            json_obj: The JSON object to flatten
+            parent: The parent key (used in recursion)
+            sep: The separator to use between nested keys
+            
+        Returns:
+            A flattened dictionary
+        """
+        items = {}
+        if isinstance(json_obj, dict):
+            for key, value in json_obj.items():
+                new_key = f"{parent}{sep}{key}" if parent else key
+                items.update(self.flatten_json(value, new_key, sep=sep))
+        elif isinstance(json_obj, list):
+            for i, value in enumerate(json_obj):
+                new_key = f"{parent}{sep}{i}" if parent else str(i)
+                items.update(self.flatten_json(value, new_key, sep=sep))
+        else:
+            items[parent] = json_obj
+        return items
+    
+    def extract_value(self, obj: Any, key: str, default: Any = None) -> Any:
+        """
+        Extract a value from different object types.
+        
+        Args:
+            obj: The object to extract from
+            key: The key to extract
+            default: Default value if key is not found
+            
+        Returns:
+            The extracted value or default
+        """
+        if hasattr(obj, key):
+            return getattr(obj, key)
+        elif isinstance(obj, dict) and key in obj:
+            return obj[key]
+        return default
+    
+    def evaluate_flattened(self, ground_truth: Any, predictions: Any, **kwargs) -> Dict[str, Any]:
+        """
+        Evaluate using flattened comparison, similar to DoxMetric.
+        
+        Args:
+            ground_truth: The ground truth
+            predictions: The model's prediction
+            **kwargs: Additional arguments
+            
+        Returns:
+            Dictionary with evaluation results
+        """
+        result = {
+            "is_valid_json": False,
+        }
+        
+        try:
+            # Parse JSON
+            gt = ground_truth if isinstance(ground_truth, dict) else (
+                json.loads(ground_truth) if self.strict_json else self.parse_json(ground_truth)
+            )
+            pred = predictions if isinstance(predictions, dict) else (
+                json.loads(predictions) if self.strict_json else self.parse_json(predictions)
+            )
+        except (json.JSONDecodeError, ValueError):
+            # Invalid JSON, return early with default scores
+            result["total"] = 0.0
+            return result
+            
+        # Mark as valid JSON
+        result["is_valid_json"] = True
+        
+        # Flatten both JSONs
+        flattened_gt = self.flatten_json(gt)
+        flattened_pred = self.flatten_json(pred)
+        
+        # Calculate true positives, false positives, and false negatives
+        tp = sum(
+            1
+            for k, v in flattened_gt.items()
+            if k in flattened_pred and flattened_pred[k] == v
+        )
+        fp = sum(1 for k in flattened_pred if k not in flattened_gt)
+        fn = sum(1 for k in flattened_gt if k not in flattened_pred)
+        
+        # Calculate precision and recall
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+        
+        # Calculate the average score
+        result["precision"] = precision
+        result["recall"] = recall
+        result["total"] = (precision + recall) / 2 if (precision + recall) > 0 else 0.0
+        
+        return result
+    
     def evaluate(self, ground_truth: Any, predictions: Any, **kwargs) -> Dict[str, Any]:
+        """
+        Evaluate a prediction against the ground truth.
+        
+        Args:
+            ground_truth: The ground truth
+            predictions: The model's prediction
+            **kwargs: Additional arguments
+            
+        Returns:
+            Dictionary with evaluation results
+        """
+        # Use flattened comparison mode if specified
+        if self.evaluation_mode == "flattened":
+            return self.evaluate_flattened(ground_truth, predictions, **kwargs)
+            
+        # Otherwise use field-based comparison
         """
         Evaluate a prediction against the ground truth.
         
