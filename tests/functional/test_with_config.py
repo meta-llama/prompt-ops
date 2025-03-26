@@ -74,20 +74,21 @@ SEED = 42
 
 # Default adapter class map for convenience
 ADAPTER_CLASS_MAP = {
-    "joule": "prompt_ops.datasets.joule.JouleAdapter",
-    "dox": "prompt_ops.datasets.dox.DoxAdapter",
+
+    "facility": "prompt_ops.datasets.facility.FacilityAdapter",
 }
 
 # Default metric class map for convenience
 METRIC_CLASS_MAP = {
     "similarity": "prompt_ops.core.metrics.DSPyMetricAdapter",
+    "facility": "prompt_ops.datasets.facility.FacilityMetric",
 }
 
 # Default strategy class map for convenience
 STRATEGY_CLASS_MAP = {
     "light": "prompt_ops.core.prompt_strategies.LightOptimizationStrategy",
-    "llama": "prompt_ops.core.model_strategies.LlamaStrategy",
-    "dox": "prompt_ops.datasets.dox.DoxMetric",
+
+    "facility": "prompt_ops.datasets.facility.FacilityMetric",
 }
 
 
