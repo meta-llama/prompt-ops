@@ -153,6 +153,153 @@ class DatasetAdapter(ABC):
         pass
 
 
+class StandardJSONAdapter(DatasetAdapter):
+    """
+    A standardized adapter for JSON datasets with configurable field mappings.
+    
+    This adapter can be used with any JSON dataset by configuring the input and output
+    field mappings. It maps the specified input field to 'question' and output field
+    to 'answer' in the standardized format, making it compatible with DSPy and other
+    frameworks without requiring a custom adapter class.
+    """
+    
+    def __init__(
+        self,
+        dataset_path: Union[str, Path],
+        input_field: Union[str, List[str], Dict[str, str]],
+        output_field: Union[str, List[str], Dict[str, str]],
+        file_format: Optional[str] = None,
+        input_transform: Optional[Callable] = None,
+        output_transform: Optional[Callable] = None,
+        **kwargs
+    ):
+        """
+        Initialize the standardized JSON adapter.
+        
+        Args:
+            dataset_path: Path to the dataset file
+            input_field: Field(s) to use as input. Can be:
+                - A string (field name)
+                - A list of strings (nested field path)
+                - A dict mapping from source fields to destination fields
+            output_field: Field(s) to use as output. Same format options as input_field
+            file_format: Format of the dataset file (defaults to json)
+            input_transform: Optional function to transform input values
+            output_transform: Optional function to transform output values
+            **kwargs: Additional arguments
+        """
+        super().__init__(dataset_path, file_format)
+        self.input_field = input_field
+        self.output_field = output_field
+        self.input_transform = input_transform
+        self.output_transform = output_transform
+    
+    def _get_nested_value(self, item: Dict[str, Any], field_path: List[str]) -> Any:
+        """
+        Get a value from a nested dictionary using a field path.
+        
+        Args:
+            item: Dictionary to extract value from
+            field_path: List of keys forming a path to the value
+            
+        Returns:
+            The value at the specified path
+        """
+        value = item
+        for key in field_path:
+            if isinstance(value, dict) and key in value:
+                value = value[key]
+            else:
+                return None
+        return value
+    
+    def _get_field_value(self, item: Dict[str, Any], field_spec: Union[str, List[str]]) -> Any:
+        """
+        Get a field value using various field specification formats.
+        
+        Args:
+            item: Dictionary to extract value from
+            field_spec: Field specification (string or list of strings)
+            
+        Returns:
+            The extracted value
+        """
+        if isinstance(field_spec, str):
+            # Simple field name
+            return item.get(field_spec)
+        elif isinstance(field_spec, list):
+            # Nested field path
+            return self._get_nested_value(item, field_spec)
+        return None
+    
+    def _process_fields(self, item: Dict[str, Any], field_spec: Union[str, List[str], Dict[str, str]], 
+                        transform: Optional[Callable] = None, is_input: bool = True) -> Dict[str, Any]:
+        """
+        Process fields according to the field specification.
+        
+        Args:
+            item: Dictionary to extract values from
+            field_spec: Field specification (string, list, or dict)
+            transform: Optional function to transform values
+            is_input: Whether this is processing input fields (True) or output fields (False)
+            
+        Returns:
+            Dictionary of processed fields
+        """
+        result = {}
+        
+        if isinstance(field_spec, dict):
+            # Mapping of source fields to destination fields
+            for src_field, dst_field in field_spec.items():
+                value = self._get_field_value(item, src_field)
+                if transform and value is not None:
+                    value = transform(value)
+                result[dst_field] = value
+        else:
+            # Single field or nested path
+            value = self._get_field_value(item, field_spec)
+            if transform and value is not None:
+                value = transform(value)
+            
+            # Map to standardized field names based on whether this is input or output
+            if isinstance(field_spec, str):
+                # Keep original field name as well
+                result[field_spec] = value
+            
+            # Add standardized field names for DSPy compatibility
+            if is_input:
+                result['question'] = value
+            else:
+                result['answer'] = value
+        
+        return result
+    
+    def adapt(self) -> List[Dict[str, Any]]:
+        """
+        Transform the JSON dataset into standardized format.
+        
+        Returns:
+            List of standardized examples
+        """
+        # Load raw data
+        raw_data = self.load_raw_data()
+        
+        # Transform into standardized format
+        standardized_data = []
+        for item in raw_data:
+            inputs = self._process_fields(item, self.input_field, self.input_transform, is_input=True)
+            outputs = self._process_fields(item, self.output_field, self.output_transform, is_input=False)
+            
+            standardized_example = {
+                "inputs": inputs,
+                "outputs": outputs,
+                "metadata": {}
+            }
+            standardized_data.append(standardized_example)
+        
+        return standardized_data
+
+
 def create_dspy_example(doc: Dict[str, Any]) -> dspy.Example:
     """
     Convert a standardized document into a DSPy example.

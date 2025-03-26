@@ -6,10 +6,13 @@ model:
   temperature: 0.0
   
 dataset:
-  adapter_class: "prompt_ops.datasets.facility.FacilityAdapter"
+  adapter_class: "prompt_ops.core.datasets.StandardJSONAdapter"
   path: "/Users/justinai/Documents/Code/prompt-ops/dataset/facility-synth/facility_v2_test.json"
   train_size: 0.7
   validation_size: 0.15
+  adapter_params:
+    input_field: ["fields", "input"]
+    output_field: "answer"
   
 prompt:
   text: |

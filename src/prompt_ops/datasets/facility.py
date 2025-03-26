@@ -1,66 +1,13 @@
 """
 Facility dataset adapter for the prompt-migrator.
 
-This module provides an adapter for the facility dataset, which contains
-customer service messages for facility management.
+This module provides an adapter for the facility dataset for customer service messages.
 """
 
 import json
 import re
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Union
-
-from prompt_ops.core.datasets import DatasetAdapter
-
-
-class FacilityAdapter(DatasetAdapter):
-    """
-    Adapter for the facility dataset.
-    
-    This adapter handles the facility dataset, which contains customer service
-    messages and their categorizations.
-    """
-    
-    def __init__(
-        self, 
-        dataset_path: Union[str, Path], 
-        file_format: Optional[str] = None,
-        **kwargs
-    ):
-        """
-        Initialize the facility adapter.
-        
-        Args:
-            dataset_path: Path to the dataset file
-            file_format: Format of the dataset file (json or csv)
-            **kwargs: Additional arguments
-        """
-        super().__init__(dataset_path, file_format)
-        
-    def adapt(self) -> List[Dict[str, Any]]:
-        """
-        Transform the facility dataset into standardized format.
-        
-        Returns:
-            List of standardized examples
-        """
-        # Load raw data
-        raw_data = self.load_raw_data()
-        
-        # Transform into standardized format
-        standardized_data = []
-        for item in raw_data:
-            standardized_example = {
-                "inputs": {
-                    "question": item["fields"]["input"],  # Map input to question for DSPy compatibility
-                    "input": item["fields"]["input"]     # Keep original input field as well
-                },
-                "outputs": {"answer": item["answer"]},
-                "metadata": {}
-            }
-            standardized_data.append(standardized_example)
-        
-        return standardized_data
 
 
 class FacilityMetric:

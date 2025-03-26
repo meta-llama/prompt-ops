@@ -105,3 +105,4 @@ src/prompt_migrator/datasets/joule/
 tests/functional/test_with_joule*.py
 dataset/joule/
 datasets/joule/
+test_with_config_client.py
