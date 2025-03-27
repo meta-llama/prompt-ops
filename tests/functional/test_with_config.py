@@ -631,7 +631,13 @@ def main():
     from datetime import datetime
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = output_config.get("directory", "results")
-    output_prefix = output_config.get("prefix", "joule_light_optimized")
+    # Use the specified prefix from config, or fall back to the config file name
+    if "prefix" in output_config:
+        output_prefix = output_config.get("prefix")
+        logging.info(f"Using output prefix from config: {output_prefix}")
+    else:
+        output_prefix = Path(args.config).stem if args.config else "optimized_prompt"
+        logging.info(f"Using config filename as output prefix: {output_prefix}")
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     file_path = os.path.join(output_dir, f"{output_prefix}_{timestamp}.json")
     

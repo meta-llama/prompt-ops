@@ -37,9 +37,11 @@ LLAMA_TEMPLATES = {
 }
 
 
+import re
+
 def is_llama_model(model_name: str) -> bool:
     """
-    Check if a model is a Llama model.
+    Check if a model is a Llama model, regardless of provider prefix.
     
     Args:
         model_name: The name of the model
@@ -47,8 +49,14 @@ def is_llama_model(model_name: str) -> bool:
     Returns:
         True if the model is a Llama model, False otherwise
     """
+    if model_name is None:
+        return False
+        
     model_name = model_name.lower()
-    return any(name in model_name for name in ["llama", "meta-llama"])
+    llama_pattern = r'(^|/)((meta-)?llama)($|[/-])'
+    
+    return bool(re.search(llama_pattern, model_name))
+
 
 
 def get_llama_tips(tip_type: Optional[str] = None) -> Dict[str, Any]:

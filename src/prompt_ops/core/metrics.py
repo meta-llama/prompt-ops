@@ -540,6 +540,7 @@ class StandardJSONMetric:
                  field_weights: Optional[Dict[str, float]] = None,
                  strict_json: bool = False,
                  evaluation_mode: str = "field_based",
+                 output_field: str = "answer",
                  **kwargs):
         """
         Initialize the StandardJSONMetric.
@@ -552,6 +553,9 @@ class StandardJSONMetric:
                           list of child fields as value.
             field_weights: Weights for each field in the evaluation.
             strict_json: Whether to use strict JSON parsing (no code block extraction).
+            evaluation_mode: Mode for evaluation ('field_based' or 'flattened').
+            output_field: Name of the field containing the ground truth output.
+                         This should match the 'golden_output_field' in the adapter config.
             **kwargs: Additional parameters for customization.
         """
         self.name = "standard_json_metric"
@@ -577,21 +581,67 @@ class StandardJSONMetric:
         self.required_fields = required_fields or []
         self.nested_fields = nested_fields or {}
         self.strict_json = strict_json
+        self.output_field = output_field
         
-    def __call__(self, example, prediction, **kwargs) -> Dict[str, Any]:
+    def __call__(self, example, prediction, trace=False, **kwargs) -> float:
         """
         Evaluate a prediction against the ground truth.
         
         Args:
             example: The example with ground truth
             prediction: The model's prediction
+            trace: Whether to enable tracing for debugging
             **kwargs: Additional arguments
             
         Returns:
-            Dictionary with evaluation results
+            Float score between 0.0 and 1.0
         """
-        ground_truth = example.outputs.get("answer", "")
-        return self.evaluate(ground_truth, prediction, **kwargs)
+        # Extract ground truth using a priority-based approach
+        ground_truth = self._extract_value(example, self.output_field)
+        
+        # Extract prediction value
+        prediction_value = self._extract_value(prediction, "answer") or prediction
+        
+        # Get the full evaluation results
+        results = self.evaluate(ground_truth, prediction_value, trace=trace, **kwargs)
+        
+        # Return just the total score as a float
+        return float(results.get("total", 0.0))
+        
+    def _extract_value(self, obj, field_name):
+        """
+        Extract a value from an object using a consistent approach.
+        
+        Args:
+            obj: The object to extract from (can be Example, Prediction, dict, etc.)
+            field_name: The name of the field to extract
+            
+        Returns:
+            The extracted value or None if not found
+        """
+        # Check for outputs attribute (DSPy Example objects)
+        if hasattr(obj, 'outputs') and hasattr(obj.outputs, 'get'):
+            value = obj.outputs.get(field_name)
+            if value is not None:
+                return value
+        
+        # Check for direct attribute
+        if hasattr(obj, field_name):
+            return getattr(obj, field_name)
+        
+        # Check dictionary-like access
+        if isinstance(obj, dict) and field_name in obj:
+            return obj[field_name]
+        
+        # Check for text attribute (common in Prediction objects)
+        if hasattr(obj, 'text'):
+            return obj.text
+        
+        # Fall back to string representation if nothing else works
+        if hasattr(obj, '__str__') and not isinstance(obj, (str, bytes, bytearray)):
+            return str(obj)
+        
+        return obj
     
     @staticmethod
     def parse_json(input_string: str):
