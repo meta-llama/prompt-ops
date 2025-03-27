@@ -166,7 +166,7 @@ class ConfigurableJSONAdapter(DatasetAdapter):
         self,
         dataset_path: Union[str, Path],
         input_field: Union[str, List[str], Dict[str, str]],
-        output_field: Union[str, List[str], Dict[str, str]],
+        golden_output_field: Union[str, List[str], Dict[str, str]],
         file_format: Optional[str] = None,
         input_transform: Optional[Callable] = None,
         output_transform: Optional[Callable] = None,
@@ -182,7 +182,7 @@ class ConfigurableJSONAdapter(DatasetAdapter):
                 - A string (field name)
                 - A list of strings (nested field path)
                 - A dict mapping from source fields to destination fields
-            output_field: Field(s) to use as output. Same format options as input_field
+            golden_output_field: Field(s) to use as ground truth/reference output. Same format options as input_field
             file_format: Format of the dataset file (defaults to json)
             input_transform: Optional function to transform input values
             output_transform: Optional function to transform output values
@@ -190,7 +190,7 @@ class ConfigurableJSONAdapter(DatasetAdapter):
         """
         super().__init__(dataset_path, file_format)
         self.input_field = input_field
-        self.output_field = output_field
+        self.golden_output_field = golden_output_field
         self.input_transform = input_transform
         self.output_transform = output_transform
         self.default_value = default_value
@@ -334,7 +334,7 @@ class ConfigurableJSONAdapter(DatasetAdapter):
         standardized_data = []
         for item in raw_data:
             inputs = self._process_fields(item, self.input_field, self.input_transform, is_input=True)
-            outputs = self._process_fields(item, self.output_field, self.output_transform, is_input=False)
+            outputs = self._process_fields(item, self.golden_output_field, self.output_transform, is_input=False)
             
             standardized_example = {
                 "inputs": inputs,
@@ -360,7 +360,7 @@ class RAGJSONAdapter(ConfigurableJSONAdapter):
         dataset_path: Union[str, Path],
         question_field: Union[str, List[str], Dict[str, str]],
         context_field: Union[str, List[str], Dict[str, str]],
-        answer_field: Union[str, List[str], Dict[str, str]],
+        golden_answer_field: Union[str, List[str], Dict[str, str]],
         file_format: Optional[str] = None,
         question_transform: Optional[Callable] = None,
         context_transform: Optional[Callable] = None,
@@ -378,7 +378,7 @@ class RAGJSONAdapter(ConfigurableJSONAdapter):
                 - A list of strings (nested field path)
                 - A dict mapping from source fields to destination fields
             context_field: Field(s) to use as context/documents
-            answer_field: Field(s) to use as answer
+            golden_answer_field: Field(s) to use as ground truth/reference answer
             file_format: Format of the dataset file (defaults to json)
             question_transform: Optional function to transform question values
             context_transform: Optional function to transform context values
@@ -390,7 +390,7 @@ class RAGJSONAdapter(ConfigurableJSONAdapter):
         super().__init__(
             dataset_path=dataset_path,
             input_field=question_field,
-            output_field=answer_field,
+            golden_output_field=golden_answer_field,
             file_format=file_format,
             input_transform=question_transform,
             output_transform=answer_transform,
@@ -401,7 +401,7 @@ class RAGJSONAdapter(ConfigurableJSONAdapter):
         # Store RAG-specific fields
         self.question_field = question_field
         self.context_field = context_field
-        self.answer_field = answer_field
+        self.golden_answer_field = golden_answer_field
         self.question_transform = question_transform
         self.context_transform = context_transform
         self.answer_transform = answer_transform
@@ -443,7 +443,7 @@ class RAGJSONAdapter(ConfigurableJSONAdapter):
             # Process question, context, and answer fields
             question_data = self._process_fields(item, self.question_field, self.question_transform, is_input=True)
             context_data = self._process_fields(item, self.context_field, self.context_transform, is_input=True)
-            answer_data = self._process_fields(item, self.answer_field, self.answer_transform, is_input=False)
+            answer_data = self._process_fields(item, self.golden_answer_field, self.answer_transform, is_input=False)
             
             # Create standardized inputs with question and context
             inputs = {}

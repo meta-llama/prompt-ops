@@ -21,7 +21,7 @@ dataset:
   adapter_params:
     # Required parameters
     input_field: ["fields", "input"]  # Field to use as input (string, list, or dict)
-    output_field: "answer"           # Field to use as output (string, list, or dict)
+    golden_output_field: "answer"    # Field to use as ground truth/reference output (string, list, or dict)
     
     # Optional parameters
     # file_format: "json"             # Format of the dataset file (json, csv, yaml)
