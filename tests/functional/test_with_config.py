@@ -74,7 +74,7 @@ SEED = 42
 
 # Default adapter class map for convenience
 ADAPTER_CLASS_MAP = {
-    "standard_json": "prompt_ops.core.datasets.StandardJSONAdapter",
+    "standard_json": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
 }
 
 # Default metric class map for convenience

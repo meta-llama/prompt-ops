@@ -12,7 +12,7 @@ model:
   # cache: false           # Whether to cache responses
   
 dataset:
-  adapter_class: "prompt_ops.core.datasets.StandardJSONAdapter"
+  adapter_class: "prompt_ops.core.datasets.ConfigurableJSONAdapter"
   path: "/Users/justinai/Documents/Code/prompt-ops/dataset/facility-synth/facility_v2_test.json"
   train_size: 0.7
   validation_size: 0.15

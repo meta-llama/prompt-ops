@@ -153,14 +153,13 @@ class DatasetAdapter(ABC):
         pass
 
 
-class StandardJSONAdapter(DatasetAdapter):
+class ConfigurableJSONAdapter(DatasetAdapter):
     """
-    A standardized adapter for JSON datasets with configurable field mappings.
+    A configurable adapter for JSON datasets with flexible field mappings.
     
     This adapter can be used with any JSON dataset by configuring the input and output
-    field mappings. It maps the specified input field to 'question' and output field
-    to 'answer' in the standardized format, making it compatible with DSPy and other
-    frameworks without requiring a custom adapter class.
+    field mappings. It supports simple field names, nested paths, and custom mappings,
+    making it compatible with various JSON structures without requiring custom adapter classes.
     """
     
     def __init__(
@@ -171,6 +170,7 @@ class StandardJSONAdapter(DatasetAdapter):
         file_format: Optional[str] = None,
         input_transform: Optional[Callable] = None,
         output_transform: Optional[Callable] = None,
+        default_value: Any = None,
         **kwargs
     ):
         """
@@ -193,6 +193,7 @@ class StandardJSONAdapter(DatasetAdapter):
         self.output_field = output_field
         self.input_transform = input_transform
         self.output_transform = output_transform
+        self.default_value = default_value
     
     def _get_nested_value(self, item: Dict[str, Any], field_path: List[str]) -> Any:
         """
@@ -203,34 +204,98 @@ class StandardJSONAdapter(DatasetAdapter):
             field_path: List of keys forming a path to the value
             
         Returns:
-            The value at the specified path
+            The value at the specified path or default_value if not found
         """
         value = item
         for key in field_path:
             if isinstance(value, dict) and key in value:
                 value = value[key]
             else:
-                return None
+                return self.default_value
         return value
     
-    def _get_field_value(self, item: Dict[str, Any], field_spec: Union[str, List[str]]) -> Any:
+    def _extract_value(self, item: Dict[str, Any], field_spec: Union[str, List[str], Dict[str, str]]) -> Any:
         """
-        Get a field value using various field specification formats.
+        Extract a value using a field specification.
         
         Args:
             item: Dictionary to extract value from
-            field_spec: Field specification (string or list of strings)
+            field_spec: Field specification (string, list, or dict)
             
         Returns:
-            The extracted value
+            The extracted value(s)
         """
         if isinstance(field_spec, str):
             # Simple field name
-            return item.get(field_spec)
+            return item.get(field_spec, self.default_value)
         elif isinstance(field_spec, list):
             # Nested field path
             return self._get_nested_value(item, field_spec)
-        return None
+        elif isinstance(field_spec, dict):
+            # Multiple fields mapping
+            result = {}
+            for src_field, dst_field in field_spec.items():
+                if isinstance(src_field, str):
+                    value = item.get(src_field, self.default_value)
+                elif isinstance(src_field, list):
+                    value = self._get_nested_value(item, src_field)
+                else:
+                    continue
+                result[dst_field] = value
+            return result
+        return self.default_value
+    
+    def _transform_value(self, value: Any, transform_func: Optional[Callable]) -> Any:
+        """
+        Apply transformation with error handling.
+        
+        Args:
+            value: Value to transform
+            transform_func: Function to apply to the value
+            
+        Returns:
+            Transformed value or original value if transformation fails
+        """
+        if transform_func is None or value is None:
+            return value
+            
+        try:
+            return transform_func(value)
+        except Exception as e:
+            logging.warning(f"Error transforming value: {e}")
+            return value
+    
+    def _map_to_standard_format(self, values: Any, field_spec: Union[str, List[str], Dict[str, str]], 
+                               is_input: bool = True) -> Dict[str, Any]:
+        """
+        Map extracted values to the standard format.
+        
+        Args:
+            values: Extracted values (single value or dictionary)
+            field_spec: Original field specification (for reference)
+            is_input: Whether this is mapping input fields (True) or output fields (False)
+            
+        Returns:
+            Dictionary with standardized field names
+        """
+        result = {}
+        
+        if isinstance(values, dict):
+            # Values already in dictionary format (from dict field_spec)
+            result.update(values)
+        else:
+            # Single value
+            if isinstance(field_spec, str):
+                # Keep original field name as well
+                result[field_spec] = values
+            
+            # Add standardized field names for DSPy compatibility
+            if is_input:
+                result['question'] = values
+            else:
+                result['answer'] = values
+        
+        return result
     
     def _process_fields(self, item: Dict[str, Any], field_spec: Union[str, List[str], Dict[str, str]], 
                         transform: Optional[Callable] = None, is_input: bool = True) -> Dict[str, Any]:
@@ -246,33 +311,14 @@ class StandardJSONAdapter(DatasetAdapter):
         Returns:
             Dictionary of processed fields
         """
-        result = {}
+        # 1. Extract values based on field specification
+        extracted_values = self._extract_value(item, field_spec)
         
-        if isinstance(field_spec, dict):
-            # Mapping of source fields to destination fields
-            for src_field, dst_field in field_spec.items():
-                value = self._get_field_value(item, src_field)
-                if transform and value is not None:
-                    value = transform(value)
-                result[dst_field] = value
-        else:
-            # Single field or nested path
-            value = self._get_field_value(item, field_spec)
-            if transform and value is not None:
-                value = transform(value)
-            
-            # Map to standardized field names based on whether this is input or output
-            if isinstance(field_spec, str):
-                # Keep original field name as well
-                result[field_spec] = value
-            
-            # Add standardized field names for DSPy compatibility
-            if is_input:
-                result['question'] = value
-            else:
-                result['answer'] = value
+        # 2. Apply transformation if provided
+        transformed_values = self._transform_value(extracted_values, transform)
         
-        return result
+        # 3. Map to standard format
+        return self._map_to_standard_format(transformed_values, field_spec, is_input)
     
     def adapt(self) -> List[Dict[str, Any]]:
         """
