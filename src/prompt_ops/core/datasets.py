@@ -346,6 +346,136 @@ class ConfigurableJSONAdapter(DatasetAdapter):
         return standardized_data
 
 
+class RAGJSONAdapter(ConfigurableJSONAdapter):
+    """
+    Adapter for RAG (Retrieval-Augmented Generation) JSON datasets with question, context, and answer fields.
+    
+    This adapter extends ConfigurableJSONAdapter to handle datasets that include retrieval contexts
+    or documents alongside questions and answers. It standardizes the format to be compatible with
+    RAG-based evaluation and optimization frameworks.
+    """
+    
+    def __init__(
+        self,
+        dataset_path: Union[str, Path],
+        question_field: Union[str, List[str], Dict[str, str]],
+        context_field: Union[str, List[str], Dict[str, str]],
+        answer_field: Union[str, List[str], Dict[str, str]],
+        file_format: Optional[str] = None,
+        question_transform: Optional[Callable] = None,
+        context_transform: Optional[Callable] = None,
+        answer_transform: Optional[Callable] = None,
+        default_value: Any = None,
+        **kwargs
+    ):
+        """
+        Initialize the RAG JSON adapter.
+        
+        Args:
+            dataset_path: Path to the dataset file
+            question_field: Field(s) to use as question. Can be:
+                - A string (field name)
+                - A list of strings (nested field path)
+                - A dict mapping from source fields to destination fields
+            context_field: Field(s) to use as context/documents
+            answer_field: Field(s) to use as answer
+            file_format: Format of the dataset file (defaults to json)
+            question_transform: Optional function to transform question values
+            context_transform: Optional function to transform context values
+            answer_transform: Optional function to transform answer values
+            default_value: Default value to use when a field is not found
+            **kwargs: Additional arguments
+        """
+        # Initialize with basic fields for backward compatibility
+        super().__init__(
+            dataset_path=dataset_path,
+            input_field=question_field,
+            output_field=answer_field,
+            file_format=file_format,
+            input_transform=question_transform,
+            output_transform=answer_transform,
+            default_value=default_value,
+            **kwargs
+        )
+        
+        # Store RAG-specific fields
+        self.question_field = question_field
+        self.context_field = context_field
+        self.answer_field = answer_field
+        self.question_transform = question_transform
+        self.context_transform = context_transform
+        self.answer_transform = answer_transform
+    
+    def _map_field_to_standard_name(self, field_data: Dict[str, Any], field_type: str) -> Any:
+        """
+        Extract the primary value from field data and map it to a standard name.
+        
+        Args:
+            field_data: Dictionary of field data
+            field_type: Type of field ('question', 'context', 'answer')
+            
+        Returns:
+            The primary value for the field
+        """
+        # If the standard name already exists, return it
+        if field_type in field_data:
+            return field_data[field_type]
+        
+        # Otherwise, use the first value in the dictionary
+        if field_data:
+            return next(iter(field_data.values()))
+        
+        return self.default_value
+    
+    def adapt(self) -> List[Dict[str, Any]]:
+        """
+        Transform the JSON dataset into standardized format with question, context, and answer.
+        
+        Returns:
+            List of standardized examples with question, context, and answer fields
+        """
+        # Load raw data
+        raw_data = self.load_raw_data()
+        
+        # Transform into standardized format
+        standardized_data = []
+        for item in raw_data:
+            # Process question, context, and answer fields
+            question_data = self._process_fields(item, self.question_field, self.question_transform, is_input=True)
+            context_data = self._process_fields(item, self.context_field, self.context_transform, is_input=True)
+            answer_data = self._process_fields(item, self.answer_field, self.answer_transform, is_input=False)
+            
+            # Create standardized inputs with question and context
+            inputs = {}
+            inputs.update(question_data)  # Include all question fields
+            
+            # Ensure 'question' field exists
+            if 'question' not in inputs:
+                inputs['question'] = self._map_field_to_standard_name(question_data, 'question')
+            
+            # Add context fields
+            context_value = self._map_field_to_standard_name(context_data, 'context')
+            inputs['context'] = context_value
+            
+            # Create standardized outputs
+            outputs = {}
+            outputs.update(answer_data)  # Include all answer fields
+            
+            # Ensure 'answer' field exists
+            if 'answer' not in outputs:
+                outputs['answer'] = self._map_field_to_standard_name(answer_data, 'answer')
+            
+            # Create standardized example
+            standardized_example = {
+                "inputs": inputs,
+                "outputs": outputs,
+                "metadata": {}
+            }
+            standardized_data.append(standardized_example)
+        
+        return standardized_data
+
+
 def create_dspy_example(doc: Dict[str, Any]) -> dspy.Example:
     """
     Convert a standardized document into a DSPy example.
