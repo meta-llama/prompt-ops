@@ -233,7 +233,7 @@ def load_config(config_path):
         raise ValueError(f"Failed to load configuration from {config_path}: {str(e)}")
 
 
-@cli.command(name="optimize-with-config")
+@cli.command(name="migrate")
 @click.option(
     "--config",
     required=True,
@@ -254,15 +254,15 @@ def load_config(config_path):
     default="OPENROUTER_API_KEY",
     help="Environment variable name for the API key"
 )
-def optimize_with_config(config, model, output_dir, api_key_env):
+def migrate(config, model, output_dir, api_key_env):
     """
-    Optimize prompts using a YAML configuration file.
+    Migrate and optimize prompts using a YAML configuration file.
     
     This command loads a configuration file that specifies the model,
     dataset, prompt, metric, and optimization strategy to use.
     
     Example:
-        prompt-ops optimize-with-config --config configs/facility.yaml
+        prompt-ops migrate --config configs/facility.yaml
     """
     # Check if API key is set
     api_key = os.getenv(api_key_env)
