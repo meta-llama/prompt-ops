@@ -1,8 +1,12 @@
 # Facility dataset configuration for prompt optimization
 
+  #TODO: think if there are any way to abstract this  
+  # provider: openrouter/hosted_vllm/togethercomputer
+  # model: meta-llama/llama-3.3-70b-instruct
+  # litellm
 model:
   name: "openrouter/meta-llama/llama-3.3-70b-instruct"
-  api_base: "https://openrouter.ai/api/v1"
+  api_base: "https://openrouter.ai/api/v1" # rename base_url:
   temperature: 0.0
   # max_tokens: 2048       # Maximum number of tokens to generate
   # top_p: 0.9             # Nucleus sampling parameter
@@ -11,6 +15,8 @@ model:
   # presence_penalty: 0.0  # Penalize tokens already in the context
   # cache: false           # Whether to cache responses
   
+
+## name the data adapter take in N params
 dataset:
   adapter_class: "prompt_ops.core.datasets.ConfigurableJSONAdapter"
   path: "/Users/justinai/Documents/Code/prompt-ops/dataset/facility-synth/facility_v2_test.json"
@@ -18,15 +24,10 @@ dataset:
   validation_size: 0.15
   # seed: 42               # Random seed for dataset splitting
   # shuffle: true          # Whether to shuffle the dataset before splitting
-  adapter_params:
-    # Required parameters
-    input_field: ["fields", "input"]  # Field to use as input (string, list, or dict)
-    golden_output_field: "answer"    # Field to use as ground truth/reference output (string, list, or dict)
-    
-    # Optional parameters
-    # file_format: "json"             # Format of the dataset file (json, csv, yaml)
-    # input_transform: null           # Function to transform input values (defined in code)
-    # output_transform: null          # Function to transform output values (defined in code)
+  # Required parameters
+  input_field: ["fields", "input"]  # Field to use as input (string, list, or dict)
+  golden_output_field: "answer"    # Field to use as ground truth/reference output (string, list, or dict)
+
   
 prompt:
   text: |
@@ -47,7 +48,7 @@ metric:
   params:
     evaluation_mode: "flattened"
     # Fields to evaluate (with optional weights)
-    fields: ["urgency", "sentiment"]
+    fields: ["urgency", "sentiment", "categories"]
     # Nested fields to evaluate
     nested_fields:
       categories: [
@@ -71,16 +72,10 @@ metric:
       categories: 1.0
     # Whether to use strict JSON parsing (no code block extraction)
     strict_json: false
-  # Alternative metric configuration using DSPyMetricAdapter
-  # class: "similarity"
-  # params:
-  #   score_range: [1, 10]           # Input score range
-  #   normalize_to: [0, 1]           # Output score range for normalization
-  #   signature_name: "similarity"    # Predefined signature template
-  #   custom_instructions: null       # Custom evaluation instructions
+
 
 optimization:
-  strategy: "light"                 # Strategy to use (light, full, custom)
+  strategy: "basic"                 # Strategy to use (basic, intermediate, advanced, custom)
   max_rounds: 3                     # Maximum number of optimization rounds
   max_examples_per_round: 5         # Maximum examples to use per round
   max_prompt_length: 2048           # Maximum length of the optimized prompt

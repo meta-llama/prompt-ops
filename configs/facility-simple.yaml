@@ -6,25 +6,21 @@ prompt:
 
 # Dataset configuration
 dataset:
-  adapter_class: "standard_json"
   path: "../dataset/facility-synth/facility_v2_test.json"
-  adapter_params:
-    input_field: ["fields", "input"]
-    golden_output_field: "answer"
+  input_field: ["fields", "input"]
+  golden_output_field: "answer"
 
 # Model configuration (minimal required settings)
 model:
   name: "openrouter/meta-llama/llama-3.3-70b-instruct"
-  temperature: 0.0
 
 # Metric configuration (simplified but maintains compatibility)
 metric:
   class: "standard_json"
-  params:
-    evaluation_mode: "flattened"
-    fields: ["urgency", "sentiment", "categories"]
-    required_fields: ["urgency", "sentiment", "categories"]
+  evaluation_mode: "flattened"
+  fields: ["urgency", "sentiment", "categories"]
+  required_fields: ["urgency", "sentiment", "categories"]
 
 # Optimization settings
 optimization:
-  strategy: "light"
+  strategy: "basic"
