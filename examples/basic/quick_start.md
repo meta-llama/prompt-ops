@@ -8,7 +8,7 @@ prompt-ops is a tool that automatically optimizes prompts for large language mod
 - Automatically improves prompts to work better with Llama models
 - Tests against real examples to ensure consistent performance
 - Provides objective metrics to measure improvements
-- Adds few-shot examples to boost performance
+- Automatically adds few-shot examples to boost performance
 
 ## Example Use Case: Customer Service Message Classification
 
@@ -111,7 +111,7 @@ system: |-
 ## Next Steps
 
 1. **Use the optimized prompt** in your production system
-2. **Try different optimization strategies** (light, medium, aggressive)
+2. **Try different optimization strategies** (light, medium, heavy)
 3. **Customize the configuration** for your specific use case
 
-For more advanced configuration options, see the detailed documentation in the `examples/` directory.
+For a detailed guide on all configuration options, check out the [Advanced Facility Configuration Guide](/examples/advanced/advanced_facility_config.md) which explains each setting in depth.
