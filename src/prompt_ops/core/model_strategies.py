@@ -11,18 +11,18 @@ from typing import Dict, Any, List, Optional, Callable, Literal, Union
 
 import dspy
 
-from .prompt_strategies import BaseStrategy, LightOptimizationStrategy, OptimizationError
+from .prompt_strategies import BaseStrategy, BasicOptimizationStrategy, OptimizationError
 from .utils.llama_utils import (
     is_llama_model, get_llama_tips, get_llama_template, 
     get_task_type_from_prompt, select_instruction_preference,
     format_prompt_for_llama
 )
 
-class LlamaStrategy(LightOptimizationStrategy):
+class LlamaStrategy(BasicOptimizationStrategy):
     """
     Optimization strategy specifically tailored for Llama models.
     
-    This strategy extends the LightOptimizationStrategy with additional
+    This strategy extends the BasicOptimizationStrategy with additional
     Llama-specific formatting and optimization techniques.
     """
     
@@ -36,7 +36,7 @@ class LlamaStrategy(LightOptimizationStrategy):
         template_type: str = "basic",
         max_bootstrapped_demos: int = 4,
         max_labeled_demos: int = 5,
-        auto: Optional[Literal["light", "medium", "heavy"]] = "light",
+        auto: Optional[Literal["basic", "intermediate", "advanced"]] = "basic",
         **kwargs
     ):
         """
@@ -51,8 +51,8 @@ class LlamaStrategy(LightOptimizationStrategy):
             template_type: Type of template to use (basic, with_context, with_examples, full)
             max_bootstrapped_demos: Maximum number of bootstrapped demos for MIPROv2
             max_labeled_demos: Maximum number of labeled demos for MIPROv2
-            auto: Auto mode for MIPROv2 (light, medium, heavy)
-            **kwargs: Additional parameters for LightOptimizationStrategy
+            auto: Auto mode for MIPROv2 (basic, intermediate, advanced)
+            **kwargs: Additional parameters for BasicOptimizationStrategy
         """
         # Verify that the model is a Llama model
         if not is_llama_model(model_name):

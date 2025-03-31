@@ -89,10 +89,10 @@ Using uv can make dependency resolution and installation much faster, especially
 
 ```python
 from prompt_ops.core.migrator import PromptMigrator
-from prompt_ops.core.prompt_strategies import LightOptimizationStrategy
+from prompt_ops.core.prompt_strategies import BasicOptimizationStrategy
 
 # Create a migrator with a specific strategy
-migrator = PromptMigrator(strategy=LightOptimizationStrategy())
+migrator = PromptMigrator(strategy=BasicOptimizationStrategy())
 
 # Optimize a prompt
 optimized_prompt = migrator.optimize(
@@ -107,11 +107,11 @@ The package includes a standardized dataset loading system using the Dataset Ada
 
 ```python
 from prompt_ops.core.migrator import PromptMigrator
-from prompt_ops.core.prompt_strategies import LightOptimizationStrategy
+from prompt_ops.core.prompt_strategies import BasicOptimizationStrategy
 from prompt_ops.datasets.custom import CustomAdapter  # Import a specific adapter
 
 # Create a strategy and migrator
-strategy = LightOptimizationStrategy(
+strategy = BasicOptimizationStrategy(
     model_name="llama-70b",
     metric=your_metric,
     task_model=model,

@@ -16,7 +16,7 @@ from typing import Dict, List, Optional, Any, Tuple
 
 import click
 
-from ..core.prompt_strategies import BaseStrategy, LightOptimizationStrategy
+from ..core.prompt_strategies import BaseStrategy, BasicOptimizationStrategy
 from ..core.model_strategies import LlamaStrategy
 from ..core.migrator import PromptMigrator
 from ..core.model import setup_model
@@ -40,8 +40,8 @@ def cli():
 )
 @click.option(
     "--strategy",
-    type=click.Choice(["base", "light", "heavy"], case_sensitive=False),
-    default="light",
+    type=click.Choice(["base", "basic", "intermediate", "advanced"], case_sensitive=False),
+    default="basic",
     show_default=True,
     help="The optimization strategy to apply"
 )
@@ -58,7 +58,7 @@ def optimize_prompt(prompt: str, strategy: str, model: str):
     # Map strategy name to class
     strategy_map = {
         "base": BaseStrategy,
-        "light": LightOptimizationStrategy,
+        "basic": BasicOptimizationStrategy,
     }
     
     # Create strategy instance
@@ -319,7 +319,7 @@ def migrate(config, model, output_dir, api_key_env):
     
     # Check if strategy is specified in config
     optimization_config = config_dict.get("optimization", {})
-    strategy_type = optimization_config.get("strategy", "light")
+    strategy_type = optimization_config.get("strategy", "basic")
     
     # Create appropriate strategy
     if strategy_type.lower() == "llama":
@@ -333,14 +333,14 @@ def migrate(config, model, output_dir, api_key_env):
             template_type=optimization_config.get("template_type", "basic")
         )
         click.echo(f"Using LlamaStrategy for model: {model_name}")
-    else:  # Default to light strategy
-        strategy = LightOptimizationStrategy(
+    else:  # Default to basic strategy
+        strategy = BasicOptimizationStrategy(
             model_name=model_name,
             metric=metric,
             task_model=model_instance,
             prompt_model=model_instance
         )
-        click.echo(f"Using LightOptimizationStrategy for model: {model_name}")
+        click.echo(f"Using BasicOptimizationStrategy for model: {model_name}")
     
     # Create migrator
     migrator = PromptMigrator(

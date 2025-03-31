@@ -59,7 +59,7 @@ metric:
 
 # Optimization settings
 optimization:
-  strategy: "light"
+  strategy: "basic"
 ```
 
 ## Step 3: Run the Optimization

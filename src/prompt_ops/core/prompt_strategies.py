@@ -13,6 +13,8 @@ from typing import Dict, Any, Optional, List, Union, Callable
 import dspy
 from typing_extensions import Literal
 
+from .utils import map_auto_mode_to_dspy
+
 class OptimizationError(Exception):
     """Exception raised when prompt optimization fails."""
     pass
@@ -84,12 +86,12 @@ class BaseStrategy(ABC):
         return text
 
 
-class LightOptimizationStrategy(BaseStrategy):
+class BasicOptimizationStrategy(BaseStrategy):
     """
-    A strategy that runs a light optimization pass using DSPy's MIPROv2.
+    A strategy that runs a basic optimization pass using DSPy's MIPROv2.
     
-    This strategy applies a light optimization to the prompt using DSPy's
-    MIPROv2 optimizer with the 'light' auto mode, which focuses on format
+    This strategy applies a basic optimization to the prompt using DSPy's
+    MIPROv2 optimizer with the 'basic' auto mode, which focuses on format
     and style adjustments without extensive restructuring.
     
     This strategy can be model-aware, incorporating model-specific tips and
@@ -105,7 +107,7 @@ class LightOptimizationStrategy(BaseStrategy):
         # MIPROv2 specific parameters
         max_bootstrapped_demos: int = 4,
         max_labeled_demos: int = 5,
-        auto: Optional[Literal["light", "medium", "heavy"]] = "light",
+        auto: Optional[Literal["basic", "intermediate", "advanced"]] = "basic",
         num_candidates: int = 10,
         max_errors: int = 10,
         seed: int = 9,
@@ -129,7 +131,7 @@ class LightOptimizationStrategy(BaseStrategy):
         **kwargs
     ):
         """
-        Initialize the light optimization strategy with MIPROv2 parameters.
+        Initialize the basic optimization strategy with MIPROv2 parameters.
         
         Args:
             model_name: Target Llama model name
@@ -139,7 +141,8 @@ class LightOptimizationStrategy(BaseStrategy):
             # MIPROv2 constructor parameters
             max_bootstrapped_demos: Maximum number of bootstrapped demos to generate
             max_labeled_demos: Maximum number of labeled demos to include
-            auto: Optimization mode ('light', 'medium', 'heavy')
+            auto: Optimization mode ('basic', 'intermediate', 'advanced')
+                 These values are mapped to DSPy's expected values ('light', 'medium', 'heavy')
             num_candidates: Number of candidate instructions to generate
             max_errors: Maximum number of errors to tolerate during evaluation
             seed: Random seed for reproducibility
@@ -201,10 +204,12 @@ class LightOptimizationStrategy(BaseStrategy):
         self.tip_aware_proposer = tip_aware_proposer
         self.fewshot_aware_proposer = fewshot_aware_proposer
         self.requires_permission_to_run = requires_permission_to_run
+        
+
     
     def run(self, prompt_data: Dict[str, Any]) -> Any:
         """
-        Apply light optimization to the prompt using DSPy's MIPROv2.
+        Apply basic optimization to the prompt using DSPy's MIPROv2.
         
         Args:
             prompt_data: Dictionary containing the prompt text and metadata
@@ -266,6 +271,9 @@ class LightOptimizationStrategy(BaseStrategy):
             # Create program instance with the signature
             program = dspy.Predict(DynamicSignature)
             
+            # Map our naming convention to DSPy's expected values
+            dspy_auto_mode = map_auto_mode_to_dspy(self.auto)
+            
             # Configure the optimizer with all parameters
             optimizer = dspy.MIPROv2(
                 metric=self.metric,
@@ -273,7 +281,7 @@ class LightOptimizationStrategy(BaseStrategy):
                 task_model=self.task_model,
                 max_bootstrapped_demos=self.max_bootstrapped_demos,
                 max_labeled_demos=self.max_labeled_demos,
-                auto=self.auto,
+                auto=dspy_auto_mode,  # Use the mapped value
                 num_candidates=self.num_candidates,
                 num_threads=self.num_threads,
                 max_errors=self.max_errors,

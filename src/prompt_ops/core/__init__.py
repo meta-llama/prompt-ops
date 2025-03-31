@@ -7,7 +7,7 @@ This module provides the main functionality for migrating and optimizing prompts
 from .migrator import PromptMigrator
 from .prompt_strategies import (
     BaseStrategy,
-    LightOptimizationStrategy
+    BasicOptimizationStrategy
 )
 from .metrics import MetricBase, ExactMatchMetric, LLMAsJudgeMetric
 from .evaluation import (
@@ -20,7 +20,7 @@ from .evaluation import (
 __all__ = [
     'PromptMigrator',
     'BaseStrategy',
-    'LightOptimizationStrategy',
+    'BasicOptimizationStrategy',
     'MetricBase',
     'ExactMatchMetric',
     'LLMAsJudgeMetric',

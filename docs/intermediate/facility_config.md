@@ -73,7 +73,7 @@ metric:
 
 # Optimization Settings
 optimization:
-  strategy: "light"
+  strategy: "basic"
   max_rounds: 3
   max_examples_per_round: 5
   max_prompt_length: 2048
@@ -226,7 +226,7 @@ The `optimization` section controls how prompt-ops approaches the optimization p
 
 ```yaml
 optimization:
-  strategy: "light"
+  strategy: "basic"
   max_rounds: 3
   max_examples_per_round: 5
   max_prompt_length: 2048
@@ -241,8 +241,8 @@ optimization:
 
 | Parameter | Description | Recommended Values |
 |-----------|-------------|-------------------|
-| `strategy` | Optimization approach | For quick results: `"light"`<br>For thorough optimization: `"medium"` |
-| `max_rounds` | Number of optimization iterations | `3` for light strategy<br>`5` for medium strategy |
+| `strategy` | Optimization approach | For quick results: `"basic"`<br>For thorough optimization: `"intermediate"` |
+| `max_rounds` | Number of optimization iterations | `3` for basic strategy<br>`5` for intermediate strategy |
 | `max_examples_per_round` | Examples to use per round | `5` for faster results<br>`10` for better quality |
 | `max_prompt_length` | Maximum length of optimized prompt | `2048` for most tasks<br>`4096` for complex tasks |
 | `num_candidates` | Prompt variations to try | `5` for balanced exploration |
@@ -254,9 +254,9 @@ optimization:
 | `model_family` | Model-specific optimizations | `"llama"` for Llama models |
 
 **Strategy Options Explained:**
-- `light`: Makes minimal changes to preserve the original prompt structure (fastest)
-- `medium`: Balanced approach with moderate changes (recommended)
-- `heavy`: More extensive modifications for maximum performance (slowest)
+- `basic`: Makes minimal changes to preserve the original prompt structure (fastest)
+- `intermediate`: Balanced approach with moderate changes (recommended)
+- `advanced`: More extensive modifications for maximum performance (slowest)
 
 ## Running with Advanced Configuration
 

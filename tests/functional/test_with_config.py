@@ -62,7 +62,7 @@ load_dotenv()
 
 from prompt_ops.core.migrator import PromptMigrator
 from prompt_ops.core.prompt_strategies import (
-    LightOptimizationStrategy, OptimizationError
+    BasicOptimizationStrategy, OptimizationError
 )
 from prompt_ops.core.model_strategies import LlamaStrategy
 from prompt_ops.core.metrics import DSPyMetricAdapter, StandardJSONMetric
@@ -85,7 +85,7 @@ METRIC_CLASS_MAP = {
 
 # Default strategy class map for convenience
 STRATEGY_CLASS_MAP = {
-    "light": "prompt_ops.core.prompt_strategies.LightOptimizationStrategy",
+    "basic": "prompt_ops.core.prompt_strategies.BasicOptimizationStrategy",
 
 }
 
@@ -563,14 +563,14 @@ def main():
                 template_type=template_type
             )
             print(f"Using LlamaStrategy from config for model: {model_name}")
-        elif strategy_type.lower() == "light":
+        elif strategy_type.lower() == "basic":
             strategy = LightOptimizationStrategy(
                 model_name=model_name,
                 metric=metric,
                 task_model=model,
                 prompt_model=model
             )
-            print(f"Using LightOptimizationStrategy from config for model: {model_name}")
+            print(f"Using BasicOptimizationStrategy from config for model: {model_name}")
         else:
             print(f"Unknown strategy type: {strategy_type}, falling back to auto-detection")
             # Fall back to auto-detection
@@ -680,7 +680,7 @@ def main():
     try:
         # Wrap the optimization in a try/except block to catch parallelizer errors
         try:
-            light_optimized = migrator.optimize(
+            basic_optimized = migrator.optimize(
                 {
                     "text": prompt_text, 
                     "inputs": prompt_inputs, 
@@ -694,9 +694,9 @@ def main():
             )
             
             print("\n=== Summary ===")
-            print("Light optimized prompt:")
+            print("Basic optimized prompt:")
             print("=" * 80)
-            print(light_optimized.signature.instructions)
+            print(basic_optimized.signature.instructions)
             print("=" * 80)
         except RuntimeError as re:
             if "cannot schedule new futures after shutdown" in str(re):
