@@ -143,11 +143,8 @@ def get_dataset_adapter(config):
     }
     
     dataset_config = config.get("dataset", {})
-    adapter_class_path = dataset_config.get("adapter_class")
+    adapter_class_path = dataset_config.get("adapter_class", "standard_json")
     dataset_path = dataset_config.get("path")
-    
-    if not adapter_class_path:
-        raise ValueError("Adapter class not specified in configuration")
     
     if not dataset_path:
         raise ValueError("Dataset path not specified in configuration")
@@ -162,8 +159,10 @@ def get_dataset_adapter(config):
         # Get file format if specified
         file_format = dataset_config.get("file_format")
         
-        # Get adapter-specific parameters
-        adapter_params = dataset_config.get("adapter_params", {})
+        # Extract all parameters except known non-parameter keys
+        adapter_params = {k: v for k, v in dataset_config.items() 
+                         if k not in ["adapter_class", "path", "file_format", 
+                                      "train_size", "validation_size", "seed", "shuffle"]}
         
         # Create and return the adapter instance
         return adapter_class(dataset_path=dataset_path, file_format=file_format, **adapter_params)
@@ -202,8 +201,9 @@ def get_metric(config, model):
         # Import the class dynamically
         metric_class = load_class_dynamically(metric_class_path)
         
-        # Get metric-specific parameters
-        metric_params = metric_config.get("params", {})
+        # Extract all parameters except known non-parameter keys
+        metric_params = {k: v for k, v in metric_config.items() 
+                        if k not in ["class", "type", "metric_class"]}
         
         # Create and return the metric instance
         if metric_class == DSPyMetricAdapter:

@@ -85,7 +85,7 @@ class DSPyModelAdapter(ModelAdapter):
             model=kwargs.get("model"),
             api_base=kwargs.get("api_base"),
             api_key=kwargs.get("api_key"),
-            max_tokens=kwargs.get("max_tokens", 2048),
+            max_tokens=kwargs.get("max_tokens", 48000),
             temperature=kwargs.get("temperature", 0.0),
             cache=kwargs.get("cache", False),
             **{k: v for k, v in kwargs.items() if k not in ["model", "api_base", "api_key", "max_tokens", "temperature", "cache"]}
