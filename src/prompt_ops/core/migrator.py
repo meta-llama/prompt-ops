@@ -94,7 +94,7 @@ class PromptMigrator:
         testset: List[Any] = None,
         save_to_file: bool = False, 
         file_path: str = None,
-        save_yaml: bool = False,
+        save_yaml: bool = True,
         user_prompt: str = None,
         use_llama_tips: bool = True
     ) -> Any:
