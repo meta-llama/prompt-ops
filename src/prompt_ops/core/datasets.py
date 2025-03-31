@@ -503,8 +503,8 @@ def create_dspy_example(doc: Dict[str, Any]) -> dspy.Example:
 
 def load_dataset(
     adapter: DatasetAdapter, 
-    train_size: float = 0.25, 
-    validation_size: float = 0.25,
+    train_size: float = 0.60, 
+    validation_size: float = 0.20,
     seed: int = 42
 ) -> Tuple[List[dspy.Example], List[dspy.Example], List[dspy.Example]]:
     """

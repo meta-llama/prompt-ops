@@ -300,6 +300,14 @@ def migrate(config, model, output_dir, api_key_env):
     
     # Get dataset adapter from config
     try:
+        # Handle relative dataset paths
+        dataset_config = config_dict.get("dataset", {})
+        if "path" in dataset_config and not os.path.isabs(dataset_config["path"]):
+            # Make dataset path relative to the config file location
+            config_dir = os.path.dirname(os.path.abspath(config))
+            dataset_config["path"] = os.path.join(config_dir, dataset_config["path"])
+            click.echo(f"Resolved relative dataset path to: {dataset_config['path']}")
+        
         dataset_adapter = get_dataset_adapter(config_dict)
         click.echo(f"Using dataset adapter: {dataset_adapter.__class__.__name__}")
     except ValueError as e:
@@ -351,13 +359,39 @@ def migrate(config, model, output_dir, api_key_env):
     
     # Get prompt from config
     prompt_config = config_dict.get("prompt", {})
+    prompt_file = prompt_config.get("file", None)
     prompt_text = prompt_config.get("text", "")
+    
+    # Load prompt text from file if specified and text is not provided
+    if prompt_file and not prompt_text:
+        # Handle relative paths - relative to the config file location
+        config_dir = os.path.dirname(os.path.abspath(config))
+        if not os.path.isabs(prompt_file):
+            prompt_file = os.path.join(config_dir, prompt_file)
+            
+        if os.path.exists(prompt_file):
+            try:
+                with open(prompt_file, 'r') as f:
+                    prompt_text = f.read()
+                click.echo(f"Loaded prompt from file: {prompt_file}")
+            except Exception as e:
+                click.echo(f"Error loading prompt file: {str(e)}", err=True)
+                sys.exit(1)
+        else:
+            click.echo(f"Warning: Prompt file not found: {prompt_file}", err=True)
+            click.echo("Using empty prompt text instead.")
+    
     prompt_inputs = prompt_config.get("inputs", ["question", "context"])
     prompt_outputs = prompt_config.get("outputs", ["answer"])
     
     # Set up output path
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_prefix = config_dict.get("output", {}).get("prefix", Path(config).stem)
+    
+    # Handle relative output directory path - relative to current working directory
+    if not os.path.isabs(output_dir):
+        output_dir = os.path.abspath(output_dir)
+        
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     file_path = os.path.join(output_dir, f"{output_prefix}_{timestamp}.json")
     
