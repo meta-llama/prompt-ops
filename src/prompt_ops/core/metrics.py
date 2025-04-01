@@ -558,7 +558,7 @@ class StandardJSONMetric(MetricBase):
     """
     
     def __init__(self, 
-                 fields: Optional[Union[List[str], Dict[str, float]]] = None,
+                 output_fields: Optional[Union[List[str], Dict[str, float]]] = None,
                  required_fields: Optional[List[str]] = None,
                  nested_fields: Optional[Dict[str, List[str]]] = None,
                  field_weights: Optional[Dict[str, float]] = None,
@@ -570,9 +570,10 @@ class StandardJSONMetric(MetricBase):
         Initialize the StandardJSONMetric.
         
         Args:
-            fields: Fields to evaluate. Can be a list of field names or a dict mapping
+            output_fields: Fields to evaluate. Can be a list of field names or a dict mapping
                    field names to weights.
-            required_fields: Fields that must be present for a valid prediction.
+            required_fields: Fields that must be present for a valid prediction. If not specified,
+                           defaults to the same values as output_fields.
             nested_fields: Nested fields to evaluate, with parent field as key and
                           list of child fields as value.
             field_weights: Weights for each field in the evaluation.
@@ -588,11 +589,11 @@ class StandardJSONMetric(MetricBase):
             raise ValueError(f"Invalid evaluation mode: {evaluation_mode}. Must be 'field_based' or 'flattened'.")
         
         # Set up fields to evaluate
-        if isinstance(fields, dict):
-            self.fields = list(fields.keys())
-            self.field_weights = fields
+        if isinstance(output_fields, dict):
+            self.fields = list(output_fields.keys())
+            self.field_weights = output_fields
         else:
-            self.fields = fields or []
+            self.fields = output_fields or []
             self.field_weights = field_weights or {}
             
         # Set default weights for fields not explicitly weighted
@@ -600,7 +601,8 @@ class StandardJSONMetric(MetricBase):
             if field not in self.field_weights:
                 self.field_weights[field] = 1.0
                 
-        self.required_fields = required_fields or []
+        # Use fields as the default for required_fields when not specified
+        self.required_fields = required_fields if required_fields is not None else self.fields
         self.nested_fields = nested_fields or {}
         self.strict_json = strict_json
         self.output_field = output_field

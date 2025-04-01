@@ -45,8 +45,8 @@ metric:
   class: "prompt_ops.core.metrics.StandardJSONMetric"
   params:
     evaluation_mode: "flattened"
-    # Fields to evaluate (with optional weights)
-    fields: ["urgency", "sentiment", "categories"]
+    # Fields to evaluate (with optional weights) - these will also be used as required fields
+    output_fields: ["urgency", "sentiment", "categories"]
     # Nested fields to evaluate
     nested_fields:
       categories:
@@ -62,8 +62,6 @@ metric:
           "customer_feedback_and_complaints",
           "facility_management_issues",
         ]
-    # Fields that must be present for a valid prediction
-    required_fields: ["urgency", "sentiment", "categories"]
     # Optional field weights (default is 1.0 for each field)
     field_weights:
       urgency: 1.0

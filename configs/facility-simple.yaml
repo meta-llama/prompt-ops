@@ -17,8 +17,7 @@ model:
 metric:
   class: "standard_json"
   evaluation_mode: "flattened"
-  fields: ["urgency", "sentiment", "categories"]
-  required_fields: ["urgency", "sentiment", "categories"]
+  output_fields: ["urgency", "sentiment", "categories"]
 
 # Optimization settings
 optimization:
