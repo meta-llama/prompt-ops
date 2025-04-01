@@ -1,6 +1,6 @@
-# Prompt Migrator Configuration
+# prompt-ops configuration
 
-This directory contains YAML configuration files for the Prompt Migrator.
+This directory contains YAML configuration files for the prompt-ops tool.
 
 ## Configuration Structure
 
@@ -63,7 +63,7 @@ logging:
 
 ## Dataset Adapters
 
-The prompt migrator now supports multiple dataset types through a flexible adapter system:
+The prompt-ops tool now supports multiple dataset types through a flexible adapter system:
 
 ### Built-in Adapters
 
@@ -90,7 +90,7 @@ dataset:
 
 ## Metrics
 
-The prompt migrator supports multiple metrics for evaluating prompt performance:
+The prompt-ops tool supports multiple metrics for evaluating prompt performance:
 
 ### Built-in Metrics
 

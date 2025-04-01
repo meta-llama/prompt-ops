@@ -1,8 +1,8 @@
 """
-Dataset adapters and utilities for prompt migrator.
+Dataset adapters and utilities for prompt-ops.
 
 This module provides a standardized way to load and process different datasets
-for use with the prompt migrator.
+for use with the prompt-ops tool.
 """
 
 import json
@@ -21,7 +21,7 @@ class DatasetAdapter(ABC):
     Base adapter class for transforming dataset-specific formats into a standardized format.
     
     Subclasses should implement the adapt method to transform their specific dataset
-    format into the standardized format expected by the prompt migrator.
+    format into the standardized format expected by the prompt-ops tool.
     """
     
     def __init__(self, dataset_path: str, file_format: str = None):

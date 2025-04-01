@@ -1,5 +1,5 @@
 """
-Tests for the prompt migrator core functionality.
+Tests for the prompt-ops core functionality.
 
 This module contains unit tests for the PromptMigrator class and strategies.
 """

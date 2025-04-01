@@ -1,7 +1,7 @@
 """
-Command-line interface for the prompt migrator.
+Command-line interface for the prompt-ops tool.
 
-This module provides a CLI for using the prompt migrator functionality,
+This module provides a CLI for using the prompt-ops functionality,
 including commands for optimizing individual prompts, batch processing,
 and optimization using YAML configuration files.
 """
@@ -28,7 +28,7 @@ from ..core.datasets import DatasetAdapter, load_dataset
 @click.group()
 def cli():
     """
-    Prompt Migrator - A tool for migrating and optimizing prompts for Llama models.
+    Prompt-ops - A tool for migrating and optimizing prompts for Llama models.
     """
     pass
 

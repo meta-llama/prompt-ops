@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
-Test the prompt migrator with YAML configuration support.
+Test the prompt-ops tool with YAML configuration support.
 
-This script provides a configurable interface for testing the prompt migrator's 
+This script provides a configurable interface for testing the prompt-ops tool's 
 ability to optimize prompts for various tasks. It supports configuration via 
 YAML files and command-line arguments.
 
@@ -495,7 +495,7 @@ def main():
     args = parse_arguments()
     config = get_merged_config(args)
     
-    print("=== Testing Prompt Migrator with Configuration ===\n")
+    print("=== Testing Prompt-ops with Configuration ===\n")
     
     # Set up logging
     logging_level = getattr(logging, config.get("logging", {}).get("level", "INFO"))

@@ -1,7 +1,7 @@
 """
-Exceptions for the prompt migrator.
+Exceptions for the prompt-ops tool.
 
-This module defines custom exceptions used throughout the prompt migrator.
+This module defines custom exceptions used throughout the prompt-ops tool.
 """
 
 
