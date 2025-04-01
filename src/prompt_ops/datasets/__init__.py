@@ -1,5 +1,5 @@
 """
-Dataset modules for the prompt migrator.
+Dataset modules for the prompt-ops tool.
 
 This package contains dataset-specific modules, each with adapters and metrics
 designed for specific dataset types.

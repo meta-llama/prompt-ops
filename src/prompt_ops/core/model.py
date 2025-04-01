@@ -1,9 +1,9 @@
 # abstract class (to generalize the interface i.e. predict etc)
 """
-Model abstraction module for prompt migrator.
+Model abstraction module for prompt-ops.
 
 This module provides a standardized way to create and configure models from
-different providers (DSPy, TextGrad, etc.) for use with the prompt migrator.
+different providers (DSPy, TextGrad, etc.) for use with the prompt-ops tool.
 It leverages LiteLLM's unified interface for accessing various LLM providers.
 """
 
