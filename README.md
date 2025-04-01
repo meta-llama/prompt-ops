@@ -6,6 +6,37 @@
 
 prompt-ops is a Python package that automates the process of optimizing prompts for large language models, with a focus on Llama models. It provides both fast template-based optimization and thorough dataset-driven approaches to help you get the best performance from your LLM prompts without manual trial and error.
 
+## How It Works
+
+```
+┌────────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Original Prompt   │     │  Configuration  │     │     Dataset     │
+└────────┬───────────┘     └────────┬────────┘     └────────┬────────┘
+         │                          │                       │
+         │                          │                       │
+         ▼                          ▼                       ▼
+         ┌────────────────────────────────────────────────────┐
+         │                 prompt-ops migrate                 │
+         └────────────────────────────────────────────────────┘
+                                  │
+                                  │
+                                  ▼
+                      ┌─────────────────────┐
+                      │   Optimized Prompt  │
+                      └─────────────────────┘
+```
+
+
+### Input
+- **Prompt**: Your existing prompt designed for other LLMs
+- **Configuration**: YAML file defining optimization parameters, dataset, metrics, etc.
+- **API Key**: Access to LLM APIs (OpenRouter, etc.)
+
+### Output
+- **Optimized Prompt**: Llama-optimized version of your prompt
+
+
+
 ## Why use prompt-ops?
 
 - **Automated Optimization**: Eliminates manual prompt engineering through data-driven optimization techniques
@@ -60,12 +91,10 @@ Below is an example of how prompt-ops transforms a prompt from OpenAI to Llama:
 
 ## Key Features
 
-- **Multiple Optimization Strategies**: Choose from template-based or dataset-driven approaches
+- **YAML Configuration**: Define your entire optimization pipeline in a single YAML file
 - **Standardized Dataset Adapters**: Easily work with different dataset formats using built-in or custom adapters
 - **Customizable Metrics**: Evaluate prompt performance with configurable metrics
-- **YAML Configuration**: Define your entire optimization pipeline in a single YAML file
 - **CLI Interface**: Run optimizations directly from the command line
-- **Llama-Specific Optimizations**: Apply best practices for Llama models automatically
 
 ## Documentation and Examples
 
