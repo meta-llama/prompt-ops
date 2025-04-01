@@ -348,18 +348,28 @@ Once you've created your custom adapter and metric classes, you can use them in 
 
 ```yaml
 dataset:
-  adapter_class: "path.to.module.FacilityAdapter"
+  adapter_class: "docs.advanced.example_custom_adapters.FacilityAdapter"
   path: "/path/to/dataset.json"
   adapter_params:
     include_metadata: true
 
 metric:
-  metric_class: "path.to.module.FacilityMetric"
+  metric_class: "docs.advanced.example_custom_adapters.FacilityMetric"
   metric_params:
     weights:
       category: 0.5
       sentiment: 0.3
       urgency: 0.2
+```
+
+Once you've created your configuration file, you can run prompt-ops with your custom adapter and metric:
+
+```bash
+# Set your API key
+export OPENROUTER_API_KEY=your_key_here
+
+# Run prompt-ops with your custom configuration
+prompt-ops migrate --config docs/advanced/custom_facility_config.yaml
 ```
 
 ## Best Practices for Custom Adapters and Metrics
@@ -393,6 +403,8 @@ metric:
    score = metric(gold, pred)
    print(f"Evaluation score: {score}")
    ```
+
+
 
 ## Advanced Example: Handling Complex JSON Structures
 
