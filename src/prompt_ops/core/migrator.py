@@ -17,8 +17,9 @@ import dspy
 from .exceptions import OptimizationError, EvaluationError
 from .datasets import DatasetAdapter, load_dataset
 from .prompt_strategies import BaseStrategy
-from .evaluation import create_evaluator, Evaluator
+from .evaluation import create_evaluator
 from .utils.llama_utils import is_llama_model
+from .utils import json_to_yaml_file
 
 class PromptMigrator:
     """
@@ -320,118 +321,18 @@ class PromptMigrator:
         logging.info(f"Saved optimized prompt to {file_path}")
         
         # If save_yaml is True, also save as YAML
-        if save_yaml:
+        if save_yaml:            
             yaml_file_path = file_path.replace(".json", ".yaml")
-            self._convert_json_to_yaml(file_path, yaml_file_path, user_prompt)
+            
+            # Use the utility function to convert JSON to YAML
+            json_to_yaml_file(
+                file_path, 
+                yaml_file_path, 
+                user_prompt=user_prompt,
+                task_model=self.task_model if hasattr(self, 'task_model') else None,
+                model_family=self.model_family if hasattr(self, 'model_family') else None,
+                strategy=self.strategy if hasattr(self, 'strategy') else None
+            )
             logging.info(f"Saved YAML prompt to {yaml_file_path}")
             
         return file_path
-        
-    def _convert_json_to_yaml(self, input_file, output_file, user_prompt=None):
-        """
-        Convert the JSON prompt file to YAML format.
-        
-        Args:
-            input_file: Path to the input JSON file
-            output_file: Path to the output YAML file
-            user_prompt: Optional user prompt to append to the YAML file
-        """
-        # Read the JSON file
-        with open(input_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            
-        # Extract the prompt and few_shots from the JSON
-        prompt = data.get("prompt", "")
-        few_shots = data.get("few_shots", [])
-        
-        # Format the prompt text with proper indentation
-        indented_prompt = "\n    ".join(prompt.strip().split("\n"))
-        
-        # Start building the YAML content with the prompt
-        yaml_content = f"""system: |-
-    {indented_prompt}
-
-    Few-shot examples:
-"""
-        
-        # Add each few_shot example
-        for i, example in enumerate(few_shots, 1):
-            question = example.get("question", "")
-            answer = example.get("answer", "")
-            context = example.get("context", "")
-            
-            # Format the question with proper indentation
-            indented_question = "\n        ".join(question.strip().split("\n"))
-            
-            # Format the answer with proper indentation
-            indented_answer = "\n        ".join(answer.strip().split("\n"))
-            
-            # Format the context with proper indentation
-            if context:
-                indented_context = "\n        ".join(context.strip().split("\n"))
-                
-                # Add the example to the YAML content
-                yaml_content += f"""
-        Q:<!> {indented_question} <!>
-        C:<#> {indented_context} <#>
-        A: {indented_answer}
-"""
-            else:
-                # Add the example to the YAML content without context
-                yaml_content += f"""
-    Example {i}:
-        Question: {indented_question}
-        Answer: {indented_answer}
-"""
-        
-        # Add user prompt if provided
-        if user_prompt:
-            indented_user_prompt = "\n    ".join(user_prompt.strip().split("\n"))
-            yaml_content += f"\n\nuser: |-\n    {indented_user_prompt}"
-            
-        # Add config section with task model and optimization info if available
-        if hasattr(self, 'task_model') and self.task_model:
-            model_name = getattr(self.task_model, 'model_name', str(self.task_model))
-            yaml_content += "\n\nconfig:\n"
-            yaml_content += f"  task_model: {model_name}\n"
-            
-            # Add model family info if available
-            if hasattr(self, 'model_family') and self.model_family:
-                yaml_content += f"  model_family: {self.model_family}\n"
-            
-            # Add detailed strategy info if available
-            if hasattr(self, 'strategy'):
-                strategy_name = self.strategy.__class__.__name__
-                yaml_content += f"  optimization:\n"
-                yaml_content += f"    name: {strategy_name}\n"
-                
-                # Add strategy-specific parameters if available
-                if hasattr(self.strategy, 'model_name'):
-                    yaml_content += f"    model_name: {self.strategy.model_name}\n"
-                
-                # Include model-specific settings for LlamaStrategy
-                if strategy_name == "LlamaStrategy":
-                    if hasattr(self.strategy, 'apply_formatting'):
-                        yaml_content += f"    apply_formatting: {self.strategy.apply_formatting}\n"
-                    
-                    if hasattr(self.strategy, 'apply_templates'):
-                        yaml_content += f"    apply_templates: {self.strategy.apply_templates}\n"
-                
-                # Extract and include instruction tips if available
-                if hasattr(self.strategy, 'proposer_kwargs') and self.strategy.proposer_kwargs:
-                    if 'tip' in self.strategy.proposer_kwargs:
-                        tip = self.strategy.proposer_kwargs['tip']
-                        # Format the tip with proper indentation for YAML
-                        indented_tip = "\n        ".join(tip.strip().split("\n"))
-                        yaml_content += f"    instruction_tips: |\n        {indented_tip}\n"
-                
-                # For LlamaStrategy, include original instruction preferences if available
-                if strategy_name == "LlamaStrategy" and hasattr(self.strategy, '_selected_preferences'):
-                    yaml_content += f"    original_preferences:\n"
-                    for i, pref in enumerate(self.strategy._selected_preferences):
-                        indented_pref = "\n        ".join(pref.strip().split("\n"))
-                        yaml_content += f"      - |\n        {indented_pref}\n"
-        
-        # Write the YAML file
-        with open(output_file, "w", encoding="utf-8") as f:
-            f.write(yaml_content)
