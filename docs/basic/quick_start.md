@@ -1,15 +1,5 @@
 # Quick Start Guide: Optimizing Prompts for Llama Models
 
-## What is prompt-ops?
-
-prompt-ops is a tool that automatically optimizes prompts for large language models like Llama. Instead of manually tweaking prompts through trial and error, prompt-ops systematically tests variations and finds the best-performing prompt for your specific task.
-
-**Key Benefits:**
-- Automatically improves prompts to work better with Llama models
-- Tests against real examples to ensure consistent performance
-- Provides objective metrics to measure improvements
-- Automatically adds few-shot examples to boost performance
-
 ## Example Use Case: Customer Service Message Classification
 
 In this guide, we'll optimize a prompt for classifying customer service messages in a facility management context. The task involves extracting three key pieces of information:
