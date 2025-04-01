@@ -1,25 +1,14 @@
-# Prompt Ops Examples
+# Prompt Ops Documentation
 
-This directory contains example scripts demonstrating how to use the prompt_ops package.
+This directory contains comprehensive documentation for the prompt-ops package, organized by complexity level.
 
-## Available Examples
+## Documentation Structure
 
-- Basic usage of PromptMigrator
-- Working with different datasets (DOX, Joule)
-- Custom adapter implementation
-- Using different model providers
+### Basic
+- [Quick Start Guide](basic/quick_start.md) - Get started with prompt-ops quickly
 
-## Running Examples
+### Intermediate
+- [Facility Configuration Guide](intermediate/facility_config.md) - Learn how to configure prompt-ops for facility management use cases
 
-To run an example, make sure you have installed the package and set up your API keys:
-
-```bash
-# Install the package
-pip install -e ..
-
-# Set up your API key
-export OPENROUTER_API_KEY=your_key_here
-
-# Run an example
-python basic_usage.py
-```
+### Advanced
+- [Custom Adapters and Metrics](advanced/custom_adapters_metrics.md) - Create custom dataset adapters and evaluation metrics
