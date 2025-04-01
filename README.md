@@ -75,14 +75,6 @@ For more detailed information, check out these resources:
 - [Intermediate Configuration Example](docs/intermediate/facility_config.md): Learn how to configure prompt-ops for customer service tasks
 - [Advanced Customization](docs/advanced/custom_adapters_metrics.md): Create your own dataset adapters and evaluation metrics
 
-## Examples
-
-The project includes several examples to help you get started:
-
-- **Basic Configuration**: Examples of simple YAML configuration files in `configs/facility-simple.yaml`
-- **Customer Service Analysis**: Complete example of analyzing customer service messages in `configs/facility.yaml`
-- **Tutorials**: Check out the documentation for step-by-step tutorials on using prompt-ops
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
