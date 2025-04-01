@@ -29,6 +29,7 @@ prompt-ops is a Python package that automates the process of optimizing prompts 
 
 ### Input
 - **Prompt**: Your existing prompt designed for other LLMs
+- **Dataset**: Examples for evaluation and optimization (JSON, CSV, etc.) with inputs and expected outputs
 - **Configuration**: YAML file defining optimization parameters, dataset, metrics, etc.
 - **API Key**: Access to LLM APIs (OpenRouter, etc.)
 
@@ -71,9 +72,6 @@ echo "OPENROUTER_API_KEY=your_key_here" > .env
 2. Run the facility-simple example to analyze customer service messages:
 
 ```bash
-# Install the package
-pip install -e .
-
 # Run with the simple facility configuration
 prompt-ops migrate --config configs/facility-simple.yaml
 ```

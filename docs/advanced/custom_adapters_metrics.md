@@ -6,8 +6,10 @@
 
 While prompt-ops provides built-in adapters and metrics for common scenarios, you may need to handle specialized datasets or evaluation requirements. This guide explains how to create two essential classes in a simple Python file:
 
-1. A custom `DatasetAdapter` class - Transforms your custom data format into the standardized format
+1. A custom `DatasetAdapter` class - Transforms your custom data format into the [standardized format](#standardized-format)
 2. A custom `MetricBase` class - Evaluates predictions against ground truth
+
+
 
 ## Creating Custom Adapters and Metrics
 
@@ -87,6 +89,36 @@ class MyCustomMetric(MetricBase):
         # Your implementation here
         pass
 ```
+
+### Standardized Format
+
+The `DatasetAdapter.adapt()` method transforms your custom dataset into a standardized format that prompt-ops can work with. This standardized format is a list of dictionaries, where each dictionary represents a single example with the following structure:
+
+```python
+{
+    "inputs": {
+        # Input fields that will be passed to the model
+        "question": "Your input text here",  # Required - the main input text
+        # Additional input fields can be included if needed
+    },
+    "outputs": {
+        # Expected output fields for evaluation
+        "answer": "Expected output here",  # Required - the expected response
+        # Can be a string or structured data (dict, list, etc.)
+    },
+    "metadata": {  # Optional
+        # Any additional information about the example
+        "id": "example-123",
+        "source": "training-set",
+        # Any other metadata fields
+    }
+}
+```
+
+The standardized format enables prompt-ops to:
+1. Format inputs consistently for different models
+2. Compare model outputs against expected outputs
+3. Track additional information through the metadata field
 
 ## Example Implementation
 

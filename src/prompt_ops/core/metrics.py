@@ -524,7 +524,7 @@ def _flatten_keys(obj: Any, prefix: str = "") -> List[str]:
     return keys
 
 
-class StandardJSONMetric:
+class StandardJSONMetric(MetricBase):
     """
     A standardized metric for evaluating JSON predictions against ground truth.
     
@@ -583,29 +583,32 @@ class StandardJSONMetric:
         self.strict_json = strict_json
         self.output_field = output_field
         
-    def __call__(self, example, prediction, trace=False, **kwargs) -> float:
+    def __call__(self, gold: Any, pred: Any, trace: bool = False, **kwargs) -> Union[Dict[str, float], float]:
         """
         Evaluate a prediction against the ground truth.
         
         Args:
-            example: The example with ground truth
-            prediction: The model's prediction
+            gold: Ground truth example. Can be a raw value, dictionary, or object
+                 with specific attributes
+            pred: Predicted example. Can be a raw value, dictionary, or object
             trace: Whether to enable tracing for debugging
-            **kwargs: Additional arguments
+            **kwargs: Additional metric-specific parameters
             
         Returns:
-            Float score between 0.0 and 1.0
+            Either a dictionary containing metric scores (if trace=True) or a single float score
         """
         # Extract ground truth using a priority-based approach
-        ground_truth = self._extract_value(example, self.output_field)
+        ground_truth = self.extract_value(gold, self.output_field)
         
         # Extract prediction value
-        prediction_value = self._extract_value(prediction, "answer") or prediction
+        prediction_value = self.extract_value(pred, "answer") or pred
         
         # Get the full evaluation results
         results = self.evaluate(ground_truth, prediction_value, trace=trace, **kwargs)
         
-        # Return just the total score as a float
+        # Return the full results dictionary if trace is True, otherwise just the total score
+        if trace:
+            return results
         return float(results.get("total", 0.0))
         
     def _extract_value(self, obj, field_name):
