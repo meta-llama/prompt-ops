@@ -8,11 +8,11 @@ version = "0.1.0"
 description = "A tool for migrating and optimizing prompts across different LLM providers"
 readme = "README.md"
 authors = []
-license = {text = "Proprietary"}
+license = {text = "MIT"}
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
-    "License :: Other/Proprietary License",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 requires-python = ">=3.9"

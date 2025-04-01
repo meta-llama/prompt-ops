@@ -17,12 +17,12 @@ from typing import Dict, List, Optional, Any, Tuple
 import click
 from dotenv import load_dotenv
 
-from ..core.prompt_strategies import BaseStrategy, BasicOptimizationStrategy, OptimizationError
-from ..core.model_strategies import LlamaStrategy
-from ..core.migrator import PromptMigrator
-from ..core.model import setup_model
-from ..core.metrics import DSPyMetricAdapter, StandardJSONMetric
-from ..core.datasets import DatasetAdapter, load_dataset
+from prompt_ops.core.prompt_strategies import BaseStrategy, BasicOptimizationStrategy, OptimizationError
+from prompt_ops.core.model_strategies import LlamaStrategy
+from prompt_ops.core.migrator import PromptMigrator
+from prompt_ops.core.model import setup_model
+from prompt_ops.core.metrics import DSPyMetricAdapter, StandardJSONMetric
+from prompt_ops.core.datasets import DatasetAdapter, load_dataset
 
 
 @click.group()
@@ -67,7 +67,7 @@ def optimize_prompt(prompt: str, strategy: str, model: str):
     strategy_instance = strategy_class(model_name=model)
     
     # Create migrator and optimize
-    from ..core.migrator import PromptMigrator
+    from prompt_ops.core.migrator import PromptMigrator
     migrator = PromptMigrator(strategy=strategy_instance)
     
     # Optimize the prompt

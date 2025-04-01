@@ -12,7 +12,7 @@ In this guide, we'll optimize a prompt for classifying customer service messages
 Here's our starting prompt that we want to optimize:
 
 ```
-You are a helpful assistant. Extract and return a json with the follwoing keys and values:
+You are a helpful assistant. Extract and return a json with the following keys and values:
 - "urgency" as one of `high`, `medium`, `low`
 - "sentiment" as one of `negative`, `neutral`, `positive`
 - "categories" Create a dictionary with categories as keys and boolean values (True/False), where the value indicates whether the category is one of the best matching support category tags from: `emergency_repair_services`, `routine_maintenance_requests`, `quality_and_safety_concerns`, `specialized_cleaning_services`, `general_inquiries`, `sustainability_and_environmental_practices`, `training_and_support_requests`, `cleaning_services_scheduling`, `customer_feedback_and_complaints`, `facility_management_issues`
@@ -79,7 +79,7 @@ Here's what an optimized prompt looks like:
 
 ```yaml
 system: |-
-    <s>[INST] You are a helpful assistant. Extract and return a json with the follwoing keys and values:
+    <s>[INST] You are a helpful assistant. Extract and return a json with the following keys and values:
     - "urgency" as one of `high`, `medium`, `low`
     - "sentiment" as one of `negative`, `neutral`, `positive`
     - "categories" Create a dictionary with categories as keys and boolean values (True/False), where the value indicates whether the category is one of the best matching support category tags from: `emergency_repair_services`, `routine_maintenance_requests`, `quality_and_safety_concerns`, `specialized_cleaning_services`, `general_inquiries`, `sustainability_and_environmental_practices`, `training_and_support_requests`, `cleaning_services_scheduling`, `customer_feedback_and_complaints`, `facility_management_issues`
@@ -101,7 +101,7 @@ system: |-
 ## Next Steps
 
 1. **Use the optimized prompt** in your production system
-2. **Try different optimization strategies** (light, medium, heavy)
+2. **Try different optimization strategies** (basic, intermediate, advanced)
 3. **Customize the configuration** for your specific use case
 
-For a detailed guide on all configuration options, check out the [Custom Adapters Guide](/examples/intermediate/facility_config.md) which explains each setting in depth.
+For a detailed guide on all configuration options, check out the [Custom Adapters Guide](../intermediate/facility_config.md) which explains each setting in depth.

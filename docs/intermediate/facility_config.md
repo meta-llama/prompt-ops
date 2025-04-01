@@ -1,6 +1,6 @@
 # Intermediate Guide: Facility YAML Configuration
 
-> **Note:** If you're new to prompt-ops, start with the [Quick Start Guide](/examples/basic/quick_start.md) before exploring these advanced options.
+> **Note:** If you're new to prompt-ops, start with the [Quick Start Guide](../basic/quick_start.md) before exploring these advanced options.
 
 ## Overview
 
@@ -90,7 +90,7 @@ Now let's explore each section in detail.
 
 ## Model Configuration
 
-The `model` section defines which language model to use and how it should behave:
+The `model` section defines which language model to use for both prompt optimization and inference. This is the LLM that will process your dataset examples, generate responses, and be used to evaluate and refine your prompts:
 
 ```yaml
 model:
@@ -307,5 +307,5 @@ While this tutorial focuses on facility classification, you can adapt the config
 
 This intermediate guide has covered the main configuration options available in prompt-ops for optimizing prompts in the facility management classification task. By understanding and customizing these settings, you can achieve better results for your specific use case.
 
-For more advanced use cases, such as creating custom adapters and metrics for specialized datasets or evaluation requirements, see the [Advanced Guide: Creating Custom Adapters and Metrics](/examples/advanced/custom_adapters_metrics.md).
+For more advanced use cases, such as creating custom adapters and metrics for specialized datasets or evaluation requirements, see the [Advanced Guide: Creating Custom Adapters and Metrics](../advanced/custom_adapters_metrics.md).
 
