@@ -49,7 +49,7 @@ prompt:
 # Metric Configuration
 metric:
   class: "standard_json"  # Can use shorthand instead of full class path
-  evaluation_mode: "flattened"
+  evaluation_mode: "full_json_comparison"
   fields: ["urgency", "sentiment", "categories"]
   nested_fields:
     categories: [
@@ -190,7 +190,7 @@ The `metric` section defines how to evaluate prompt performance:
 metric:
   class: "prompt_ops.core.metrics.StandardJSONMetric"
   params:
-  evaluation_mode: "flattened"
+  evaluation_mode: "full_json_comparison"
   fields: ["urgency", "sentiment", "categories"]
   nested_fields:
     categories: [
@@ -209,7 +209,7 @@ metric:
 | Parameter | Description | Recommended Values |
 |-----------|-------------|-------------------|
 | `class` | The metric class to use | For JSON: `standard_json` or `prompt_ops.core.metrics.StandardJSONMetric`<br>For similarity: `similarity` |
-| `evaluation_mode` | How to compare outputs | For nested JSON: `"flattened"`<br>For specific field validation: `"field_based"` |
+| `evaluation_mode` | How to compare outputs | For nested JSON: `"full_json_comparison"`<br>For specific field validation: `"selected_fields_comparison"` |
 | `fields` | Which fields to evaluate | List all important fields: `["urgency", "sentiment", "categories"]` |
 | `nested_fields` | Subfields within nested structures | For categories: list all possible category values |
 | `required_fields` | Fields that must be present | Critical fields: `["urgency", "sentiment", "categories"]` |

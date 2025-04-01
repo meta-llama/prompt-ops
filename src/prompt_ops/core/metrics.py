@@ -563,7 +563,7 @@ class StandardJSONMetric(MetricBase):
                  nested_fields: Optional[Dict[str, List[str]]] = None,
                  field_weights: Optional[Dict[str, float]] = None,
                  strict_json: bool = False,
-                 evaluation_mode: str = "field_based",
+                 evaluation_mode: str = "selected_fields_comparison",
                  output_field: str = "answer",
                  **kwargs):
         """
@@ -578,15 +578,15 @@ class StandardJSONMetric(MetricBase):
                           list of child fields as value.
             field_weights: Weights for each field in the evaluation.
             strict_json: Whether to use strict JSON parsing (no code block extraction).
-            evaluation_mode: Mode for evaluation ('field_based' or 'flattened').
+            evaluation_mode: Mode for evaluation ('selected_fields_comparison' or 'full_json_comparison').
             output_field: Name of the field containing the ground truth output.
                          This should match the 'golden_output_field' in the adapter config.
             **kwargs: Additional parameters for customization.
         """
         # Set up evaluation mode
         self.evaluation_mode = evaluation_mode
-        if evaluation_mode not in ["field_based", "flattened"]:
-            raise ValueError(f"Invalid evaluation mode: {evaluation_mode}. Must be 'field_based' or 'flattened'.")
+        if evaluation_mode not in ["selected_fields_comparison", "full_json_comparison"]:
+            raise ValueError(f"Invalid evaluation mode: {evaluation_mode}. Must be 'selected_fields_comparison' or 'full_json_comparison'.")
         
         # Set up fields to evaluate
         if isinstance(output_fields, dict):
@@ -828,7 +828,7 @@ class StandardJSONMetric(MetricBase):
             Dictionary with evaluation results
         """
         # Use flattened comparison mode if specified
-        if self.evaluation_mode == "flattened":
+        if self.evaluation_mode == "full_json_comparison":
             return self.evaluate_flattened(ground_truth, predictions, **kwargs)
             
         # Otherwise use field-based comparison

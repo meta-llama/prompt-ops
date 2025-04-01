@@ -43,7 +43,7 @@ model:
 # Metric configuration
 metric:
   class: "standard_json"
-  evaluation_mode: "flattened"
+  evaluation_mode: "full_json_comparison"
   fields: ["urgency", "sentiment", "categories"]
   required_fields: ["urgency", "sentiment", "categories"]
 
