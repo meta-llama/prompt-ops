@@ -1,198 +1,92 @@
-# Prompt Ops
+# prompt-ops
 
-A Python package for migrating and optimizing prompts from other LLMs to Llama using configurable strategies.
+> Automated prompt engineering and optimization for LLMs like Llama
 
-## Overview
+## What is prompt-ops?
 
-The Prompt Ops package provides developers with functionality to migrate and optimize prompts from other LLMs to Llama using configurable strategies. This package offers a flexible, pluggable API for prompt optimization with multiple integration points.
+prompt-ops is a Python package that automates the process of optimizing prompts for large language models, with a focus on Llama models. It provides both fast template-based optimization and thorough dataset-driven approaches to help you get the best performance from your LLM prompts without manual trial and error.
 
-## Installation
+## Why use prompt-ops?
 
-### From Source
+- **Automated Optimization**: Eliminates manual prompt engineering through data-driven optimization techniques
+- **Improved Output Quality**: Enhances LLM responses by applying model-specific best practices and formatting
+- **Simple Migration**: Easily migrate prompts from other LLM models to Llama with configurable strategies
+- **Flexible Approaches**: Choose between fast template-based optimization or thorough dataset-based optimization
+- **Standardized Evaluation**: Evaluate prompt performance with customizable metrics and datasets
+
+## Quick Start (5 minutes)
+
+### Installation
 
 ```bash
-git clone <repository-url>
+# From PyPI
+pip install prompt-ops
+
+# From source
+git clone https://github.com/yourusername/prompt-ops.git
 cd prompt-ops
 pip install -e .
 ```
 
-### Development Installation
+### Basic Usage
 
-For development, install with additional dependencies:
-
-```bash
-pip install -e ".[dev]"
-```
-
-### Environment Setup with uv
-
-#### Installing uv
+1. Create a `.env` file in the project root:
 
 ```bash
-# Install uv using pip
-pip install uv
-
-# Or on macOS with Homebrew
-brew install uv
+# Create and open .env file
+echo "OPENROUTER_API_KEY=your_key_here" > .env
 ```
 
-#### Creating a Virtual Environment for Prompt Ops
+2. Run the facility-simple example to analyze customer service messages:
 
 ```bash
-# Create a dedicated virtual environment for prompt-ops
-uv venv prompt-ops-env
+# Install the package
+pip install -e .
 
-# Activate the environment
-source prompt-ops-env/bin/activate  # On Unix/macOS
-# or
-prompt-ops-env\Scripts\activate     # On Windows
-
-# Navigate to the prompt-ops directory
-cd /path/to/prompt-ops
+# Run with the simple facility configuration
+prompt-ops migrate --config configs/facility-simple.yaml
 ```
 
-#### Installing Prompt Ops Dependencies with uv
+This example demonstrates how prompt-ops migrates a customer service analysis prompt from OpenAI to Llama models. The prompt analyzes customer messages, categorizing them by urgency (high/medium/low), sentiment (positive/neutral/negative), and topic categories. The optimized prompt will be saved to the `results` directory with performance metrics comparing the original and optimized versions.
 
-```bash
-# Install prompt-ops and its core dependencies
-uv pip install -e .
+### Prompt Transformation Example
 
-# For development work (includes testing and code quality tools)
-uv pip install -e ".[dev]"
+Below is an example of how prompt-ops transforms a prompt from OpenAI to Llama:
 
-# This will install all dependencies including:
-# - dspy for prompt optimization
-# - numpy and scipy for numerical operations
-# - pandas for data manipulation
-# - openai and litellm for model access
-```
+| Original OpenAI Prompt | Optimized Llama Prompt |
+|------------------------|------------------------|
+| You are a helpful assistant. Extract and return a json with the follwoing keys and values:<br>- "urgency" as one of `high`, `medium`, `low`<br>- "sentiment" as one of `negative`, `neutral`, `positive`<br>- "categories" Create a dictionary with categories as keys and boolean values (True/False), where the value indicates whether the category is one of the best matching support category tags from: `emergency_repair_services`, `routine_maintenance_requests`, etc.<br><br>Your complete message should be a valid json string that can be read directly. | You are an expert in analyzing customer service messages. Your task is to categorize the following message based on urgency, sentiment, and relevant categories.<br><br>Analyze the message and return a JSON object with these fields:<br>1. "urgency": Classify as "high", "medium", or "low" based on how quickly this needs attention<br>2. "sentiment": Classify as "negative", "neutral", or "positive" based on the customer's tone<br>3. "categories": Create a dictionary with facility management categories as keys and boolean values<br><br>Only include these exact keys in your response. Return a valid JSON object without code blocks, prefixes, or explanations. |
 
-#### Using uv with Existing Conda Environment for Prompt Ops
 
-```bash
-# If you prefer using conda for environment management
-# First create a conda environment with Python 3.10
-conda create -n prompt-ops python=3.10 -y
+## Key Features
 
-# Activate the conda environment
-conda activate prompt-ops
+- **Multiple Optimization Strategies**: Choose from template-based or dataset-driven approaches
+- **Standardized Dataset Adapters**: Easily work with different dataset formats using built-in or custom adapters
+- **Customizable Metrics**: Evaluate prompt performance with configurable metrics
+- **YAML Configuration**: Define your entire optimization pipeline in a single YAML file
+- **CLI Interface**: Run optimizations directly from the command line
+- **Llama-Specific Optimizations**: Apply best practices for Llama models automatically
 
-# Install prompt-ops dependencies with uv (much faster than regular pip)
-uv pip install -e ".[dev]"
-```
+## Documentation and Examples
 
-Using uv can make dependency resolution and installation much faster, especially for large projects with complex dependency trees.
+For more detailed information, check out these resources:
 
-## Usage
-
-### Basic Python Usage
-
-```python
-from prompt_ops.core.migrator import PromptMigrator
-from prompt_ops.core.prompt_strategies import BasicOptimizationStrategy
-
-# Create a migrator with a specific strategy
-migrator = PromptMigrator(strategy=BasicOptimizationStrategy())
-
-# Optimize a prompt
-optimized_prompt = migrator.optimize(
-    {"text": "Your original prompt here", "inputs": ["question"], "outputs": ["answer"]}
-)
-print(optimized_prompt.signature.instructions)
-```
-
-### Using Dataset Adapters
-
-The package includes a standardized dataset loading system using the Dataset Adapters pattern:
-
-```python
-from prompt_ops.core.migrator import PromptMigrator
-from prompt_ops.core.prompt_strategies import BasicOptimizationStrategy
-from prompt_ops.datasets.custom import CustomAdapter  # Import a specific adapter
-
-# Create a strategy and migrator
-strategy = BasicOptimizationStrategy(
-    model_name="llama-70b",
-    metric=your_metric,
-    task_model=model,
-    prompt_model=model
-)
-
-migrator = PromptMigrator(
-    strategy=strategy,
-    task_model=model,
-    prompt_model=model
-)
-
-# Create an adapter for your dataset
-adapter = CustomAdapter(dataset_path="/path/to/your/dataset.json")
-
-# Load dataset using adapter
-trainset, valset, testset = migrator.load_dataset_with_adapter(
-    adapter, train_size=0.25, validation_size=0.25
-)
-
-# Optimize a prompt with the loaded dataset
-optimized = migrator.optimize(
-    {
-        "text": "Your original prompt here", 
-        "inputs": ["question", "context"], 
-        "outputs": ["answer"]
-    },
-    trainset=trainset,
-    valset=valset,
-    testset=testset,
-    save_to_file=True,
-    file_path="optimized_prompt.txt"
-)
-```
-
-## Features
-
-- Multiple optimization strategies (Light, Heavy)
-- Customizable metrics for evaluation
-- Standardized dataset loading with Dataset Adapters
-- Integration with Llama models
-
-## Dataset Adapters
-
-The package includes a standardized way to load and process different datasets using the Dataset Adapters pattern:
-
-### Available Adapters
-
-The package includes several dataset adapters. You can also create your own custom adapters.
-
-### Creating a Custom Adapter
-
-To create an adapter for a new dataset, subclass `DatasetAdapter` and implement the `adapt` method:
-
-```python
-from prompt_migrator.core.datasets import DatasetAdapter
-
-class MyCustomAdapter(DatasetAdapter):
-    def adapt(self):
-        data = self.load_raw_data()
-        return [
-            {
-                "inputs": {
-                    "field1": doc["your_input_field1"],
-                    "field2": doc["your_input_field2"],
-                },
-                "outputs": {
-                    "field1": doc["your_output_field"],
-                },
-                "metadata": {  # Optional
-                    "extra_info": doc["some_extra_info"],
-                }
-            }
-            for doc in data
-        ]
-```
+- [Quick Start Guide](docs/basic/quick_start.md): Get up and running with prompt-ops
+- [Intermediate Configuration Example](docs/intermediate/facility_config.md): Learn how to configure prompt-ops for customer service tasks
+- [Advanced Customization](docs/advanced/custom_adapters_metrics.md): Create your own dataset adapters and evaluation metrics
 
 ## Examples
 
-The repository includes example implementations for different use cases. Check the `examples/` directory for more information.
+The project includes several examples to help you get started:
+
+- **Basic Configuration**: Examples of simple YAML configuration files in `configs/facility-simple.yaml`
+- **Customer Service Analysis**: Complete example of analyzing customer service messages in `configs/facility.yaml`
+- **Tutorials**: Check out the documentation for step-by-step tutorials on using prompt-ops
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-Proprietary - Internal Meta use only
+This project is licensed under the MIT License - see the LICENSE file for details.
