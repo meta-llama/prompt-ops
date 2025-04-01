@@ -15,8 +15,9 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 
 import click
+from dotenv import load_dotenv
 
-from ..core.prompt_strategies import BaseStrategy, BasicOptimizationStrategy
+from ..core.prompt_strategies import BaseStrategy, BasicOptimizationStrategy, OptimizationError
 from ..core.model_strategies import LlamaStrategy
 from ..core.migrator import PromptMigrator
 from ..core.model import setup_model
@@ -250,11 +251,21 @@ def load_config(config_path):
     help="Directory to save optimization results"
 )
 @click.option(
+    "--save-yaml/--no-save-yaml",
+    default=True,
+    help="Whether to save results in YAML format in addition to JSON"
+)
+@click.option(
     "--api-key-env",
     default="OPENROUTER_API_KEY",
     help="Environment variable name for the API key"
 )
-def migrate(config, model, output_dir, api_key_env):
+@click.option(
+    "--dotenv-path",
+    default=".env",
+    help="Path to the .env file containing API keys"
+)
+def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path):
     """
     Migrate and optimize prompts using a YAML configuration file.
     
@@ -264,11 +275,16 @@ def migrate(config, model, output_dir, api_key_env):
     Example:
         prompt-ops migrate --config configs/facility.yaml
     """
+    # Load environment variables from .env file if it exists
+    if os.path.exists(dotenv_path):
+        load_dotenv(dotenv_path)
+        click.echo(f"Loaded environment variables from {dotenv_path}")
+    
     # Check if API key is set
     api_key = os.getenv(api_key_env)
     if not api_key:
         click.echo(f"Error: {api_key_env} environment variable not set", err=True)
-        click.echo(f"Please set it with: export {api_key_env}=your_key_here", err=True)
+        click.echo(f"Please set it with: export {api_key_env}=your_key_here or add it to your .env file", err=True)
         sys.exit(1)
     
     # Load configuration
@@ -318,29 +334,76 @@ def migrate(config, model, output_dir, api_key_env):
     model_name = model_config.get("name", "").split("/")[-1]
     
     # Check if strategy is specified in config
-    optimization_config = config_dict.get("optimization", {})
-    strategy_type = optimization_config.get("strategy", "basic")
+    strategy_config = config_dict.get("strategy", {})
+    strategy_type = strategy_config.get("type")
     
-    # Create appropriate strategy
-    if strategy_type.lower() == "llama":
-        strategy = LlamaStrategy(
-            model_name=model_name,
-            metric=metric,
-            task_model=model_instance,
-            prompt_model=model_instance,
-            apply_formatting=optimization_config.get("apply_formatting", True),
-            apply_templates=optimization_config.get("apply_templates", True),
-            template_type=optimization_config.get("template_type", "basic")
-        )
-        click.echo(f"Using LlamaStrategy for model: {model_name}")
-    else:  # Default to basic strategy
-        strategy = BasicOptimizationStrategy(
-            model_name=model_name,
-            metric=metric,
-            task_model=model_instance,
-            prompt_model=model_instance
-        )
-        click.echo(f"Using BasicOptimizationStrategy for model: {model_name}")
+    # If strategy type is specified in config, use it
+    if strategy_type:
+        if strategy_type.lower() == "llama":
+            # Get Llama-specific parameters
+            apply_formatting = strategy_config.get("apply_formatting", True)
+            apply_templates = strategy_config.get("apply_templates", True)
+            template_type = strategy_config.get("template_type", "basic")
+            
+            strategy = LlamaStrategy(
+                model_name=model_name,
+                metric=metric,
+                task_model=model_instance,
+                prompt_model=model_instance,
+                apply_formatting=apply_formatting,
+                apply_templates=apply_templates,
+                template_type=template_type
+            )
+            click.echo(f"Using LlamaStrategy from config for model: {model_name}")
+        elif strategy_type.lower() == "basic":
+            strategy = BasicOptimizationStrategy(
+                model_name=model_name,
+                metric=metric,
+                task_model=model_instance,
+                prompt_model=model_instance
+            )
+            click.echo(f"Using BasicOptimizationStrategy from config for model: {model_name}")
+        else:
+            click.echo(f"Unknown strategy type: {strategy_type}, falling back to auto-detection")
+            # Fall back to auto-detection
+            if "llama" in model_name.lower():
+                strategy = LlamaStrategy(
+                    model_name=model_name,
+                    metric=metric,
+                    task_model=model_instance,
+                    prompt_model=model_instance,
+                    apply_formatting=True,
+                    apply_templates=True
+                )
+                click.echo(f"Auto-detected LlamaStrategy for model: {model_name}")
+            else:
+                strategy = BasicOptimizationStrategy(
+                    model_name=model_name,
+                    metric=metric,
+                    task_model=model_instance,
+                    prompt_model=model_instance
+                )
+                click.echo(f"Auto-detected BasicOptimizationStrategy for model: {model_name}")
+    else:
+        # Auto-detect based on model name
+        if "llama" in model_name.lower():
+            strategy = LlamaStrategy(
+                model_name=model_name,
+                metric=metric,
+                task_model=model_instance,
+                prompt_model=model_instance,
+                apply_formatting=True,
+                apply_templates=True
+            )
+            click.echo(f"Auto-detected LlamaStrategy for model: {model_name}")
+        else:
+            strategy = BasicOptimizationStrategy(
+                model_name=model_name,
+                metric=metric,
+                task_model=model_instance,
+                prompt_model=model_instance
+            )
+            click.echo(f"Auto-detected BasicOptimizationStrategy for model: {model_name}")
     
     # Create migrator
     migrator = PromptMigrator(
@@ -385,40 +448,80 @@ def migrate(config, model, output_dir, api_key_env):
     prompt_outputs = prompt_config.get("outputs", ["answer"])
     
     # Set up output path
+    output_config = config_dict.get("output", {})
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_prefix = config_dict.get("output", {}).get("prefix", Path(config).stem)
     
     # Handle relative output directory path - relative to current working directory
     if not os.path.isabs(output_dir):
         output_dir = os.path.abspath(output_dir)
-        
+    
+    # Use the specified prefix from config, or fall back to the config file name
+    if "prefix" in output_config:
+        output_prefix = output_config.get("prefix")
+        click.echo(f"Using output prefix from config: {output_prefix}")
+    else:
+        output_prefix = Path(config).stem
+        click.echo(f"Using config filename as output prefix: {output_prefix}")
+    
     Path(output_dir).mkdir(parents=True, exist_ok=True)
-    file_path = os.path.join(output_dir, f"{output_prefix}_{timestamp}.json")
+    json_file_path = os.path.join(output_dir, f"{output_prefix}_{timestamp}.json")
+    yaml_file_path = os.path.join(output_dir, f"{output_prefix}_{timestamp}.yaml")
     
     # Try to optimize the prompt and save it to a file
     try:
-        click.echo("Starting prompt optimization...")
-        optimized = migrator.optimize(
-            {
-                "text": prompt_text, 
-                "inputs": prompt_inputs, 
-                "outputs": prompt_outputs
-            },
-            trainset=trainset,
-            valset=valset,
-            testset=testset,
-            save_to_file=True,
-            file_path=file_path
-        )
-        
-        click.echo("\n=== Optimization Complete ===")
-        click.echo(f"Results saved to: {file_path}")
-        click.echo("\nOptimized prompt:")
-        click.echo("=" * 80)
-        click.echo(optimized.signature.instructions)
-        click.echo("=" * 80)
-    except Exception as e:
+        # Wrap the optimization in a try/except block to catch parallelizer errors
+        try:
+            click.echo("Starting prompt optimization...")
+            optimized = migrator.optimize(
+                {
+                    "text": prompt_text, 
+                    "inputs": prompt_inputs, 
+                    "outputs": prompt_outputs
+                },
+                trainset=trainset,
+                valset=valset,
+                testset=testset,
+                save_to_file=True,
+                file_path=json_file_path
+            )
+            
+            # Also save to YAML format if requested
+            if save_yaml:
+                try:
+                    # Get the data from the JSON file
+                    with open(json_file_path, 'r') as json_file:
+                        result_data = json.load(json_file)
+                    
+                    # Save as YAML
+                    with open(yaml_file_path, 'w') as yaml_file:
+                        yaml.dump(result_data, yaml_file, default_flow_style=False)
+                except Exception as yaml_error:
+                    click.echo(f"Warning: Could not save YAML file: {str(yaml_error)}", err=True)
+            
+            click.echo("\n=== Optimization Complete ===")
+            click.echo(f"Results saved to: {json_file_path}")
+            if save_yaml:
+                click.echo(f"Results also saved to: {yaml_file_path}")
+            click.echo("\nOptimized prompt:")
+            click.echo("=" * 80)
+            click.echo(optimized.signature.instructions)
+            click.echo("=" * 80)
+        except RuntimeError as re:
+            if "cannot schedule new futures after shutdown" in str(re):
+                click.echo("\nEncountered a parallelizer shutdown error. This is likely due to a threading issue in DSPy.")
+                click.echo("The optimization may have partially completed. Check the output files for results.")
+                click.echo(f"JSON output file: {json_file_path}")
+                if save_yaml:
+                    click.echo(f"YAML output file: {yaml_file_path}")
+            else:
+                raise
+    except OptimizationError as e:
         click.echo(f"\nOptimization failed: {str(e)}", err=True)
+        click.echo("No optimized prompt was generated.")
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"\nUnexpected error during optimization: {str(e)}", err=True)
+        click.echo("No optimized prompt was generated.")
         sys.exit(1)
 
 

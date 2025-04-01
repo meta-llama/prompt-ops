@@ -1,4 +1,3 @@
-# Core configuration - essential elements only
 prompt:
   file: "../dataset/facility-synth/facility_prompt_sys.txt"
   inputs: ["question"]
