@@ -274,11 +274,22 @@ class BasicOptimizationStrategy(BaseStrategy):
             # Map our naming convention to DSPy's expected values
             dspy_auto_mode = map_auto_mode_to_dspy(self.auto)
             
+            # Extract the underlying DSPy model if we have model adapters
+            task_model = self.task_model
+            prompt_model = self.prompt_model
+            
+            # Handle DSPyModelAdapter instances
+            if hasattr(task_model, '_model'):
+                task_model = task_model._model
+                
+            if hasattr(prompt_model, '_model'):
+                prompt_model = prompt_model._model
+                
             # Configure the optimizer with all parameters
             optimizer = dspy.MIPROv2(
                 metric=self.metric,
-                prompt_model=self.prompt_model,
-                task_model=self.task_model,
+                prompt_model=prompt_model,
+                task_model=task_model,
                 max_bootstrapped_demos=self.max_bootstrapped_demos,
                 max_labeled_demos=self.max_labeled_demos,
                 auto=dspy_auto_mode,  # Use the mapped value

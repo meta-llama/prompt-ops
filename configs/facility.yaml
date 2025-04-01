@@ -1,9 +1,9 @@
 # Facility dataset configuration for prompt optimization
 
-  #TODO: think if there are any way to abstract this  
-  # provider: openrouter/hosted_vllm/togethercomputer
-  # model: meta-llama/llama-3.3-70b-instruct
-  # litellm
+#TODO: think if there are any way to abstract this
+# provider: openrouter/hosted_vllm/togethercomputer
+# model: meta-llama/llama-3.3-70b-instruct
+# litellm
 model:
   name: "openrouter/meta-llama/llama-3.3-70b-instruct"
   api_base: "https://openrouter.ai/api/v1" # rename base_url:
@@ -14,7 +14,6 @@ model:
   # frequency_penalty: 0.0 # Penalize repeated tokens
   # presence_penalty: 0.0  # Penalize tokens already in the context
   # cache: false           # Whether to cache responses
-  
 
 ## name the data adapter take in N params
 dataset:
@@ -25,10 +24,9 @@ dataset:
   # seed: 42               # Random seed for dataset splitting
   # shuffle: true          # Whether to shuffle the dataset before splitting
   # Required parameters
-  input_field: ["fields", "input"]  # Field to use as input (string, list, or dict)
-  golden_output_field: "answer"    # Field to use as ground truth/reference output (string, list, or dict)
+  input_field: ["fields", "input"] # Field to use as input (string, list, or dict)
+  golden_output_field: "answer" # Field to use as ground truth/reference output (string, list, or dict)
 
-  
 prompt:
   text: |
     Giving the following message:
@@ -51,18 +49,19 @@ metric:
     fields: ["urgency", "sentiment", "categories"]
     # Nested fields to evaluate
     nested_fields:
-      categories: [
-        "emergency_repair_services", 
-        "routine_maintenance_requests", 
-        "quality_and_safety_concerns", 
-        "specialized_cleaning_services", 
-        "general_inquiries", 
-        "sustainability_and_environmental_practices", 
-        "training_and_support_requests", 
-        "cleaning_services_scheduling", 
-        "customer_feedback_and_complaints", 
-        "facility_management_issues"
-      ]
+      categories:
+        [
+          "emergency_repair_services",
+          "routine_maintenance_requests",
+          "quality_and_safety_concerns",
+          "specialized_cleaning_services",
+          "general_inquiries",
+          "sustainability_and_environmental_practices",
+          "training_and_support_requests",
+          "cleaning_services_scheduling",
+          "customer_feedback_and_complaints",
+          "facility_management_issues",
+        ]
     # Fields that must be present for a valid prediction
     required_fields: ["urgency", "sentiment", "categories"]
     # Optional field weights (default is 1.0 for each field)
@@ -73,12 +72,11 @@ metric:
     # Whether to use strict JSON parsing (no code block extraction)
     strict_json: false
 
-
 optimization:
-  strategy: "basic"                 # Strategy to use (basic, intermediate, advanced, custom)
-  max_rounds: 3                     # Maximum number of optimization rounds
-  max_examples_per_round: 5         # Maximum examples to use per round
-  max_prompt_length: 2048           # Maximum length of the optimized prompt
+  strategy: "basic" # Strategy to use (basic, intermediate, advanced, custom)
+  max_rounds: 3 # Maximum number of optimization rounds
+  max_examples_per_round: 5 # Maximum examples to use per round
+  max_prompt_length: 2048 # Maximum length of the optimized prompt
   # num_candidates: 5               # Number of candidate prompts to generate
   # bootstrap_examples: 4           # Number of examples to bootstrap
   # num_threads: 36                 # Number of threads for parallel processing

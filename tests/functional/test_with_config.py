@@ -505,8 +505,10 @@ def main():
 
     # Use config values for model setup
     model_config = config.get("model", {})
+    adapter_type = model_config.get("adapter_type", "dspy")
     model = setup_model(
         model_name=model_config.get("name", "openrouter/meta-llama/llama-3.3-70b-instruct"),
+        adapter_type=adapter_type,
         api_base=model_config.get("api_base", "https://openrouter.ai/api/v1"),
         api_key=os.getenv("OPENROUTER_API_KEY"),
         max_tokens=model_config.get("max_tokens", 100000),

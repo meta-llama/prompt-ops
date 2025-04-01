@@ -297,8 +297,10 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path):
     
     # Use config values for model setup
     model_config = config_dict.get("model", {})
+    adapter_type = model_config.get("adapter_type", "dspy")
     model_instance = setup_model(
         model_name=model if model else model_config.get("name", "openrouter/meta-llama/llama-3.3-70b-instruct"),
+        adapter_type=adapter_type,
         api_base=model_config.get("api_base", "https://openrouter.ai/api/v1"),
         api_key=api_key,
         max_tokens=model_config.get("max_tokens", 2048),

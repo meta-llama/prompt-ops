@@ -28,29 +28,46 @@ class ModelAdapter(ABC):
     """
     Base adapter class for different model providers.
     
-    This abstract class defines the interface that all model adapters must implement.
+    This abstract class defines a common interface for all LLM interactions,
+    regardless of the underlying implementation (DSPy, TextGrad, etc.).
     """
     
     @abstractmethod
-    def get_model(self, **kwargs) -> Any:
+    def __init__(self, model_name: str = None, **kwargs):
         """
-        Get a model instance from the provider.
+        Initialize the model adapter with configuration parameters.
         
         Args:
-            **kwargs: Provider-specific configuration options
-            
-        Returns:
-            A model instance from the provider
+            model_name: The name/identifier of the model to use
+            **kwargs: Additional model-specific configuration parameters
         """
         pass
     
     @abstractmethod
-    def configure(self, **kwargs) -> None:
+    def generate(self, prompt: str, **kwargs) -> str:
         """
-        Configure the model provider with global settings.
+        Generate text from a prompt using the underlying model.
         
         Args:
-            **kwargs: Provider-specific configuration options
+            prompt: The input prompt text
+            **kwargs: Generation parameters (temperature, max_tokens, etc.)
+            
+        Returns:
+            The generated text response
+        """
+        pass
+    
+    @abstractmethod
+    def generate_with_chat_format(self, messages: List[Dict[str, str]], **kwargs) -> str:
+        """
+        Generate text using a chat format with multiple messages.
+        
+        Args:
+            messages: List of message dictionaries with 'role' and 'content' keys
+            **kwargs: Generation parameters (temperature, max_tokens, etc.)
+            
+        Returns:
+            The generated text response
         """
         pass
 
@@ -60,49 +77,124 @@ class DSPyModelAdapter(ModelAdapter):
     Adapter for DSPy models.
     """
     
-    def __init__(self):
-        """Initialize the DSPy model adapter."""
+    def __init__(self, model_name: str = None, api_base: str = None, api_key: str = None, 
+                 max_tokens: int = 48000, temperature: float = 0.0, cache: bool = False, **kwargs):
+        """
+        Initialize the DSPy model adapter with configuration parameters.
+        
+        Args:
+            model_name: The model identifier (e.g., "openai/gpt-4o-mini")
+            api_base: The API base URL
+            api_key: The API key
+            max_tokens: Maximum number of tokens to generate
+            temperature: Sampling temperature
+            cache: Whether to cache responses
+            **kwargs: Additional arguments to pass to dspy.LM
+        """
         if not DSPY_AVAILABLE:
             raise ImportError("DSPy is not installed. Install it with `pip install dspy-ai`")
-    
-    def get_model(self, **kwargs) -> Any:
-        """
-        Get a DSPy LM instance.
-        
-        Args:
-            model: The model identifier (e.g., "openai/gpt-4o-mini" or "anthropic/claude-3-opus-20240229")
-            api_base: The API base URL (optional)
-            api_key: The API key (optional)
-            max_tokens: Maximum number of tokens to generate (default: 2048)
-            temperature: Sampling temperature (default: 0.0)
-            cache: Whether to cache responses (default: False)
-            **kwargs: Additional arguments to pass to dspy.LM
             
-        Returns:
-            A dspy.LM instance
-        """
-        model = dspy.LM(
-            model=kwargs.get("model"),
-            api_base=kwargs.get("api_base"),
-            api_key=kwargs.get("api_key"),
-            max_tokens=kwargs.get("max_tokens", 48000),
-            temperature=kwargs.get("temperature", 0.0),
-            cache=kwargs.get("cache", False),
-            **{k: v for k, v in kwargs.items() if k not in ["model", "api_base", "api_key", "max_tokens", "temperature", "cache"]}
+        # Store all initialization parameters for reference
+        self.kwargs = {
+            'model': model_name,
+            'api_base': api_base,
+            'api_key': api_key,
+            'max_tokens': max_tokens,
+            'temperature': temperature,
+            'cache': cache,
+            **kwargs
+        }
+            
+        # Create the DSPy model
+        self._model = dspy.LM(
+            model=model_name,
+            api_base=api_base,
+            api_key=api_key,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            cache=cache,
+            **kwargs
         )
         
-        return model
+        # Configure DSPy to use this model as default
+        # This is critical for DSPy's optimizers to work properly
+        dspy.configure(lm=self._model)
+        
+        # Ensure the model is globally accessible for DSPy
+        # This is needed for some DSPy components that don't explicitly take a model parameter
+        if hasattr(dspy, 'settings'):
+            dspy.settings.lm = self._model
+        
+        # Set the global LM in the DSPy module for backward compatibility
+        # Some DSPy components access this directly
+        if hasattr(dspy, 'LM'):
+            dspy.LM.lm = self._model
+            
+        # For DSPy's teleprompt module which is used by MIPROv2
+        if hasattr(dspy, 'teleprompt'):
+            if hasattr(dspy.teleprompt, 'lm'):
+                dspy.teleprompt.lm = self._model
     
-    def configure(self, model=None, **kwargs) -> None:
+    def generate(self, prompt: str, temperature: float = None, max_tokens: int = None, **kwargs) -> str:
         """
-        Configure DSPy with a default model.
+        Generate text from a prompt using the underlying DSPy model.
         
         Args:
-            model: The model to set as default
-            **kwargs: Additional configuration options
+            prompt: The input prompt text
+            temperature: Override the default temperature
+            max_tokens: Override the default max tokens
+            **kwargs: Additional generation parameters
+            
+        Returns:
+            The generated text response
         """
-        if model:
-            dspy.configure(lm=model)
+        # Create a temporary configuration with override parameters if provided
+        temp_config = {}
+        if temperature is not None:
+            temp_config["temperature"] = temperature
+        if max_tokens is not None:
+            temp_config["max_tokens"] = max_tokens
+            
+        # Use the model to generate a completion
+        if temp_config:
+            with dspy.settings(**temp_config):
+                response = self._model(prompt)
+        else:
+            response = self._model(prompt)
+            
+        return response
+    
+    def generate_with_chat_format(self, messages: List[Dict[str, str]], 
+                                  temperature: float = None, max_tokens: int = None, **kwargs) -> str:
+        """
+        Generate text using a chat format with multiple messages.
+        
+        Args:
+            messages: List of message dictionaries with 'role' and 'content' keys
+            temperature: Override the default temperature
+            max_tokens: Override the default max tokens
+            **kwargs: Additional generation parameters
+            
+        Returns:
+            The generated text response
+        """
+        # Format the messages into a single prompt
+        formatted_prompt = ""
+        for message in messages:
+            role = message.get("role", "user").lower()
+            content = message.get("content", "")
+            
+            if role == "system":
+                formatted_prompt += f"System: {content}\n\n"
+            elif role == "user":
+                formatted_prompt += f"User: {content}\n\n"
+            elif role == "assistant":
+                formatted_prompt += f"Assistant: {content}\n\n"
+                
+        formatted_prompt += "Assistant: "
+        
+        # Generate the response using the formatted prompt
+        return self.generate(formatted_prompt, temperature=temperature, max_tokens=max_tokens, **kwargs)
 
 
 class TextGradModelAdapter(ModelAdapter):
@@ -110,62 +202,104 @@ class TextGradModelAdapter(ModelAdapter):
     Adapter for TextGrad models.
     """
     
-    def __init__(self):
-        """Initialize the TextGrad model adapter."""
-        if not TEXTGRAD_AVAILABLE:
-            raise ImportError("TextGrad is not installed. Install it with `pip install textgrad`")
-    
-    def get_model(self, **kwargs) -> Any:
+    def __init__(self, model_name: str = None, api_base: str = None, api_key: str = None, **kwargs):
         """
-        Get a TextGrad engine instance.
+        Initialize the TextGrad model adapter with configuration parameters.
         
         Args:
-            engine_name: The engine name (e.g., "openrouter/meta-llama/llama-3.3-70b-instruct")
-            api_base: The API base URL (optional)
-            api_key: The API key (optional)
+            model_name: The model identifier (e.g., "openrouter/meta-llama/llama-3.3-70b-instruct")
+            api_base: The API base URL
+            api_key: The API key
             **kwargs: Additional arguments to pass to tg.get_engine
-            
-        Returns:
-            A TextGrad engine instance
         """
+        if not TEXTGRAD_AVAILABLE:
+            raise ImportError("TextGrad is not installed. Install it with `pip install textgrad`")
+        
+        # Store all initialization parameters for reference
+        self.kwargs = {
+            'engine_name': model_name,
+            'api_base': api_base,
+            'api_key': api_key,
+            **kwargs
+        }
+        
+        # Prepare engine kwargs
         engine_kwargs = {}
         
         # Add API base and key if provided
-        if "api_base" in kwargs:
-            engine_kwargs["api_base"] = kwargs.pop("api_base")
+        if api_base:
+            engine_kwargs["api_base"] = api_base
         
-        if "api_key" in kwargs:
-            engine_kwargs["api_key"] = kwargs.pop("api_key")
-        
-        # Get the engine name
-        engine_name = kwargs.pop("engine_name", None)
-        
-        # Fall back to "model" if engine_name is not provided
-        if not engine_name and "model" in kwargs:
-            engine_name = kwargs.pop("model")
+        if api_key:
+            engine_kwargs["api_key"] = api_key
         
         # Add remaining kwargs
         engine_kwargs.update(kwargs)
         
         # Get the engine
-        return tg.get_engine(engine_name=engine_name, **engine_kwargs)
+        self._model = tg.get_engine(engine_name=model_name, **engine_kwargs)
     
-    def configure(self, **kwargs) -> None:
+    def generate(self, prompt: str, temperature: float = 0.0, max_tokens: int = 1024, **kwargs) -> str:
         """
-        Configure TextGrad with global settings.
+        Generate text from a prompt using the underlying TextGrad model.
         
         Args:
-            **kwargs: Configuration options
+            prompt: The input prompt text
+            temperature: Generation temperature
+            max_tokens: Maximum tokens to generate
+            **kwargs: Additional generation parameters
+            
+        Returns:
+            The generated text response
         """
-        # TextGrad doesn't have a global configuration method like DSPy
-        pass
+        # TextGrad uses a different API for generation
+        response = self._model.complete(
+            prompt=prompt,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            **kwargs
+        )
+        
+        return response.text
+    
+    def generate_with_chat_format(self, messages: List[Dict[str, str]], 
+                                  temperature: float = 0.0, max_tokens: int = 1024, **kwargs) -> str:
+        """
+        Generate text using a chat format with multiple messages.
+        
+        Args:
+            messages: List of message dictionaries with 'role' and 'content' keys
+            temperature: Generation temperature
+            max_tokens: Maximum tokens to generate
+            **kwargs: Additional generation parameters
+            
+        Returns:
+            The generated text response
+        """
+        # TextGrad has native support for chat format
+        chat_messages = []
+        for message in messages:
+            role = message.get("role", "user")
+            content = message.get("content", "")
+            chat_messages.append({"role": role, "content": content})
+        
+        response = self._model.chat_complete(
+            messages=chat_messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            **kwargs
+        )
+        
+        return response.text
+    
+    
 
 
 def setup_model(model_name=None, adapter_type="dspy", **kwargs):
     """
-    Set up a model using the specified adapter.
+    Set up a model adapter using the specified adapter type.
     
-    This function provides a unified interface for creating models from different providers.
+    This function provides a unified interface for creating model adapters from different providers.
     It supports both simple model identifiers (e.g., "openai/gpt-4o-mini") and custom configurations.
     
     Args:
@@ -174,7 +308,7 @@ def setup_model(model_name=None, adapter_type="dspy", **kwargs):
         **kwargs: Additional adapter-specific configuration options
         
     Returns:
-        A model instance from the specified adapter
+        A ModelAdapter instance that provides a unified interface to the underlying model
         
     Raises:
         ValueError: If the adapter type is not supported
@@ -182,54 +316,53 @@ def setup_model(model_name=None, adapter_type="dspy", **kwargs):
         
     Examples:
         # Simple usage with known providers
-        model = setup_model("openai/gpt-4o-mini")
+        adapter = setup_model("openai/gpt-4o-mini")
+        response = adapter.generate("Tell me about AI")
         
         # Custom configuration for vLLM
-        model = setup_model(
+        adapter = setup_model(
             model_name="vllm_llama_8b",
             api_base="http://localhost:8000/v1",
             api_key="fake-key"
         )
         
-        # Using with TextGrad
-        model = setup_model(
+        # Using with TextGrad and chat format
+        adapter = setup_model(
             model_name="openrouter/meta-llama/llama-3.3-70b-instruct",
             adapter_type="textgrad"
         )
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Tell me about AI"}
+        ]
+        response = adapter.generate_with_chat_format(messages)
     """
-    # Create settings dictionary with model name
-    settings = {}
-    if model_name:
-        settings["model"] = model_name
-    
-    # Update with additional kwargs
-    settings.update(kwargs)
-    
     # Create adapter based on type
     if adapter_type.lower() == "dspy":
-        adapter = DSPyModelAdapter()
-        model = adapter.get_model(**settings)
-        adapter.configure(model=model)
-        print(f" Using model with DSPy: {settings.get('model', 'custom configuration')}")
+        # For DSPy, rename model_name to match the expected parameter
+        if model_name and "model_name" not in kwargs:
+            kwargs["model_name"] = model_name
+        adapter = DSPyModelAdapter(**kwargs)
+        print(f" Using model with DSPy: {kwargs.get('model_name', 'custom configuration')}")
     elif adapter_type.lower() == "textgrad":
-        adapter = TextGradModelAdapter()
-        # TextGrad uses engine_name instead of model
-        if "model" in settings:
-            settings["engine_name"] = settings.pop("model")
-        model = adapter.get_model(**settings)
-        print(f" Using model with TextGrad: {settings.get('engine_name', 'custom configuration')}")
+        # For TextGrad, use model_name directly
+        if model_name and "model_name" not in kwargs:
+            kwargs["model_name"] = model_name
+        adapter = TextGradModelAdapter(**kwargs)
+        print(f" Using model with TextGrad: {kwargs.get('model_name', 'custom configuration')}")
     else:
         raise ValueError(f"Unsupported adapter type: {adapter_type}")
     
-    return model
+    return adapter
 
 
-def get_model_adapter(adapter_type):
+def get_model_adapter(adapter_type, **kwargs):
     """
     Get a model adapter instance by type.
     
     Args:
         adapter_type: The adapter type ("dspy" or "textgrad")
+        **kwargs: Configuration parameters for the adapter
         
     Returns:
         A ModelAdapter instance
@@ -237,13 +370,4 @@ def get_model_adapter(adapter_type):
     Raises:
         ValueError: If the adapter type is not supported
     """
-    if adapter_type.lower() == "dspy":
-        return DSPyModelAdapter()
-    elif adapter_type.lower() == "textgrad":
-        return TextGradModelAdapter()
-    else:
-        raise ValueError(f"Unsupported adapter type: {adapter_type}")
-        
-
-# For backward compatibility
-setup_openrouter_model = setup_model
+    return setup_model(adapter_type=adapter_type, **kwargs)

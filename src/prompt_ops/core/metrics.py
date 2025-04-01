@@ -9,6 +9,7 @@ import json
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Union, List, Callable, TypeVar, Generic, Type, get_type_hints
 import dspy
+from prompt_ops.core.model import ModelAdapter
 
 
 T = TypeVar('T', bound=Any)
@@ -144,7 +145,17 @@ Answer only with an integer from 1 to 10 based on how correct the response is co
         normalize_to=(0, 1),
         custom_instructions=None
     ):
-        self.model = model
+        # Handle both raw DSPy models and our ModelAdapter instances
+        if isinstance(model, ModelAdapter):
+            # If it's a ModelAdapter, we can use its underlying model
+            if hasattr(model, '_model'):
+                self.model = model._model
+            else:
+                raise ValueError("Model adapter does not have an accessible underlying model")
+        else:
+            # If it's a raw model, use it directly
+            self.model = model
+            
         self.signature_class = signature_class
         self.signature_name = signature_name
         
@@ -319,11 +330,24 @@ and {self.score_range[1]} means identical in meaning.
             
             return final_score
             
-        except Exception as e:
+        except (ValueError, TypeError, KeyError, AttributeError) as e:
+            # Expected errors when parsing LLM outputs or accessing attributes
+            logging.warning(f"Expected error in DSPyMetricAdapter: {str(e)}")
             if trace:
-                print(f"\nError in metric: {str(e)}")
+                print(f"\nExpected error in metric evaluation: {str(e)}")
             
-            # Return a default score if evaluation fails
+            # Return a default score for expected evaluation failures
+            return self.normalize_to[0]
+            
+        except Exception as e:
+            # Unexpected errors that might indicate bugs in the code
+            logging.error(f"Unexpected error in DSPyMetricAdapter: {str(e)}")
+            if trace:
+                print(f"\nUnexpected error in metric: {str(e)}")
+                import traceback
+                traceback.print_exc()
+            
+            # Still return a default score, but this should be investigated
             return self.normalize_to[0]
 
 
@@ -558,8 +582,6 @@ class StandardJSONMetric(MetricBase):
                          This should match the 'golden_output_field' in the adapter config.
             **kwargs: Additional parameters for customization.
         """
-        self.name = "standard_json_metric"
-        
         # Set up evaluation mode
         self.evaluation_mode = evaluation_mode
         if evaluation_mode not in ["field_based", "flattened"]:
