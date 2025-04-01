@@ -21,7 +21,7 @@ Your complete message should be a valid json string that can be read directly an
 
 ## Step 2: Create a Simple Configuration File
 
-Create a file named `facility-simple.yaml` with the following content:
+Create a file named [`facility-simple.yaml`](../../configs/facility-simple.yaml) with the following content:
 
 ```yaml
 # Core configuration
@@ -104,4 +104,4 @@ system: |-
 2. **Try different optimization strategies** (light, medium, heavy)
 3. **Customize the configuration** for your specific use case
 
-For a detailed guide on all configuration options, check out the [Advanced Facility Configuration Guide](/examples/advanced/advanced_facility_config.md) which explains each setting in depth.
+For a detailed guide on all configuration options, check out the [Custom Adapters Guide](/examples/intermediate/facility_config.md) which explains each setting in depth.

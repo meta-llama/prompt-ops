@@ -1,130 +1,105 @@
 # Creating Custom Adapters and Metrics in prompt-ops
 
-> **Note:** This tutorial builds on concepts from the [Advanced Facility Configuration Guide](/examples/advanced/advanced_facility_config.md). Make sure you're familiar with the basic configuration options before diving into custom implementations.
+> **Note:** This guide explains how to create custom dataset adapters and evaluation metrics for specialized use cases in prompt-ops.
 
 ## Overview
 
-While prompt-ops provides flexible configuration options through YAML files, there are cases where you might need to create custom adapter and metric classes to handle specialized datasets or evaluation requirements. This tutorial will guide you through:
+While prompt-ops provides built-in adapters and metrics for common scenarios, you may need to handle specialized datasets or evaluation requirements. This guide explains how to create two essential classes in a simple Python file:
 
-1. Understanding the base classes for adapters and metrics
-2. Creating a custom dataset adapter
-3. Creating a custom evaluation metric
-4. Registering and using your custom components
+1. A custom `DatasetAdapter` class - Transforms your custom data format into the standardized format
+2. A custom `MetricBase` class - Evaluates predictions against ground truth
 
-## Understanding the Base Classes
+## Creating Custom Adapters and Metrics
 
-### Dataset Adapters
+You can create both custom adapters and metrics in a single Python file that can be referenced in your YAML configuration.
 
-All dataset adapters in prompt-ops inherit from the `DatasetAdapter` base class, which defines the common interface:
+### Basic Structure
+
+Create a Python file (e.g., `my_custom_adapters.py`) with the following structure:
 
 ```python
-from abc import ABC, abstractmethod
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Union
 from pathlib import Path
+from prompt_ops.core.datasets import DatasetAdapter
+from prompt_ops.core.metrics import MetricBase
 
-class DatasetAdapter(ABC):
+class MyCustomAdapter(DatasetAdapter):
     """
-    Base adapter class for transforming dataset-specific formats into a standardized format.
+    Custom adapter for transforming dataset-specific formats into a standardized format.
     """
     
-    def __init__(self, dataset_path: str, file_format: str = None):
-        """Initialize the dataset adapter with a path to the dataset file."""
-        self.dataset_path = Path(dataset_path)
-        self.file_format = file_format or self._infer_format(self.dataset_path)
-    
-    @abstractmethod
+    def __init__(self, dataset_path: str, **kwargs):
+        """
+        Initialize the dataset adapter with a path to the dataset file.
+        
+        Args:
+            dataset_path: Path to the dataset file
+            **kwargs: Additional configuration parameters from your YAML config
+        """
+        super().__init__(dataset_path)
+        # Initialize any custom parameters here
+        
     def adapt(self) -> List[Dict[str, Any]]:
         """
         Transform dataset-specific format into standardized format.
         
-        The standardized format is a list of dictionaries, where each dictionary
-        represents a single example and has the following structure:
-        {
-            "inputs": {
-                "field1": value1,
-                "field2": value2,
+        Returns:
+            List of standardized examples in the format:
+            [
+                {
+                    "inputs": {"question": "Your input text here"},
+                    "outputs": {"answer": "Expected output here"},
+                    "metadata": {"optional": "metadata"}  # Optional
+                },
                 ...
-            },
-            "outputs": {
-                "field1": value1,
-                "field2": value2,
-                ...
-            },
-            "metadata": {  # Optional
-                "field1": value1,
-                "field2": value2,
-                ...
-            }
-        }
+            ]
         """
+        # Your implementation here
         pass
-```
 
-### Metrics
-
-All metrics inherit from the `MetricBase` class, which defines the common interface:
-
-```python
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Union, Generic, TypeVar
-
-T = TypeVar('T')  # Type for gold/reference
-U = TypeVar('U')  # Type for prediction
-
-class MetricBase(ABC, Generic[T, U]):
-    """Base class for all optimization metrics."""
+class MyCustomMetric(MetricBase):
+    """
+    Custom metric for evaluating predictions.
+    """
     
-    @abstractmethod
-    def __call__(
-        self, 
-        gold: T, 
-        pred: U, 
-        trace: bool = False,
-        **kwargs
-    ) -> Union[Dict[str, float], float]:
+    def __init__(self, **kwargs):
         """
-        Evaluate the prediction against the ground truth.
+        Initialize the metric with custom parameters.
+        
+        Args:
+            **kwargs: Configuration parameters from your YAML config
+        """
+        # Initialize any custom parameters here
+        
+    def __call__(self, gold: Any, pred: Any, trace: bool = False, **kwargs) -> Union[Dict[str, float], float]:
+        """
+        Evaluate a prediction against the ground truth.
         
         Args:
             gold: Ground truth example
-            pred: Predicted example
-            trace: Whether to enable tracing for debugging
-            **kwargs: Additional metric-specific parameters
+            pred: Model prediction to evaluate
+            trace: Whether to return detailed scores
+            **kwargs: Additional parameters
             
         Returns:
-            Either a dictionary containing metric scores or a single float score
+            A score between 0.0 and 1.0 or a dictionary of scores
         """
+        # Your implementation here
         pass
 ```
 
-## Creating a Custom Dataset Adapter
+## Example Implementation
 
-Let's create a custom adapter for a facility management dataset that handles a specific format. We'll call it `FacilityCustomAdapter`.
-
-### Step 1: Create a New Module
-
-First, create a new directory for your custom adapter:
-
-```bash
-mkdir -p src/prompt_ops/datasets/facility_custom
-touch src/prompt_ops/datasets/facility_custom/__init__.py
-touch src/prompt_ops/datasets/facility_custom/adapter.py
-```
-
-### Step 2: Implement the Adapter
-
-In `src/prompt_ops/datasets/facility_custom/adapter.py`:
+Here's a complete example of custom adapter and metric classes for a facility management dataset:
 
 ```python
-"""
-Custom adapter for facility management datasets.
-"""
-
-from typing import Dict, List, Any
+import json
+from typing import Dict, List, Any, Union
+from pathlib import Path
 from prompt_ops.core.datasets import DatasetAdapter
+from prompt_ops.core.metrics import MetricBase
 
-
-class FacilityCustomAdapter(DatasetAdapter):
+class FacilityAdapter(DatasetAdapter):
     """
     Custom adapter for facility management datasets with specialized formatting.
     
@@ -134,11 +109,12 @@ class FacilityCustomAdapter(DatasetAdapter):
     
     def __init__(self, dataset_path: str, include_metadata: bool = True, **kwargs):
         """
-        Initialize the facility custom adapter.
+        Initialize the facility adapter.
         
         Args:
             dataset_path: Path to the dataset file
             include_metadata: Whether to include additional metadata in the output
+            **kwargs: Additional configuration parameters
         """
         super().__init__(dataset_path)
         self.include_metadata = include_metadata
@@ -150,7 +126,15 @@ class FacilityCustomAdapter(DatasetAdapter):
         Returns:
             List of standardized examples
         """
-        data = self.load_raw_data()
+        # Load the dataset
+        with open(self.dataset_path, 'r') as f:
+            if self.file_format == 'json':
+                data = json.load(f)
+            elif self.file_format == 'jsonl':
+                data = [json.loads(line) for line in f]
+            else:
+                raise ValueError(f"Unsupported file format: {self.file_format}")
+        
         standardized_data = []
         
         for item in data:
@@ -203,338 +187,274 @@ class FacilityCustomAdapter(DatasetAdapter):
             "low": "low",
             "routine": "low"
         }
-        
         return priority_map.get(priority.lower(), "medium")
-```
-
-### Step 3: Register the Adapter
-
-In `src/prompt_ops/datasets/facility_custom/__init__.py`:
-
-```python
-"""
-Custom facility management dataset adapters.
-"""
-
-from .adapter import FacilityCustomAdapter
-
-__all__ = ["FacilityCustomAdapter"]
-```
-
-## Creating a Custom Metric
-
-Now, let's create a custom metric for evaluating facility management predictions.
-
-### Step 1: Create a New Module
-
-```bash
-mkdir -p src/prompt_ops/metrics/facility_custom
-touch src/prompt_ops/metrics/facility_custom/__init__.py
-touch src/prompt_ops/metrics/facility_custom/metric.py
-```
-
-### Step 2: Implement the Metric
-
-In `src/prompt_ops/metrics/facility_custom/metric.py`:
-
-```python
-"""
-Custom metrics for facility management evaluation.
-"""
-
-from typing import Dict, Any, Union, List
-import json
-from prompt_ops.core.metrics import MetricBase
+    
+    def _infer_format(self, path: Path) -> str:
+        """
+        Infer the file format from the file extension.
+        
+        Args:
+            path: Path to the dataset file
+            
+        Returns:
+            Inferred file format
+        """
+        suffix = path.suffix.lower()
+        if suffix == '.json':
+            return 'json'
+        elif suffix == '.jsonl':
+            return 'jsonl'
+        else:
+            raise ValueError(f"Unsupported file extension: {suffix}")
 
 
-class FacilityCustomMetric(MetricBase):
+class FacilityMetric(MetricBase):
     """
     Custom metric for evaluating facility management predictions.
     
     This metric evaluates predictions based on:
-    1. Urgency accuracy
+    1. Category accuracy
     2. Sentiment accuracy
-    3. Category matching with partial credit
+    3. Urgency accuracy
     """
     
-    def __init__(
-        self,
-        urgency_weight: float = 1.0,
-        sentiment_weight: float = 1.0,
-        categories_weight: float = 1.5,
-        required_categories: List[str] = None,
-        strict_json: bool = False
-    ):
+    def __init__(self, weights: Dict[str, float] = None, **kwargs):
         """
-        Initialize the facility custom metric.
+        Initialize the facility metric.
         
         Args:
-            urgency_weight: Weight for urgency evaluation
-            sentiment_weight: Weight for sentiment evaluation
-            categories_weight: Weight for categories evaluation
-            required_categories: List of categories that must be present
-            strict_json: Whether to use strict JSON parsing
+            weights: Optional weights for different aspects of the evaluation
+            **kwargs: Additional configuration parameters
         """
-        self.urgency_weight = urgency_weight
-        self.sentiment_weight = sentiment_weight
-        self.categories_weight = categories_weight
-        self.required_categories = required_categories or []
-        self.strict_json = strict_json
-        
-        # Calculate total weight for normalization
-        self.total_weight = urgency_weight + sentiment_weight + categories_weight
+        self.weights = weights or {
+            "category": 0.5,
+            "sentiment": 0.3,
+            "urgency": 0.2
+        }
     
-    def __call__(
-        self,
-        gold: Any,
-        pred: Any,
-        trace: bool = False,
-        **kwargs
-    ) -> Union[Dict[str, float], float]:
+    def __call__(self, gold: Any, pred: Any, trace: bool = False, **kwargs) -> Union[Dict[str, float], float]:
         """
         Evaluate the prediction against the ground truth.
         
         Args:
             gold: Ground truth example
-            pred: Predicted example
-            trace: Whether to enable tracing
+            pred: Predicted example (can be a string or dictionary)
+            trace: Whether to enable tracing for debugging
+            **kwargs: Additional metric-specific parameters
             
         Returns:
-            Dictionary with scores or a single float score
+            A score between 0.0 and 1.0 or a dictionary of scores
         """
-        # Extract values from gold and pred
-        gold_data = self._extract_data(gold)
-        pred_data = self._extract_data(pred)
+        # Parse the prediction if it's a string (common with LLM outputs)
+        if isinstance(pred, str):
+            try:
+                pred = json.loads(pred)
+            except json.JSONDecodeError:
+                # If prediction is not valid JSON, return a low score
+                return 0.0
         
-        if gold_data is None or pred_data is None:
-            if trace:
-                print("Failed to parse gold or pred as JSON")
-            return 0.0
+        # Extract the relevant fields from gold
+        gold_data = gold.get("answer", gold)
         
-        # Evaluate individual components
-        urgency_score = self._evaluate_urgency(gold_data, pred_data)
-        sentiment_score = self._evaluate_sentiment(gold_data, pred_data)
-        categories_score = self._evaluate_categories(gold_data, pred_data)
+        # Evaluate different aspects
+        category_score = self._evaluate_categories(gold_data, pred)
+        sentiment_score = self._evaluate_sentiment(gold_data, pred)
+        urgency_score = self._evaluate_urgency(gold_data, pred)
         
-        # Calculate weighted score
-        weighted_score = (
-            (urgency_score * self.urgency_weight) +
-            (sentiment_score * self.sentiment_weight) +
-            (categories_score * self.categories_weight)
-        ) / self.total_weight
+        # Combine scores with weights
+        total_score = (
+            self.weights["category"] * category_score +
+            self.weights["sentiment"] * sentiment_score +
+            self.weights["urgency"] * urgency_score
+        )
         
+        # Return detailed scores if trace is enabled
         if trace:
             return {
-                "urgency": urgency_score,
+                "category": category_score,
                 "sentiment": sentiment_score,
-                "categories": categories_score,
-                "overall": weighted_score
+                "urgency": urgency_score,
+                "overall": total_score
             }
         
-        return weighted_score
+        return total_score
     
-    def _extract_data(self, data: Any) -> Dict[str, Any]:
+    def _evaluate_categories(self, gold: Dict[str, Any], pred: Dict[str, Any]) -> float:
         """
-        Extract data from various formats.
+        Evaluate category predictions.
         
         Args:
-            data: Input data (could be string, dict, or object)
+            gold: Ground truth example
+            pred: Predicted example
             
         Returns:
-            Extracted data as dictionary
+            A score between 0.0 and 1.0
         """
-        if isinstance(data, dict):
-            # Check if this is a standardized example
-            if "outputs" in data and "answer" in data["outputs"]:
-                return data["outputs"]["answer"]
-            if "answer" in data:
-                return data["answer"]
-            return data
+        gold_categories = gold.get("categories", {})
+        pred_categories = pred.get("categories", {})
         
-        if isinstance(data, str):
-            # Try to parse as JSON
-            if not self.strict_json:
-                # Extract JSON from markdown code blocks if present
-                if "```json" in data:
-                    start = data.find("```json") + 7
-                    end = data.find("```", start)
-                    if end > start:
-                        data = data[start:end].strip()
-                elif "```" in data:
-                    start = data.find("```") + 3
-                    end = data.find("```", start)
-                    if end > start:
-                        data = data[start:end].strip()
-            
-            try:
-                return json.loads(data)
-            except json.JSONDecodeError:
-                return None
+        # Calculate precision and recall for categories
+        correct = 0
+        for category, value in pred_categories.items():
+            if category in gold_categories and gold_categories[category] == value:
+                correct += 1
         
-        return None
-    
-    def _evaluate_urgency(self, gold: Dict[str, Any], pred: Dict[str, Any]) -> float:
-        """
-        Evaluate urgency prediction.
+        precision = correct / len(pred_categories) if pred_categories else 0
+        recall = correct / len(gold_categories) if gold_categories else 0
         
-        Args:
-            gold: Ground truth data
-            pred: Predicted data
-            
-        Returns:
-            Score between 0.0 and 1.0
-        """
-        gold_urgency = str(gold.get("urgency", "")).lower()
-        pred_urgency = str(pred.get("urgency", "")).lower()
-        
-        return 1.0 if gold_urgency == pred_urgency else 0.0
+        # Calculate F1 score
+        if precision + recall > 0:
+            return 2 * precision * recall / (precision + recall)
+        return 0.0
     
     def _evaluate_sentiment(self, gold: Dict[str, Any], pred: Dict[str, Any]) -> float:
         """
         Evaluate sentiment prediction.
         
         Args:
-            gold: Ground truth data
-            pred: Predicted data
+            gold: Ground truth example
+            pred: Predicted example
             
         Returns:
-            Score between 0.0 and 1.0
+            A score between 0.0 and 1.0
         """
-        gold_sentiment = str(gold.get("sentiment", "")).lower()
-        pred_sentiment = str(pred.get("sentiment", "")).lower()
+        gold_sentiment = gold.get("sentiment", "").lower()
+        pred_sentiment = pred.get("sentiment", "").lower()
         
+        # Simple exact match for sentiment
         return 1.0 if gold_sentiment == pred_sentiment else 0.0
     
-    def _evaluate_categories(self, gold: Dict[str, Any], pred: Dict[str, Any]) -> float:
+    def _evaluate_urgency(self, gold: Dict[str, Any], pred: Dict[str, Any]) -> float:
         """
-        Evaluate category predictions with partial credit.
+        Evaluate urgency prediction.
         
         Args:
-            gold: Ground truth data
-            pred: Predicted data
+            gold: Ground truth example
+            pred: Predicted example
             
         Returns:
-            Score between 0.0 and 1.0
+            A score between 0.0 and 1.0
         """
-        gold_categories = gold.get("categories", {})
-        pred_categories = pred.get("categories", {})
+        gold_urgency = gold.get("urgency", "").lower()
+        pred_urgency = pred.get("urgency", "").lower()
         
-        if not isinstance(gold_categories, dict) or not isinstance(pred_categories, dict):
-            return 0.0
-        
-        # Check required categories
-        for category in self.required_categories:
-            if category not in pred_categories:
-                return 0.0
-        
-        # Calculate true positives, false positives, and false negatives
-        true_positives = 0
-        false_positives = 0
-        false_negatives = 0
-        
-        for category, value in gold_categories.items():
-            if category in pred_categories:
-                if bool(value) == bool(pred_categories[category]):
-                    true_positives += 1
-                else:
-                    false_positives += 1
-            elif bool(value):
-                false_negatives += 1
-        
-        for category, value in pred_categories.items():
-            if category not in gold_categories and bool(value):
-                false_positives += 1
-        
-        # Calculate F1 score
-        if true_positives + false_positives + false_negatives == 0:
-            return 1.0  # Perfect match if both are empty
-        
-        if true_positives == 0:
-            return 0.0  # No matches
-        
-        precision = true_positives / (true_positives + false_positives)
-        recall = true_positives / (true_positives + false_negatives)
-        
-        f1 = 2 * (precision * recall) / (precision + recall)
-        return f1
+        # Simple exact match for urgency
+        return 1.0 if gold_urgency == pred_urgency else 0.0
 ```
 
-### Step 3: Register the Metric
+## Using Your Custom Classes in YAML Configuration
 
-In `src/prompt_ops/metrics/facility_custom/__init__.py`:
-
-```python
-"""
-Custom facility management metrics.
-"""
-
-from .metric import FacilityCustomMetric
-
-__all__ = ["FacilityCustomMetric"]
-```
-
-## Using Custom Components in YAML Configuration
-
-Now that you've created custom adapter and metric classes, you can use them in your YAML configuration:
+Once you've created your custom adapter and metric classes, you can use them in your YAML configuration by specifying the module path:
 
 ```yaml
-# Model Configuration
-model:
-  name: "openrouter/meta-llama/llama-3.3-70b-instruct"
-  api_base: "https://openrouter.ai/api/v1"
-  temperature: 0.0
-
-# Dataset Configuration with Custom Adapter
 dataset:
-  adapter_class: "prompt_ops.datasets.facility_custom.FacilityCustomAdapter"
-  path: "../dataset/facility-synth/facility_custom.json"
-  include_metadata: true
-  train_size: 0.7
-  validation_size: 0.15
+  adapter_class: "path.to.module.FacilityAdapter"
+  path: "/path/to/dataset.json"
+  adapter_params:
+    include_metadata: true
 
-# Prompt Configuration
-prompt:
-  file: "../dataset/facility-synth/facility_prompt_sys.txt"
-  inputs: ["question"]
-  outputs: ["answer"]
-
-# Metric Configuration with Custom Metric
 metric:
-  class: "prompt_ops.metrics.facility_custom.FacilityCustomMetric"
-  urgency_weight: 1.0
-  sentiment_weight: 1.0
-  categories_weight: 1.5
-  required_categories: ["emergency_repair_services", "routine_maintenance_requests"]
-  strict_json: false
-
-# Optimization Settings
-optimization:
-  strategy: "light"
-  max_rounds: 3
-  max_examples_per_round: 5
-  max_prompt_length: 2048
+  metric_class: "path.to.module.FacilityMetric"
+  metric_params:
+    weights:
+      category: 0.5
+      sentiment: 0.3
+      urgency: 0.2
 ```
 
-## Best Practices for Custom Components
+## Best Practices for Custom Adapters and Metrics
 
-When creating custom adapters and metrics, follow these best practices:
+1. **Input/Output Standardization**: Always normalize your dataset to use consistent field names:
+   - Use `"question"` for the main input field
+   - Use `"answer"` for the main output field
 
-1. **Maintain the Interface**: Always inherit from the base classes and implement all required methods.
+2. **Error Handling**: Include robust error handling in your evaluation method to handle:
+   - Malformed predictions (e.g., non-JSON strings)
+   - Missing fields in predictions
+   - Type mismatches between gold and prediction
 
-2. **Handle Edge Cases**: Your code should gracefully handle missing fields, malformed data, and unexpected inputs.
+3. **Documentation**: Document your classes with clear docstrings explaining:
+   - Expected input format
+   - Output format
+   - Any special handling or transformations
 
-3. **Add Documentation**: Include detailed docstrings explaining what your component does and how to use it.
+4. **Testing**: Test your adapter and metric with sample data before using them in a full optimization run:
+   ```python
+   # Test your adapter
+   adapter = FacilityAdapter("/path/to/test_data.json")
+   examples = adapter.adapt()
+   print(f"Processed {len(examples)} examples")
+   print(examples[0])  # Check the first example
+   
+   # Test your metric
+   metric = FacilityMetric()
+   gold = examples[0]["outputs"]["answer"]
+   pred = {"sentiment": "positive", "urgency": "high", "categories": {"maintenance": True}}
+   score = metric(gold, pred)
+   print(f"Evaluation score: {score}")
+   ```
 
-4. **Use Type Hints**: Add proper type annotations to make your code more maintainable.
+## Advanced Example: Handling Complex JSON Structures
 
-5. **Keep It Modular**: Break down complex logic into helper methods for better readability and testability.
+For datasets with complex nested structures, you may need more sophisticated parsing in your adapter class:
 
-6. **Test Thoroughly**: Create unit tests for your custom components to ensure they work as expected.
+```python
+class ComplexJSONAdapter(DatasetAdapter):
+    """Adapter for complex nested JSON structures."""
+    
+    def __init__(self, dataset_path: str, input_path: List[str] = None, output_path: List[str] = None, **kwargs):
+        """
+        Initialize the complex JSON adapter.
+        
+        Args:
+            dataset_path: Path to the dataset file
+            input_path: List of keys to navigate to the input field
+            output_path: List of keys to navigate to the output field
+            **kwargs: Additional configuration parameters
+        """
+        super().__init__(dataset_path)
+        self.input_path = input_path or ["content", "message", "text"]
+        self.output_path = output_path or ["annotations", "labels"]
+    
+    def adapt(self) -> List[Dict[str, Any]]:
+        """Transform complex JSON format into standardized format."""
+        with open(self.dataset_path, 'r') as f:
+            data = json.load(f)
+        
+        standardized_data = []
+        
+        # Handle nested data structures
+        for item in data.get("records", []):
+            # Extract nested fields using helper function
+            input_text = self._extract_nested_field(item, self.input_path)
+            output_data = self._extract_nested_field(item, self.output_path)
+            
+            if input_text is not None and output_data is not None:
+                example = {
+                    "inputs": {"question": input_text},
+                    "outputs": {"answer": output_data}
+                }
+                standardized_data.append(example)
+        
+        return standardized_data
+    
+    def _extract_nested_field(self, data: Dict[str, Any], path: List[str]) -> Any:
+        """Extract a value from a nested dictionary using a path of keys."""
+        current = data
+        for key in path:
+            if isinstance(current, dict) and key in current:
+                current = current[key]
+            else:
+                return None
+        return current
+```
 
 ## Conclusion
 
-Creating custom adapters and metrics allows you to tailor prompt-ops to your specific needs. By following the patterns established in the base classes, you can seamlessly integrate your custom components with the rest of the framework.
+Creating custom adapter and metric classes for prompt-ops allows you to work with specialized datasets and evaluation requirements while maintaining a clean, object-oriented approach. By implementing these classes in a simple Python file, you can:
 
-## Next Steps
+1. Transform your custom data formats into the standardized format required by prompt-ops
+2. Create specialized evaluation metrics tailored to your specific use case
+3. Integrate seamlessly with the prompt-ops configuration system
 
-- Contribute your custom components back to the prompt-ops project
+This approach provides a flexible way to extend prompt-ops functionality without modifying the core codebase, allowing you to leverage the optimization framework while accommodating your unique requirements.
