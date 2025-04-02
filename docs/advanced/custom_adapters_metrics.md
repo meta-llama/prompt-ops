@@ -9,8 +9,6 @@ While prompt-ops provides built-in adapters and metrics for common scenarios, yo
 1. A custom `DatasetAdapter` class - Transforms your custom data format into the [standardized format](#standardized-format)
 2. A custom `MetricBase` class - Evaluates predictions against ground truth
 
-
-
 ## Creating Custom Adapters and Metrics
 
 You can create both custom adapters and metrics in a single Python file that can be referenced in your YAML configuration.
@@ -29,22 +27,22 @@ class MyCustomAdapter(DatasetAdapter):
     """
     Custom adapter for transforming dataset-specific formats into a standardized format.
     """
-    
+
     def __init__(self, dataset_path: str, **kwargs):
         """
         Initialize the dataset adapter with a path to the dataset file.
-        
+
         Args:
             dataset_path: Path to the dataset file
             **kwargs: Additional configuration parameters from your YAML config
         """
         super().__init__(dataset_path)
         # Initialize any custom parameters here
-        
+
     def adapt(self) -> List[Dict[str, Any]]:
         """
         Transform dataset-specific format into standardized format.
-        
+
         Returns:
             List of standardized examples in the format:
             [
@@ -63,26 +61,26 @@ class MyCustomMetric(MetricBase):
     """
     Custom metric for evaluating predictions.
     """
-    
+
     def __init__(self, **kwargs):
         """
         Initialize the metric with custom parameters.
-        
+
         Args:
             **kwargs: Configuration parameters from your YAML config
         """
         # Initialize any custom parameters here
-        
+
     def __call__(self, gold: Any, pred: Any, trace: bool = False, **kwargs) -> Union[Dict[str, float], float]:
         """
         Evaluate a prediction against the ground truth.
-        
+
         Args:
             gold: Ground truth example
             pred: Model prediction to evaluate
             trace: Whether to return detailed scores
             **kwargs: Additional parameters
-            
+
         Returns:
             A score between 0.0 and 1.0 or a dictionary of scores
         """
@@ -116,6 +114,7 @@ The `DatasetAdapter.adapt()` method transforms your custom dataset into a standa
 ```
 
 The standardized format enables prompt-ops to:
+
 1. Format inputs consistently for different models
 2. Compare model outputs against expected outputs
 3. Track additional information through the metadata field
@@ -134,15 +133,15 @@ from prompt_ops.core.metrics import MetricBase
 class FacilityAdapter(DatasetAdapter):
     """
     Custom adapter for facility management datasets with specialized formatting.
-    
+
     This adapter handles datasets where each example contains a customer message,
     priority level, and categorization information.
     """
-    
+
     def __init__(self, dataset_path: str, include_metadata: bool = True, **kwargs):
         """
         Initialize the facility adapter.
-        
+
         Args:
             dataset_path: Path to the dataset file
             include_metadata: Whether to include additional metadata in the output
@@ -150,11 +149,11 @@ class FacilityAdapter(DatasetAdapter):
         """
         super().__init__(dataset_path)
         self.include_metadata = include_metadata
-    
+
     def adapt(self) -> List[Dict[str, Any]]:
         """
         Transform facility dataset format into standardized format.
-        
+
         Returns:
             List of standardized examples
         """
@@ -166,16 +165,16 @@ class FacilityAdapter(DatasetAdapter):
                 data = [json.loads(line) for line in f]
             else:
                 raise ValueError(f"Unsupported file format: {self.file_format}")
-        
+
         standardized_data = []
-        
+
         for item in data:
             # Extract fields from the dataset
             message = item.get("customer_message", "")
             priority = item.get("priority", "")
             categories = item.get("categories", {})
             sentiment = item.get("sentiment", "")
-            
+
             # Create standardized example
             example = {
                 "inputs": {
@@ -189,7 +188,7 @@ class FacilityAdapter(DatasetAdapter):
                     }
                 }
             }
-            
+
             # Add metadata if requested
             if self.include_metadata:
                 example["metadata"] = {
@@ -197,18 +196,18 @@ class FacilityAdapter(DatasetAdapter):
                     "timestamp": item.get("timestamp", ""),
                     "customer_id": item.get("customer_id", "")
                 }
-            
+
             standardized_data.append(example)
-            
+
         return standardized_data
-    
+
     def _map_priority_to_urgency(self, priority: str) -> str:
         """
         Map priority values to standardized urgency levels.
-        
+
         Args:
             priority: Original priority value
-            
+
         Returns:
             Standardized urgency level
         """
@@ -220,14 +219,14 @@ class FacilityAdapter(DatasetAdapter):
             "routine": "low"
         }
         return priority_map.get(priority.lower(), "medium")
-    
+
     def _infer_format(self, path: Path) -> str:
         """
         Infer the file format from the file extension.
-        
+
         Args:
             path: Path to the dataset file
-            
+
         Returns:
             Inferred file format
         """
@@ -243,17 +242,17 @@ class FacilityAdapter(DatasetAdapter):
 class FacilityMetric(MetricBase):
     """
     Custom metric for evaluating facility management predictions.
-    
+
     This metric evaluates predictions based on:
     1. Category accuracy
     2. Sentiment accuracy
     3. Urgency accuracy
     """
-    
+
     def __init__(self, weights: Dict[str, float] = None, **kwargs):
         """
         Initialize the facility metric.
-        
+
         Args:
             weights: Optional weights for different aspects of the evaluation
             **kwargs: Additional configuration parameters
@@ -263,17 +262,17 @@ class FacilityMetric(MetricBase):
             "sentiment": 0.3,
             "urgency": 0.2
         }
-    
+
     def __call__(self, gold: Any, pred: Any, trace: bool = False, **kwargs) -> Union[Dict[str, float], float]:
         """
         Evaluate the prediction against the ground truth.
-        
+
         Args:
             gold: Ground truth example
             pred: Predicted example (can be a string or dictionary)
             trace: Whether to enable tracing for debugging
             **kwargs: Additional metric-specific parameters
-            
+
         Returns:
             A score between 0.0 and 1.0 or a dictionary of scores
         """
@@ -284,22 +283,22 @@ class FacilityMetric(MetricBase):
             except json.JSONDecodeError:
                 # If prediction is not valid JSON, return a low score
                 return 0.0
-        
+
         # Extract the relevant fields from gold
         gold_data = gold.get("answer", gold)
-        
+
         # Evaluate different aspects
         category_score = self._evaluate_categories(gold_data, pred)
         sentiment_score = self._evaluate_sentiment(gold_data, pred)
         urgency_score = self._evaluate_urgency(gold_data, pred)
-        
+
         # Combine scores with weights
         total_score = (
             self.weights["category"] * category_score +
             self.weights["sentiment"] * sentiment_score +
             self.weights["urgency"] * urgency_score
         )
-        
+
         # Return detailed scores if trace is enabled
         if trace:
             return {
@@ -308,68 +307,68 @@ class FacilityMetric(MetricBase):
                 "urgency": urgency_score,
                 "overall": total_score
             }
-        
+
         return total_score
-    
+
     def _evaluate_categories(self, gold: Dict[str, Any], pred: Dict[str, Any]) -> float:
         """
         Evaluate category predictions.
-        
+
         Args:
             gold: Ground truth example
             pred: Predicted example
-            
+
         Returns:
             A score between 0.0 and 1.0
         """
         gold_categories = gold.get("categories", {})
         pred_categories = pred.get("categories", {})
-        
+
         # Calculate precision and recall for categories
         correct = 0
         for category, value in pred_categories.items():
             if category in gold_categories and gold_categories[category] == value:
                 correct += 1
-        
+
         precision = correct / len(pred_categories) if pred_categories else 0
         recall = correct / len(gold_categories) if gold_categories else 0
-        
+
         # Calculate F1 score
         if precision + recall > 0:
             return 2 * precision * recall / (precision + recall)
         return 0.0
-    
+
     def _evaluate_sentiment(self, gold: Dict[str, Any], pred: Dict[str, Any]) -> float:
         """
         Evaluate sentiment prediction.
-        
+
         Args:
             gold: Ground truth example
             pred: Predicted example
-            
+
         Returns:
             A score between 0.0 and 1.0
         """
         gold_sentiment = gold.get("sentiment", "").lower()
         pred_sentiment = pred.get("sentiment", "").lower()
-        
+
         # Simple exact match for sentiment
         return 1.0 if gold_sentiment == pred_sentiment else 0.0
-    
+
     def _evaluate_urgency(self, gold: Dict[str, Any], pred: Dict[str, Any]) -> float:
         """
         Evaluate urgency prediction.
-        
+
         Args:
             gold: Ground truth example
             pred: Predicted example
-            
+
         Returns:
             A score between 0.0 and 1.0
         """
         gold_urgency = gold.get("urgency", "").lower()
         pred_urgency = pred.get("urgency", "").lower()
-        
+
         # Simple exact match for urgency
         return 1.0 if gold_urgency == pred_urgency else 0.0
 ```
@@ -386,12 +385,14 @@ dataset:
     include_metadata: true
 
 metric:
-  metric_class: "docs.advanced.example_custom_adapters.FacilityMetric"
-  metric_params:
-    weights:
-      category: 0.5
-      sentiment: 0.3
-      urgency: 0.2
+  class: "prompt_ops.core.metrics.FacilityMetric"
+  strict_json: false
+  output_field: "answer"
+  # Optional custom weights for different components
+  weights:
+    categories: 0.5
+    sentiment: 0.3
+    urgency: 0.2
 ```
 
 Once you've created your configuration file, you can run prompt-ops with your custom adapter and metric:
@@ -407,27 +408,31 @@ prompt-ops migrate --config docs/advanced/custom_facility_config.yaml
 ## Best Practices for Custom Adapters and Metrics
 
 1. **Input/Output Standardization**: Always normalize your dataset to use consistent field names:
+
    - Use `"question"` for the main input field
    - Use `"answer"` for the main output field
 
 2. **Error Handling**: Include robust error handling in your evaluation method to handle:
+
    - Malformed predictions (e.g., non-JSON strings)
    - Missing fields in predictions
    - Type mismatches between gold and prediction
 
 3. **Documentation**: Document your classes with clear docstrings explaining:
+
    - Expected input format
    - Output format
    - Any special handling or transformations
 
 4. **Testing**: Test your adapter and metric with sample data before using them in a full optimization run:
+
    ```python
    # Test your adapter
    adapter = FacilityAdapter("/path/to/test_data.json")
    examples = adapter.adapt()
    print(f"Processed {len(examples)} examples")
    print(examples[0])  # Check the first example
-   
+
    # Test your metric
    metric = FacilityMetric()
    gold = examples[0]["outputs"]["answer"]
@@ -436,8 +441,6 @@ prompt-ops migrate --config docs/advanced/custom_facility_config.yaml
    print(f"Evaluation score: {score}")
    ```
 
-
-
 ## Advanced Example: Handling Complex JSON Structures
 
 For datasets with complex nested structures, you may need more sophisticated parsing in your adapter class:
@@ -445,11 +448,11 @@ For datasets with complex nested structures, you may need more sophisticated par
 ```python
 class ComplexJSONAdapter(DatasetAdapter):
     """Adapter for complex nested JSON structures."""
-    
+
     def __init__(self, dataset_path: str, input_path: List[str] = None, output_path: List[str] = None, **kwargs):
         """
         Initialize the complex JSON adapter.
-        
+
         Args:
             dataset_path: Path to the dataset file
             input_path: List of keys to navigate to the input field
@@ -459,29 +462,29 @@ class ComplexJSONAdapter(DatasetAdapter):
         super().__init__(dataset_path)
         self.input_path = input_path or ["content", "message", "text"]
         self.output_path = output_path or ["annotations", "labels"]
-    
+
     def adapt(self) -> List[Dict[str, Any]]:
         """Transform complex JSON format into standardized format."""
         with open(self.dataset_path, 'r') as f:
             data = json.load(f)
-        
+
         standardized_data = []
-        
+
         # Handle nested data structures
         for item in data.get("records", []):
             # Extract nested fields using helper function
             input_text = self._extract_nested_field(item, self.input_path)
             output_data = self._extract_nested_field(item, self.output_path)
-            
+
             if input_text is not None and output_data is not None:
                 example = {
                     "inputs": {"question": input_text},
                     "outputs": {"answer": output_data}
                 }
                 standardized_data.append(example)
-        
+
         return standardized_data
-    
+
     def _extract_nested_field(self, data: Dict[str, Any], path: List[str]) -> Any:
         """Extract a value from a nested dictionary using a path of keys."""
         current = data
