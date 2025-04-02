@@ -12,18 +12,16 @@ from typing import Dict, Any, List, Optional, Callable, Literal, Union
 import dspy
 
 from .prompt_strategies import BaseStrategy, BasicOptimizationStrategy, OptimizationError
-from .utils.llama_utils import (
-    is_llama_model, get_llama_tips, get_llama_template, 
-    get_task_type_from_prompt, select_instruction_preference,
-    format_prompt_for_llama
-)
+from .prompt_processors import PromptProcessor, create_llama_processing_chain
+from .utils.llama_utils import is_llama_model
 
-class LlamaStrategy(BasicOptimizationStrategy):
+class LlamaStrategy(BaseStrategy):
     """
     Optimization strategy specifically tailored for Llama models.
     
-    This strategy extends the BasicOptimizationStrategy with additional
-    Llama-specific formatting and optimization techniques.
+    This strategy uses composition with the Chain of Responsibility pattern to process prompts
+    with Llama-specific formatting and optimization techniques before passing
+    them to a BasicOptimizationStrategy for optimization.
     """
     
     def __init__(
@@ -59,7 +57,8 @@ class LlamaStrategy(BasicOptimizationStrategy):
             warnings.warn(f"Model '{model_name}' does not appear to be a Llama model. "
                          f"This strategy is optimized for Llama models and may not work as expected.")
         
-        super().__init__(
+        # Create the base optimization strategy
+        self.base_strategy = BasicOptimizationStrategy(
             model_name=model_name,
             num_threads=num_threads,
             metric=metric,
@@ -73,11 +72,26 @@ class LlamaStrategy(BasicOptimizationStrategy):
         self.apply_formatting = apply_formatting
         self.apply_templates = apply_templates
         self.template_type = template_type
+        self.verbose = kwargs.get('verbose', False)
+        
+        # Create the processing chain
+        self.processor_chain = create_llama_processing_chain(
+            apply_formatting=apply_formatting,
+            apply_templates=apply_templates,
+            verbose=self.verbose
+        )
+        
+        # Forward essential attributes from base_strategy for compatibility
+        self.task_model = getattr(self.base_strategy, 'task_model', None)
+        self.prompt_model = getattr(self.base_strategy, 'prompt_model', None)
+        self.trainset = getattr(self.base_strategy, 'trainset', None)
+        self.valset = getattr(self.base_strategy, 'valset', None)
         
     def run(self, prompt_data: Dict[str, Any]) -> Any:
         """Apply Llama-specific optimization to the prompt.
         
-        Incorporates Llama-specific instruction preferences and formatting based on task type.
+        Uses a chain of processors to apply Llama-specific formatting and
+        instruction preferences before passing to the optimizer.
         
         Args:
             prompt_data: Dictionary containing the prompt text and metadata
@@ -85,59 +99,44 @@ class LlamaStrategy(BasicOptimizationStrategy):
         Returns:
             The optimized DSPy program object
         """
-        # Apply Llama-specific formatting if enabled
-        if self.apply_formatting:
-            # Extract examples from prompt_data if available
-            examples = prompt_data.get("examples", [])
-            context = prompt_data.get("context", "")
-            instruction = prompt_data.get("text", "")
+        # Add strategy parameters to prompt data for processors
+        prompt_data_copy = prompt_data.copy()
+        prompt_data_copy["apply_formatting"] = self.apply_formatting
+        prompt_data_copy["apply_templates"] = self.apply_templates
+        
+        # Process the prompt data through the chain
+        processed_data = self.processor_chain.process(prompt_data_copy)
+        
+        # Extract any proposer kwargs that were added by processors
+        if "proposer_kwargs" in processed_data:
+            # Ensure the base strategy has proposer_kwargs
+            if not hasattr(self.base_strategy, 'proposer_kwargs') or not self.base_strategy.proposer_kwargs:
+                self.base_strategy.proposer_kwargs = {}
+                
+            # Transfer proposer kwargs to the base strategy
+            self.base_strategy.proposer_kwargs.update(processed_data["proposer_kwargs"])
             
-            # Apply Llama-specific template formatting if enabled
-            if self.apply_templates:
-                formatted_prompt = format_prompt_for_llama(
-                    instruction=instruction,
-                    context=context,
-                    examples=examples
-                )
-                prompt_data["text"] = formatted_prompt
-        
-        # Extract input and output fields from the prompt data
-        input_fields = prompt_data.get("input_fields", [])
-        output_fields = prompt_data.get("output_fields", [])
-        prompt_text = prompt_data.get("text", "")
-        
-        # Determine the task type
-        task_type = get_task_type_from_prompt(prompt_text, input_fields, output_fields)
-        
-        # Select appropriate instruction preferences based on the task type
-        selected_preferences = select_instruction_preference(task_type, prompt_data)
-        
-        # Store the original selected preferences for later reference
-        self._selected_preferences = selected_preferences
-        
-        if selected_preferences:
-            # Add the selected instruction preferences to the prompt
-            text = prompt_data.get("text", "")
-            text += "\n\nFollow these instruction formats:\n"
-            for i, preference in enumerate(selected_preferences):
-                text += f"{i+1}. {preference}\n"
-            prompt_data["text"] = text
+            # If we have a tip, store it for YAML export
+            if 'tip' in processed_data["proposer_kwargs"]:
+                self.tip = processed_data["proposer_kwargs"]['tip']
             
-            # Combine all instruction preferences into a single tip string for MIPROv2
-            self.proposer_kwargs = getattr(self, 'proposer_kwargs', {}) or {}
-            if selected_preferences:
-                # Combine all preferences into a single tip string
-                combined_tip = "\n".join([f"{i+1}. {pref}" for i, pref in enumerate(selected_preferences)])
-                self.proposer_kwargs['tip'] = f"Apply the following instruction formats to optimize the prompt:\n{combined_tip}"
+        # Store selected preferences for reference if available
+        if "_selected_preferences" in processed_data:
+            self._selected_preferences = processed_data["_selected_preferences"]
             
-            # Log the task type and selected preferences if verbose
-            if getattr(self, 'verbose', False):
-                print(f"Task type detected: {task_type}")
-                for i, pref in enumerate(selected_preferences):
-                    print(f"Selected instruction preference {i+1}: {pref[:50]}...")
+        # Store instruction tips for YAML export if available
+        if "instruction_tips" in processed_data:
+            self.instruction_tips = processed_data["instruction_tips"]
         
-        # Call the parent class's run method to apply optimization
-        return super().run(prompt_data)
+        # Ensure the base strategy has the latest models and datasets
+        # This is important because these might be set after initialization
+        self.base_strategy.task_model = self.task_model
+        self.base_strategy.prompt_model = self.prompt_model
+        self.base_strategy.trainset = self.trainset
+        self.base_strategy.valset = self.valset
+        
+        # Delegate to the base strategy for optimization
+        return self.base_strategy.run(processed_data)
 
 
 def get_strategy_for_model(model_name: str, **kwargs) -> BaseStrategy:
@@ -156,3 +155,21 @@ def get_strategy_for_model(model_name: str, **kwargs) -> BaseStrategy:
                      f"This library is optimized for Llama models and may not work as expected with other models.")
     
     return LlamaStrategy(model_name=model_name, **kwargs)
+
+
+# Add methods to LlamaStrategy to handle attribute setting
+def __setattr__(self, name, value):
+    """
+    Override attribute setting to forward important attributes to the base strategy.
+    """
+    # Set the attribute on self first
+    object.__setattr__(self, name, value)
+    
+    # Forward specific attributes to the base strategy if it exists
+    if hasattr(self, 'base_strategy') and name in [
+        'task_model', 'prompt_model', 'trainset', 'valset', 'metric'
+    ]:
+        setattr(self.base_strategy, name, value)
+
+# Add the __setattr__ method to LlamaStrategy
+LlamaStrategy.__setattr__ = __setattr__

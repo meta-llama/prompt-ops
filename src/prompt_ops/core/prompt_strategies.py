@@ -89,6 +89,7 @@ class BaseStrategy(ABC):
 class BasicOptimizationStrategy(BaseStrategy):
     """
     A strategy that runs a basic optimization pass using DSPy's MIPROv2.
+    based on this paper: https://arxiv.org/pdf/2406.11695
     
     This strategy applies a basic optimization to the prompt using DSPy's
     MIPROv2 optimizer with the 'basic' auto mode, which focuses on format
@@ -304,9 +305,16 @@ class BasicOptimizationStrategy(BaseStrategy):
                 metric_threshold=self.metric_threshold
             )
             
-            # If we have model-specific tips, configure the proposer to use them
-            if model_tips and hasattr(optimizer, 'proposer_kwargs'):
-                optimizer.proposer_kwargs = getattr(optimizer, 'proposer_kwargs', {}) or {}
+            # Initialize proposer_kwargs if not already present
+            optimizer.proposer_kwargs = getattr(optimizer, 'proposer_kwargs', {}) or {}
+            
+            # First check if we have custom instruction tips from LlamaStrategy
+            if hasattr(self, 'proposer_kwargs') and self.proposer_kwargs and 'tip' in self.proposer_kwargs:
+                # Use our custom instruction tips with highest priority
+                optimizer.proposer_kwargs['tip'] = self.proposer_kwargs['tip']
+                logging.info(f"Using custom instruction tips: {self.proposer_kwargs['tip'][:100]}...")
+            # Otherwise, if we have model-specific tips, use those
+            elif model_tips:
                 # Add persona and example tips to the proposer
                 if 'persona' in model_tips or 'examples' in model_tips:
                     persona_tip = model_tips.get('persona', '')
@@ -317,22 +325,52 @@ class BasicOptimizationStrategy(BaseStrategy):
             
             logging.info(f"Compiling program with {len(self.trainset)} training examples and {len(self.valset)} validation examples")
             
-            # Call compile with all parameters
-            optimized_program = optimizer.compile(
-                program,
-                trainset=self.trainset,
-                valset=self.valset,
-                num_trials=self.num_trials,
-                minibatch=self.minibatch,
-                minibatch_size=self.minibatch_size,
-                minibatch_full_eval_steps=self.minibatch_full_eval_steps,
-                program_aware_proposer=self.program_aware_proposer,
-                data_aware_proposer=self.data_aware_proposer,
-                view_data_batch_size=self.view_data_batch_size,
-                tip_aware_proposer=self.tip_aware_proposer,
-                fewshot_aware_proposer=self.fewshot_aware_proposer,
-                requires_permission_to_run=self.requires_permission_to_run
-            )
+            # Create a custom compile method that injects our tip directly
+            original_propose_instructions = None
+            if hasattr(self, 'proposer_kwargs') and self.proposer_kwargs and 'tip' in self.proposer_kwargs:
+                # Store the original method
+                from dspy.propose.grounded_proposer import GroundedProposer
+                original_propose_instructions = GroundedProposer.propose_instructions_for_program
+                
+                # Create a wrapper that injects our custom tip
+                def custom_propose_instructions(self, *args, **kwargs):
+                    # Override the tip parameter with our custom tip
+                    if 'tip' in kwargs:
+                        logging.info(f"Using default tip parameter: {kwargs['tip'][:50]}...")
+                    
+                    # Inject our custom tip
+                    custom_tip = optimizer.proposer_kwargs.get('tip')
+                    if custom_tip:
+                        logging.info(f"Injecting custom tip: {custom_tip[:50]}...")
+                        kwargs['tip'] = custom_tip
+                    
+                    # Call the original method
+                    return original_propose_instructions(self, *args, **kwargs)
+                
+                # Apply our wrapper
+                GroundedProposer.propose_instructions_for_program = custom_propose_instructions
+            
+            try:
+                # Call compile with all parameters
+                optimized_program = optimizer.compile(
+                    program,
+                    trainset=self.trainset,
+                    valset=self.valset,
+                    num_trials=self.num_trials,
+                    minibatch=self.minibatch,
+                    minibatch_size=self.minibatch_size,
+                    minibatch_full_eval_steps=self.minibatch_full_eval_steps,
+                    program_aware_proposer=self.program_aware_proposer,
+                    data_aware_proposer=self.data_aware_proposer,
+                    view_data_batch_size=self.view_data_batch_size,
+                    tip_aware_proposer=self.tip_aware_proposer,
+                    fewshot_aware_proposer=self.fewshot_aware_proposer,
+                    requires_permission_to_run=self.requires_permission_to_run
+                )
+            finally:
+                # Restore the original method if we modified it
+                if original_propose_instructions:
+                    GroundedProposer.propose_instructions_for_program = original_propose_instructions
             
             # Store model family information in the optimized program for reference
             if hasattr(self, 'model_family') and optimized_program is not None:
