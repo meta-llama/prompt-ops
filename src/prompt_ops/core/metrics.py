@@ -106,13 +106,13 @@ class DSPyMetricAdapter(MetricBase):
             },
             "instructions": """You are a smart language model that evaluates the similarity between a predicted text and the expected ground truth answer. You do not propose changes to the answer and only critically evaluate the existing answer and provide feedback following the instructions given.
 
-The following is the response provided by a language model to a prompt:
-{output}
+            The following is the response provided by a language model to a prompt:
+            {output}
 
-The expected answer to this prompt is:
-{ground_truth}
+            The expected answer to this prompt is:
+            {ground_truth}
 
-Answer only with an integer from 1 to 10 based on how semantically similar the responses are to the expected answer. where 1 is no semantic similarity at all and 10 is perfect agreement between the responses and the expected answer. On a NEW LINE, give the integer score and nothing more."""
+            Answer only with an integer from 1 to 10 based on how semantically similar the responses are to the expected answer. where 1 is no semantic similarity at all and 10 is perfect agreement between the responses and the expected answer. On a NEW LINE, give the integer score and nothing more."""
         },
         "correctness": {
             "input_fields": {
@@ -124,13 +124,13 @@ Answer only with an integer from 1 to 10 based on how semantically similar the r
             },
             "instructions": """You are a smart language model that evaluates the correctness of a predicted answer compared to the expected ground truth. You do not propose changes to the answer and only critically evaluate the existing answer.
 
-The following is the response provided by a language model to a prompt:
-{output}
+            The following is the response provided by a language model to a prompt:
+            {output}
 
-The expected answer to this prompt is:
-{ground_truth}
+            The expected answer to this prompt is:
+            {ground_truth}
 
-Answer only with an integer from 1 to 10 based on how correct the response is compared to the expected answer, where 1 means completely incorrect and 10 means perfectly correct. On a NEW LINE, give the integer score and nothing more."""
+            Answer only with an integer from 1 to 10 based on how correct the response is compared to the expected answer, where 1 means completely incorrect and 10 means perfectly correct. On a NEW LINE, give the integer score and nothing more."""
         }
     }
     
@@ -546,6 +546,204 @@ def _flatten_keys(obj: Any, prefix: str = "") -> List[str]:
         keys.append(prefix)
         
     return keys
+
+
+class FacilityMetric(MetricBase):
+    """
+    A specialized metric for evaluating facility categorization predictions.
+    
+    This metric is based on the evaluation approach in facility-synth/eval.ipynb and
+    specifically evaluates JSON predictions with urgency, sentiment, and categories fields.
+    """
+    
+    def __init__(self, 
+                 output_field: str = "answer",
+                 strict_json: bool = False,
+                 **kwargs):
+        """
+        Initialize the FacilityMetric.
+        
+        Args:
+            output_field: Name of the field containing the ground truth output.
+                         This should match the 'golden_output_field' in the adapter config.
+            strict_json: Whether to use strict JSON parsing (no code block extraction).
+            **kwargs: Additional parameters for customization.
+        """
+        self.output_field = output_field
+        self.strict_json = strict_json
+        
+    def __call__(self, gold: Any, pred: Any, trace: bool = False, **kwargs) -> Union[Dict[str, float], float]:
+        """
+        Evaluate a prediction against the ground truth.
+        
+        Args:
+            gold: Ground truth example. Can be a raw value, dictionary, or object
+                 with specific attributes
+            pred: Predicted example. Can be a raw value, dictionary, or object
+            trace: Whether to enable tracing for debugging
+            **kwargs: Additional metric-specific parameters
+            
+        Returns:
+            Either a dictionary containing metric scores (if trace=True) or a single float score
+        """
+        # Extract ground truth using a priority-based approach
+        ground_truth = self.extract_value(gold, self.output_field)
+        
+        # Extract prediction value
+        prediction_value = self.extract_value(pred, "answer") or pred
+        
+        # Get the full evaluation results
+        results = self.evaluate(ground_truth, prediction_value, **kwargs)
+        
+        # Return the full results dictionary if trace is True, otherwise just the total score
+        if trace:
+            return results
+        return float(results.get("total", 0.0))
+    
+    def extract_value(self, obj: Any, key: str, default: Any = None) -> Any:
+        """
+        Extract a value from different object types.
+        
+        Args:
+            obj: The object to extract from
+            key: The key to extract
+            default: Default value if key is not found
+            
+        Returns:
+            The extracted value or default
+        """
+        # Check for outputs attribute (DSPy Example objects)
+        if hasattr(obj, 'outputs') and hasattr(obj.outputs, 'get'):
+            value = obj.outputs.get(key)
+            if value is not None:
+                return value
+        
+        # Check for direct attribute
+        if hasattr(obj, key):
+            return getattr(obj, key)
+        
+        # Check dictionary-like access
+        if isinstance(obj, dict) and key in obj:
+            return obj[key]
+        
+        # Check for text attribute (common in Prediction objects)
+        if hasattr(obj, 'text'):
+            return obj.text
+        
+        # Fall back to string representation if nothing else works
+        if hasattr(obj, '__str__') and not isinstance(obj, (str, bytes, bytearray)):
+            return str(obj)
+        
+        return obj
+    
+    @staticmethod
+    def parse_json(input_string: str):
+        """
+        Attempts to parse the given string as JSON. If direct parsing fails,
+        it tries to extract a JSON snippet from code blocks formatted as:
+            ```json
+            ... JSON content ...
+            ```
+        or any code block delimited by triple backticks and then parses that content.
+
+        Parameters:
+            input_string (str): The input string which may contain JSON.
+
+        Returns:
+            The parsed JSON object.
+
+        Raises:
+            ValueError: If parsing fails even after attempting to extract a JSON snippet.
+        """
+        # Try to parse the string directly.
+        try:
+            return json.loads(input_string)
+        except json.JSONDecodeError as err:
+            error = err  # Proceed to try extracting a JSON snippet.
+
+        # Define patterns to search for a JSON code block.
+        import re
+        patterns = [
+            re.compile(r"```json\s*(.*?)\s*```", re.DOTALL | re.IGNORECASE),  # code block with "json" label
+            re.compile(r"```(.*?)```", re.DOTALL)  # any code block delimited by triple backticks
+        ]
+        
+        # Attempt extraction using each pattern in order.
+        for pattern in patterns:
+            match = pattern.search(input_string)
+            if match:
+                json_candidate = match.group(1).strip()
+                try:
+                    return json.loads(json_candidate)
+                except json.JSONDecodeError:
+                    # Continue trying if extraction from the code block didn't result in valid JSON.
+                    continue
+
+        # If all attempts fail, raise an error.
+        raise error
+    
+    def evaluate(self, ground_truth: Any, predictions: Any, **kwargs) -> Dict[str, Any]:
+        """
+        Evaluate a prediction against the ground truth using the approach from facility-synth/eval.ipynb.
+        
+        Args:
+            ground_truth: The ground truth
+            predictions: The model's prediction
+            **kwargs: Additional arguments
+            
+        Returns:
+            Dictionary with evaluation results
+        """
+        result = {
+            "is_valid_json": False,
+            "correct_categories": 0.0,
+            "correct_sentiment": False,
+            "correct_urgency": False,
+        }
+        
+        try:
+            # Parse JSON
+            gt = ground_truth if isinstance(ground_truth, dict) else (
+                json.loads(ground_truth) if self.strict_json else self.parse_json(ground_truth)
+            )
+            pred = predictions if isinstance(predictions, dict) else (
+                json.loads(predictions) if self.strict_json else self.parse_json(predictions)
+            )
+        except (json.JSONDecodeError, ValueError):
+            # Invalid JSON, return early with default scores
+            result["total"] = 0.0
+            return result
+            
+        # Mark as valid JSON
+        result["is_valid_json"] = True
+        
+        # Check if required fields are present
+        required_fields = ["categories", "sentiment", "urgency"]
+        for field in required_fields:
+            if field not in gt or field not in pred:
+                result["total"] = 0.0
+                return result
+        
+        # Evaluate categories field
+        try:
+            # Calculate percentage of correctly matched category boolean values
+            result["correct_categories"] = sum(
+                [gt["categories"][k] == pred["categories"][k] for k in gt["categories"].keys()]
+            ) / len(gt["categories"])
+        except (KeyError, TypeError, ZeroDivisionError):
+            result["correct_categories"] = 0.0
+        
+        # Evaluate sentiment field
+        result["correct_sentiment"] = pred["sentiment"] == gt["sentiment"]
+        
+        # Evaluate urgency field
+        result["correct_urgency"] = pred["urgency"] == gt["urgency"]
+        
+        # Calculate total score as average of all correct_* fields
+        correct_fields = [v for k, v in result.items() if k.startswith('correct_')]
+        result["total"] = sum(correct_fields) / len(correct_fields) if correct_fields else 0.0
+        
+        return result
 
 
 class StandardJSONMetric(MetricBase):
