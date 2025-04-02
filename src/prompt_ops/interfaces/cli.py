@@ -13,7 +13,7 @@ import yaml
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
-
+import logging
 import click
 from dotenv import load_dotenv
 
@@ -308,35 +308,62 @@ def get_metric(config, model):
     METRIC_CLASS_MAP = {
         "similarity": "prompt_ops.core.metrics.DSPyMetricAdapter",
         "standard_json": "prompt_ops.core.metrics.StandardJSONMetric",
+        "facility": "prompt_ops.core.metrics.FacilityMetric",
     }
     
     metric_config = config.get("metric", {})
+    
+    # Get metric class from config - check both 'class' and 'metric_class' for compatibility
     metric_class_path = metric_config.get("class")
     
+    # If no metric class is specified, use the type to determine the class
     if not metric_class_path:
-        # Default to DSPyMetricAdapter with similarity signature
-        return DSPyMetricAdapter(model=model, signature_name="similarity")
+        metric_type = metric_config.get("type", "similarity")
+        if metric_type == "similarity":
+            click.echo("Using similarity metric")
+            return DSPyMetricAdapter(
+                model=model,
+                signature_name="similarity"
+            )
+        elif metric_type == "custom":
+            # For backward compatibility with custom metrics
+            click.echo("Using custom metric configuration")
+            return DSPyMetricAdapter(
+                model=model,
+                input_mapping=metric_config.get("input_mapping", {}),
+                output_fields=metric_config.get("output_fields", []),
+                score_range=tuple(metric_config.get("score_range", (0, 1))),
+                normalize_to=tuple(metric_config.get("normalize_to", (0, 1))),
+                custom_instructions=metric_config.get("custom_instructions", "")
+            )
+        elif metric_type.lower() in METRIC_CLASS_MAP:
+            # If type is a known shorthand (like 'standard_json'), resolve it
+            metric_class_path = metric_type
     
-    # Resolve metric class path if it's a known type
-    metric_class_path = resolve_class(metric_class_path, METRIC_CLASS_MAP)
+    # If we have a class path at this point, resolve and instantiate it
+    if metric_class_path:
+        # Resolve metric class path if it's a known type
+        metric_class_path = resolve_class(metric_class_path, METRIC_CLASS_MAP)
+        
+        try:
+            # Import the metric class dynamically
+            metric_class = load_class_dynamically(metric_class_path)
+            
+            # Extract all parameters except known non-parameter keys
+            metric_params = {k: v for k, v in metric_config.items() 
+                            if k not in ["metric_class", "type", "class"]}
+            
+            # Create and return the metric instance
+            if metric_class == DSPyMetricAdapter:
+                # DSPyMetricAdapter requires the model parameter
+                return metric_class(model=model, **metric_params)
+            else:
+                return metric_class(**metric_params)
+        except Exception as e:
+            raise ValueError(f"Failed to create metric instance: {str(e)}")
     
-    try:
-        # Import the class dynamically
-        metric_class = load_class_dynamically(metric_class_path)
-        
-        # Extract all parameters except known non-parameter keys
-        metric_params = {k: v for k, v in metric_config.items() 
-                        if k not in ["class", "type", "metric_class"]}
-        
-        # Create and return the metric instance
-        if metric_class == DSPyMetricAdapter:
-            # DSPyMetricAdapter requires the model parameter
-            return metric_class(model=model, **metric_params)
-        else:
-            # Other metric classes may not need the model
-            return metric_class(**metric_params)
-    except ValueError as e:
-        raise ValueError(f"Failed to load metric: {str(e)}")
+    # If we get here, we couldn't determine the metric type
+    raise ValueError(f"Could not determine metric type from config: {metric_config}")
 
 
 def load_config(config_path):
@@ -387,7 +414,12 @@ def load_config(config_path):
     default=".env",
     help="Path to the .env file containing API keys"
 )
-def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path):
+@click.option(
+    "--log-level",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], case_sensitive=False),
+    default="INFO",
+    help="Set the logging level")
+def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_level):
     """
     Migrate and optimize prompts using a YAML configuration file.
     
@@ -397,6 +429,10 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path):
     Example:
         prompt-ops migrate --config configs/facility.yaml
     """
+    # Set up logging
+    numeric_level = getattr(logging, log_level.upper())
+    logging.basicConfig(level=numeric_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    
     # Load environment variables from .env file if it exists
     if os.path.exists(dotenv_path):
         load_dotenv(dotenv_path)

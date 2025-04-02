@@ -81,6 +81,8 @@ ADAPTER_CLASS_MAP = {
 # Default metric class map for convenience
 METRIC_CLASS_MAP = {
     "similarity": "prompt_ops.core.metrics.DSPyMetricAdapter",
+    "standard_json": "prompt_ops.core.metrics.StandardJSONMetric",
+    "facility": "prompt_ops.core.metrics.FacilityMetric",
 }
 
 # Default strategy class map for convenience
@@ -152,9 +154,16 @@ def load_class_dynamically(class_path):
         ValueError: If the class cannot be imported
     """
     try:
-        module_path, class_name = class_path.rsplit(".", 1)
-        module = importlib.import_module(module_path)
-        return getattr(module, class_name)
+        # Check if the class_path contains a dot
+        if "." in class_path:
+            module_path, class_name = class_path.rsplit(".", 1)
+            module = importlib.import_module(module_path)
+            return getattr(module, class_name)
+        else:
+            # If no dot, assume it's in the current module
+            print(f"Warning: Class path '{class_path}' doesn't contain a module path. " 
+                  f"Make sure it's a valid class name in the METRIC_CLASS_MAP.")
+            raise ValueError(f"Invalid class path: {class_path}. Must include module path.")
     except (ValueError, ImportError, AttributeError) as e:
         raise ValueError(f"Failed to import class {class_path}: {str(e)}")
 
@@ -211,45 +220,53 @@ def get_metric(config, model):
     Returns:
         A metric instance
     """
+    # Default metric class map for convenience
+    METRIC_CLASS_MAP = {
+        "standard_json": "prompt_ops.core.metrics.StandardJSONMetric",
+        "similarity": "prompt_ops.core.metrics.DSPyMetricAdapter",
+    }
+    
     metric_config = config.get("metric", {})
     
-    # Get metric class from config
-    metric_class_path = metric_config.get("metric_class")
+    # Get metric class from config - using 'class' field
+    metric_class_path = metric_config.get("class")
     
-    # If no metric class is specified, use the type to determine the class
+    # If no class is specified, default to similarity metric
     if not metric_class_path:
-        metric_type = metric_config.get("type", "similarity")
-        if metric_type == "similarity":
-            return DSPyMetricAdapter(
-                model=model,
-                signature_name="similarity"
-            )
-        elif metric_type == "custom":
-            # For backward compatibility with custom metrics
-            return DSPyMetricAdapter(
-                model=model,
-                input_mapping=metric_config.get("input_mapping", {}),
-                output_fields=metric_config.get("output_fields", []),
-                score_range=tuple(metric_config.get("score_range", (0, 1))),
-                normalize_to=tuple(metric_config.get("normalize_to", (0, 1))),
-                custom_instructions=metric_config.get("custom_instructions", "")
-            )
-    else:
-        # Resolve metric class path
-        metric_class_path = resolve_metric_class(metric_class_path)
-        
-        # Import the metric class dynamically
+        print("No metric class specified, defaulting to similarity metric")
+        return DSPyMetricAdapter(
+            model=model,
+            signature_name="similarity"
+        )
+    
+    # Resolve metric class path if it's a known shorthand
+    if metric_class_path.lower() in METRIC_CLASS_MAP:
+        print(f"Resolved shorthand class name to: {METRIC_CLASS_MAP[metric_class_path.lower()]}")
+        metric_class_path = METRIC_CLASS_MAP[metric_class_path.lower()]
+    
+    # Import the metric class dynamically
+    try:
         metric_class = load_class_dynamically(metric_class_path)
         
         # Extract all parameters except known non-parameter keys
-        metric_params = {k: v for k, v in metric_config.items() 
-                        if k not in ["metric_class", "type", "class"]}
+        metric_params = {}
+        if "params" in metric_config:
+            # Handle params being in a nested 'params' field
+            metric_params = metric_config["params"]
+        else:
+            # Extract params directly from the metric config
+            metric_params = {k: v for k, v in metric_config.items() 
+                            if k not in ["class"]}
         
         # Create and return the metric instance
-        try:
+        if metric_class.__name__ == "DSPyMetricAdapter":
+            # DSPyMetricAdapter requires the model parameter
+            return metric_class(model=model, **metric_params)
+        else:
+            # Other metric classes don't need the model
             return metric_class(**metric_params)
-        except Exception as e:
-            raise ValueError(f"Failed to create metric instance: {str(e)}")
+    except Exception as e:
+        raise ValueError(f"Failed to create metric instance: {str(e)}")
 
 
 def check_api_key():
@@ -518,8 +535,16 @@ def main():
     
     # Create metric based on config
     try:
+        # Print metric configuration for debugging
+        metric_config = config.get("metric", {})
+        print(f"\nMetric configuration: {metric_config}")
+        print(f"Using metric class: {metric_config.get('class')}")
+        if "params" in metric_config:
+            print(f"Metric params: {metric_config.get('params')}")
+        
         metric = get_metric(config, model)
         print(f"Using metric: {metric.__class__.__name__}")
+        print(f"Metric parameters: {metric.__dict__}")
     except ValueError as e:
         print(f"Error creating metric: {str(e)}")
         sys.exit(1)

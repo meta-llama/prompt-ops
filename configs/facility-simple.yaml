@@ -15,9 +15,9 @@ model:
 
 # Metric configuration (simplified but maintains compatibility)
 metric:
-  class: "standard_json"
-  evaluation_mode: "full_json_comparison"
-  output_fields: ["urgency", "sentiment", "categories"]
+  class: "prompt_ops.core.metrics.FacilityMetric"
+  strict_json: false
+  output_field: "answer"
 
 # Optimization settings
 optimization:
