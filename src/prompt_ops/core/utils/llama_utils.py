@@ -7,6 +7,7 @@ for optimizing prompts for Llama models.
 
 from typing import Dict, Any, List, Optional
 import random
+import re
 
 
 LLAMA_TIPS = {
@@ -36,8 +37,6 @@ LLAMA_TEMPLATES = {
     "full": "<s>[INST] {instruction}\n\n{context}\n\nExamples:\n{examples} [/INST]"
 }
 
-
-import re
 
 def is_llama_model(model_name: str) -> bool:
     """

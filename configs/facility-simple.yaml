@@ -21,4 +21,4 @@ metric:
 
 # Optimization settings
 optimization:
-  strategy: "basic"
+  strategy: "llama"

@@ -71,7 +71,7 @@ metric:
     strict_json: false
 
 optimization:
-  strategy: "basic" # Strategy to use (basic, intermediate, advanced, custom)
+  strategy: "llama" # Strategy to use (llama, basic, intermediate, advanced, custom)
   max_rounds: 3 # Maximum number of optimization rounds
   max_examples_per_round: 5 # Maximum examples to use per round
   max_prompt_length: 2048 # Maximum length of the optimized prompt

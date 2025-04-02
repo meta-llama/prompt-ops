@@ -94,12 +94,18 @@ def convert_json_to_yaml(prompt, few_shots, user_prompt=None, task_model=None, m
                     yaml_content += f"    apply_templates: {strategy.apply_templates}\n"
             
             # Extract and include instruction tips if available
-            if hasattr(strategy, 'proposer_kwargs') and strategy.proposer_kwargs:
-                if 'tip' in strategy.proposer_kwargs:
-                    tip = strategy.proposer_kwargs['tip']
-                    # Format the tip with proper indentation for YAML
-                    indented_tip = "\n        ".join(tip.strip().split("\n"))
-                    yaml_content += f"    instruction_tips: |\n        {indented_tip}\n"
+            if hasattr(strategy, 'instruction_tips'):
+                # Use the directly stored instruction_tips attribute
+                tip = strategy.instruction_tips
+                # Format the tip with proper indentation for YAML
+                indented_tip = "\n        ".join(tip.strip().split("\n"))
+                yaml_content += f"    instruction_tips: |\n        {indented_tip}\n"
+            # Fall back to proposer_kwargs if instruction_tips not available
+            elif hasattr(strategy, 'proposer_kwargs') and strategy.proposer_kwargs and 'tip' in strategy.proposer_kwargs:
+                tip = strategy.proposer_kwargs['tip']
+                # Format the tip with proper indentation for YAML
+                indented_tip = "\n        ".join(tip.strip().split("\n"))
+                yaml_content += f"    instruction_tips: |\n        {indented_tip}\n"
             
             # For LlamaStrategy, include original instruction preferences if available
             if strategy_name == "LlamaStrategy" and hasattr(strategy, '_selected_preferences'):

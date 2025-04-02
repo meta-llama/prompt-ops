@@ -153,22 +153,144 @@ def get_dataset_adapter(config):
     # Resolve adapter class path if it's a known type
     adapter_class_path = resolve_class(adapter_class_path, ADAPTER_CLASS_MAP)
     
-    try:
-        # Import the class dynamically
-        adapter_class = load_class_dynamically(adapter_class_path)
+    # Import the class dynamically
+    adapter_class = load_class_dynamically(adapter_class_path)
+    
+    # Get file format if specified
+    file_format = dataset_config.get("file_format")
+    
+    # Extract all parameters except known non-parameter keys
+    adapter_params = {k: v for k, v in dataset_config.items() 
+                     if k not in ["adapter_class", "path", "file_format", 
+                                  "train_size", "validation_size", "seed", "shuffle"]}
+    
+    # Create and return the adapter instance
+    return adapter_class(dataset_path=dataset_path, file_format=file_format, **adapter_params)
+
+
+def get_dataset_adapter_from_config(config_dict, config_path):
+    """
+    Create a dataset adapter from configuration, handling relative paths.
+    
+    Args:
+        config_dict: The full configuration dictionary
+        config_path: Path to the configuration file (used for resolving relative paths)
         
-        # Get file format if specified
-        file_format = dataset_config.get("file_format")
+    Returns:
+        A configured dataset adapter instance
+    """
+    # Handle relative dataset paths
+    dataset_config = config_dict.get("dataset", {})
+    if "path" in dataset_config and not os.path.isabs(dataset_config["path"]):
+        # Make dataset path relative to the config file location
+        config_dir = os.path.dirname(os.path.abspath(config_path))
+        dataset_config["path"] = os.path.join(config_dir, dataset_config["path"])
+        click.echo(f"Resolved relative dataset path to: {dataset_config['path']}")
+    
+    # Get the adapter using the existing helper function
+    return get_dataset_adapter(config_dict)
+
+
+def get_model_from_config(config_dict, override_model_name=None, api_key=None):
+    """
+    Create a model adapter instance from configuration.
+    
+    Args:
+        config_dict: The full configuration dictionary
+        override_model_name: Optional model name to override the one in config
+        api_key: API key to use for the model
         
-        # Extract all parameters except known non-parameter keys
-        adapter_params = {k: v for k, v in dataset_config.items() 
-                         if k not in ["adapter_class", "path", "file_format", 
-                                      "train_size", "validation_size", "seed", "shuffle"]}
+    Returns:
+        A configured model adapter instance
+    """
+    model_config = config_dict.get("model", {})
+    adapter_type = model_config.get("adapter_type", "dspy")
+    
+    return setup_model(
+        model_name=override_model_name if override_model_name else model_config.get("name", "openrouter/meta-llama/llama-3.3-70b-instruct"),
+        adapter_type=adapter_type,
+        api_base=model_config.get("api_base", "https://openrouter.ai/api/v1"),
+        api_key=api_key,
+        max_tokens=model_config.get("max_tokens", 2048),
+        temperature=model_config.get("temperature", 0.0),
+        cache=model_config.get("cache", False)
+    )
+
+
+def get_strategy(strategy_config, model_name_with_path, metric, model_instance):
+    """
+    Create a prompt optimization strategy based on configuration.
+    
+    Args:
+        strategy_config: Strategy configuration dictionary
+        model_name_with_path: Full model name including provider path
+        metric: Metric instance to use for optimization
+        model_instance: Model adapter instance
         
-        # Create and return the adapter instance
-        return adapter_class(dataset_path=dataset_path, file_format=file_format, **adapter_params)
-    except ValueError as e:
-        raise ValueError(f"Failed to load adapter: {str(e)}")
+    Returns:
+        A strategy instance appropriate for the model and configuration
+    """
+    # Extract just the model name without provider path
+    model_name = model_name_with_path.split("/")[-1]
+    
+    # Check if strategy is specified in config
+    strategy_type = strategy_config.get("type")
+    
+    # If strategy type is specified in config, use it
+    if strategy_type:
+        if strategy_type.lower() == "llama":
+            # Get Llama-specific parameters
+            apply_formatting = strategy_config.get("apply_formatting", True)
+            apply_templates = strategy_config.get("apply_templates", True)
+            template_type = strategy_config.get("template_type", "basic")
+            
+            strategy = LlamaStrategy(
+                model_name=model_name,
+                metric=metric,
+                task_model=model_instance,
+                prompt_model=model_instance,
+                apply_formatting=apply_formatting,
+                apply_templates=apply_templates,
+                template_type=template_type
+            )
+            click.echo(f"Using LlamaStrategy from config for model: {model_name}")
+            return strategy
+            
+        elif strategy_type.lower() == "basic":
+            strategy = BasicOptimizationStrategy(
+                model_name=model_name,
+                metric=metric,
+                task_model=model_instance,
+                prompt_model=model_instance
+            )
+            click.echo(f"Using BasicOptimizationStrategy from config for model: {model_name}")
+            return strategy
+            
+        else:
+            click.echo(f"Unknown strategy type: {strategy_type}, falling back to auto-detection")
+            # Fall through to auto-detection
+    
+    # Auto-detect based on model name
+    if "llama" in model_name.lower():
+        strategy = LlamaStrategy(
+            model_name=model_name,
+            metric=metric,
+            task_model=model_instance,
+            prompt_model=model_instance,
+            apply_formatting=True,
+            apply_templates=True
+        )
+        click.echo(f"Auto-detected LlamaStrategy for model: {model_name}")
+    else:
+        strategy = BasicOptimizationStrategy(
+            model_name=model_name,
+            metric=metric,
+            task_model=model_instance,
+            prompt_model=model_instance
+        )
+        click.echo(f"Auto-detected BasicOptimizationStrategy for model: {model_name}")
+    
+    return strategy
 
 
 def get_metric(config, model):
@@ -295,18 +417,8 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path):
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)
     
-    # Use config values for model setup
-    model_config = config_dict.get("model", {})
-    adapter_type = model_config.get("adapter_type", "dspy")
-    model_instance = setup_model(
-        model_name=model if model else model_config.get("name", "openrouter/meta-llama/llama-3.3-70b-instruct"),
-        adapter_type=adapter_type,
-        api_base=model_config.get("api_base", "https://openrouter.ai/api/v1"),
-        api_key=api_key,
-        max_tokens=model_config.get("max_tokens", 2048),
-        temperature=model_config.get("temperature", 0.0),
-        cache=model_config.get("cache", False)
-    )
+    # Set up model from config
+    model_instance = get_model_from_config(config_dict, model, api_key)
     
     # Create metric based on config
     try:
@@ -318,94 +430,19 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path):
     
     # Get dataset adapter from config
     try:
-        # Handle relative dataset paths
-        dataset_config = config_dict.get("dataset", {})
-        if "path" in dataset_config and not os.path.isabs(dataset_config["path"]):
-            # Make dataset path relative to the config file location
-            config_dir = os.path.dirname(os.path.abspath(config))
-            dataset_config["path"] = os.path.join(config_dir, dataset_config["path"])
-            click.echo(f"Resolved relative dataset path to: {dataset_config['path']}")
-        
-        dataset_adapter = get_dataset_adapter(config_dict)
+        dataset_adapter = get_dataset_adapter_from_config(config_dict, config)
         click.echo(f"Using dataset adapter: {dataset_adapter.__class__.__name__}")
     except ValueError as e:
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)
     
     # Create strategy based on config
-    model_name = model_config.get("name", "").split("/")[-1]
-    
-    # Check if strategy is specified in config
-    strategy_config = config_dict.get("strategy", {})
-    strategy_type = strategy_config.get("type")
-    
-    # If strategy type is specified in config, use it
-    if strategy_type:
-        if strategy_type.lower() == "llama":
-            # Get Llama-specific parameters
-            apply_formatting = strategy_config.get("apply_formatting", True)
-            apply_templates = strategy_config.get("apply_templates", True)
-            template_type = strategy_config.get("template_type", "basic")
-            
-            strategy = LlamaStrategy(
-                model_name=model_name,
-                metric=metric,
-                task_model=model_instance,
-                prompt_model=model_instance,
-                apply_formatting=apply_formatting,
-                apply_templates=apply_templates,
-                template_type=template_type
-            )
-            click.echo(f"Using LlamaStrategy from config for model: {model_name}")
-        elif strategy_type.lower() == "basic":
-            strategy = BasicOptimizationStrategy(
-                model_name=model_name,
-                metric=metric,
-                task_model=model_instance,
-                prompt_model=model_instance
-            )
-            click.echo(f"Using BasicOptimizationStrategy from config for model: {model_name}")
-        else:
-            click.echo(f"Unknown strategy type: {strategy_type}, falling back to auto-detection")
-            # Fall back to auto-detection
-            if "llama" in model_name.lower():
-                strategy = LlamaStrategy(
-                    model_name=model_name,
-                    metric=metric,
-                    task_model=model_instance,
-                    prompt_model=model_instance,
-                    apply_formatting=True,
-                    apply_templates=True
-                )
-                click.echo(f"Auto-detected LlamaStrategy for model: {model_name}")
-            else:
-                strategy = BasicOptimizationStrategy(
-                    model_name=model_name,
-                    metric=metric,
-                    task_model=model_instance,
-                    prompt_model=model_instance
-                )
-                click.echo(f"Auto-detected BasicOptimizationStrategy for model: {model_name}")
-    else:
-        # Auto-detect based on model name
-        if "llama" in model_name.lower():
-            strategy = LlamaStrategy(
-                model_name=model_name,
-                metric=metric,
-                task_model=model_instance,
-                prompt_model=model_instance,
-                apply_formatting=True,
-                apply_templates=True
-            )
-            click.echo(f"Auto-detected LlamaStrategy for model: {model_name}")
-        else:
-            strategy = BasicOptimizationStrategy(
-                model_name=model_name,
-                metric=metric,
-                task_model=model_instance,
-                prompt_model=model_instance
-            )
-            click.echo(f"Auto-detected BasicOptimizationStrategy for model: {model_name}")
+    strategy = get_strategy(
+        config_dict.get("strategy", {}),
+        config_dict.get("model", {}).get("name", ""),
+        metric,
+        model_instance
+    )
     
     # Create migrator
     migrator = PromptMigrator(
