@@ -308,7 +308,6 @@ def get_metric(config, model):
     METRIC_CLASS_MAP = {
         "similarity": "prompt_ops.core.metrics.DSPyMetricAdapter",
         "standard_json": "prompt_ops.core.metrics.StandardJSONMetric",
-        "facility": "prompt_ops.core.metrics.FacilityMetric",
     }
     
     metric_config = config.get("metric", {})
@@ -559,20 +558,7 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
                 save_to_file=True,
                 file_path=json_file_path
             )
-            
-            # Also save to YAML format if requested
-            if save_yaml:
-                try:
-                    # Get the data from the JSON file
-                    with open(json_file_path, 'r') as json_file:
-                        result_data = json.load(json_file)
-                    
-                    # Save as YAML
-                    with open(yaml_file_path, 'w') as yaml_file:
-                        yaml.dump(result_data, yaml_file, default_flow_style=False)
-                except Exception as yaml_error:
-                    click.echo(f"Warning: Could not save YAML file: {str(yaml_error)}", err=True)
-            
+                        
             click.echo("\n=== Optimization Complete ===")
             click.echo(f"Results saved to: {json_file_path}")
             if save_yaml:
