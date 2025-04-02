@@ -26,17 +26,16 @@ prompt-ops is a Python package that automates the process of optimizing prompts 
                       └─────────────────────┘
 ```
 
-
 ### Input
+
 - **Prompt**: Your existing prompt designed for other LLMs
 - **Dataset**: Examples for evaluation and optimization (JSON, CSV, etc.) with inputs and expected outputs
 - **Configuration**: YAML file defining optimization parameters, dataset, metrics, etc.
 - **API Key**: Access to LLM APIs (OpenRouter, etc.)
 
 ### Output
+
 - **Optimized Prompt**: Llama-optimized version of your prompt
-
-
 
 ## Why use prompt-ops?
 
@@ -55,7 +54,9 @@ prompt-ops is a Python package that automates the process of optimizing prompts 
 pip install prompt-ops
 
 # From source
-git clone https://github.com/yourusername/prompt-ops.git
+git clone https://github.com/meta-llama/prompt-ops.git
+# or with ssh
+# git clone git@github.com:meta-llama/prompt-ops.git
 cd prompt-ops
 pip install -e .
 ```
@@ -82,10 +83,9 @@ This example demonstrates how prompt-ops migrates a customer service analysis pr
 
 Below is an example of how prompt-ops transforms a prompt from OpenAI to Llama:
 
-| Original OpenAI Prompt | Optimized Llama Prompt |
-|------------------------|------------------------|
+| Original OpenAI Prompt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Optimized Llama Prompt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | You are a helpful assistant. Extract and return a json with the following keys and values:<br>- "urgency" as one of `high`, `medium`, `low`<br>- "sentiment" as one of `negative`, `neutral`, `positive`<br>- "categories" Create a dictionary with categories as keys and boolean values (True/False), where the value indicates whether the category is one of the best matching support category tags from: `emergency_repair_services`, `routine_maintenance_requests`, etc.<br><br>Your complete message should be a valid json string that can be read directly. | You are an expert in analyzing customer service messages. Your task is to categorize the following message based on urgency, sentiment, and relevant categories.<br><br>Analyze the message and return a JSON object with these fields:<br>1. "urgency": Classify as "high", "medium", or "low" based on how quickly this needs attention<br>2. "sentiment": Classify as "negative", "neutral", or "positive" based on the customer's tone<br>3. "categories": Create a dictionary with facility management categories as keys and boolean values<br><br>Only include these exact keys in your response. Return a valid JSON object without code blocks, prefixes, or explanations. |
-
 
 ## Key Features
 

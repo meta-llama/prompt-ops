@@ -71,11 +71,7 @@ Create a `.env` file in the project root with your API key:
 
 ```bash
 # Create a .env file with your API key
-cat > .env << 'EOL'
-OPENROUTER_API_KEY=your_key_here
-# OR use one of these instead
-# TOGETHER_API_KEY=your_key_here
-EOL
+echo "OPENROUTER_API_KEY=your_key_here" > .env
 ```
 
 The prompt-ops tool will automatically load this file when running.
