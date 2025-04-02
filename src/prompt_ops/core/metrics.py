@@ -552,7 +552,7 @@ class FacilityMetric(MetricBase):
     """
     A specialized metric for evaluating facility categorization predictions.
     
-    This metric is based on the evaluation approach in facility-synth/eval.ipynb and
+    This metric is based on the evaluation approach in use-cases/facility-synth/eval.ipynb and
     specifically evaluates JSON predictions with urgency, sentiment, and categories fields.
     """
     
@@ -684,7 +684,7 @@ class FacilityMetric(MetricBase):
     
     def evaluate(self, ground_truth: Any, predictions: Any, **kwargs) -> Dict[str, Any]:
         """
-        Evaluate a prediction against the ground truth using the approach from facility-synth/eval.ipynb.
+        Evaluate a prediction against the ground truth using the approach from use-cases/facility-synth/eval.ipynb.
         
         Args:
             ground_truth: The ground truth

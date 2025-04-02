@@ -8,7 +8,7 @@ In this quick guide, you'll optimize a prompt for classifying customer service m
 - **Sentiment**: positive, neutral, or negative
 - **Categories**: relevant service categories from a predefined list
 
-You can explore the complete dataset and prompt in the `dataset/facility-synth` directory, which contains the sample data and system prompts used in this guide.
+You can explore the complete dataset and prompt in the `use-cases/facility-synth` directory, which contains the sample data and system prompts used in this guide.
 
 ## Step 1: Install prompt-ops
 
@@ -45,7 +45,7 @@ prompt:
 
 # Dataset configuration
 dataset:
-  path: "../dataset/facility-synth/facility_v2_test.json"
+  path: "../use-cases/facility-synth/facility_v2_test.json"
   input_field: ["fields", "input"]
   golden_output_field: "answer"
 

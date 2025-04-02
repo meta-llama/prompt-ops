@@ -92,17 +92,15 @@ coverage/
 /.pytest_cache
 
 configs/dox*.yaml
-src/prompt_ops/datasets/dox/
-src/prompt_migrator/datasets/dox/
+
 tests/functional/test_with_dox*.py
-dataset/dox/
-datasets/dox/
+use-cases/dox/
 configs/joule*.yaml
 examples/joule_*.sh
 examples/joule_*.py
 src/prompt_ops/datasets/joule/
-src/prompt_migrator/datasets/joule/
 tests/functional/test_with_joule*.py
-dataset/joule/
-datasets/joule/
+use-cases/joule/
 test_with_config_client.py
+src/prompt_ops/datasets/dox/
+src/prompt_ops/datasets/joule/

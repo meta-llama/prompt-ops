@@ -12,7 +12,7 @@ The facility management classification task involves categorizing customer servi
 2. Customer sentiment
 3. Relevant service categories
 
-You can explore the complete dataset and prompt in the `dataset/facility-synth` directory, which contains the sample data and system prompts used in this guide. This will help you understand the specific use case and how the configuration options apply to real-world data.
+You can explore the complete dataset and prompt in the `use-cases/facility-synth` directory, which contains the sample data and system prompts used in this guide. This will help you understand the specific use case and how the configuration options apply to real-world data.
 
 By understanding the advanced configuration options, you can fine-tune the optimization process to achieve better results for your specific use case.
 
@@ -33,7 +33,7 @@ model:
 # Dataset Configuration
 dataset:
   adapter_class: "prompt_ops.core.datasets.ConfigurableJSONAdapter"
-  path: "../dataset/facility-synth/facility_v2_test.json"
+  path: "../use-cases/facility-synth/facility_v2_test.json"
   train_size: 0.7
   validation_size: 0.15
   # These parameters can be placed directly at the dataset level
@@ -45,7 +45,7 @@ dataset:
 
 # Prompt Configuration
 prompt:
-  file: "../dataset/facility-synth/facility_prompt_sys.txt"  # Reference to prompt file instead of inline text
+  file: "../use-cases/facility-synth/facility_prompt_sys.txt"  # Reference to prompt file instead of inline text
   inputs: ["question"]
   outputs: ["answer"]
 
@@ -130,7 +130,7 @@ The `dataset` section defines how to load and process your examples:
 ```yaml
 dataset:
   adapter_class: "prompt_ops.core.datasets.ConfigurableJSONAdapter"
-  path: "/path/to/dataset/facility-synth/facility_v2_test.json"
+  path: "/path/to/use-cases/facility-synth/facility_v2_test.json"
   train_size: 0.7
   validation_size: 0.15
   seed: 42
@@ -172,7 +172,7 @@ prompt:
     - "sentiment" as one of `negative`, `neutral`, `positive`
     - "categories" Create a dictionary with categories as keys and boolean values...
   # Option 2: File Path
-  file: "../dataset/facility-synth/facility_prompt_sys.txt"
+  file: "../use-cases/facility-synth/facility_prompt_sys.txt"
   inputs: ["question"]
   outputs: ["answer"]
 ```

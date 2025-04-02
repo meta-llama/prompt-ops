@@ -18,7 +18,7 @@ model:
 ## name the data adapter take in N params
 dataset:
   adapter_class: "prompt_ops.core.datasets.ConfigurableJSONAdapter"
-  path: "../dataset/facility-synth/facility_v2_test.json"
+  path: "../use-cases/facility-synth/facility_v2_test.json"
   train_size: 0.7
   validation_size: 0.15
   # seed: 42               # Random seed for dataset splitting

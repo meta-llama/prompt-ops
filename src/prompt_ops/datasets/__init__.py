@@ -6,7 +6,5 @@ designed for specific dataset types.
 """
 
 # Import adapters and metrics for easy access
-try:
-    from prompt_ops.datasets.facility import FacilityAdapter, FacilityMetric
-except ImportError:
-    pass
+# Note: FacilityAdapter and FacilityMetric are now imported from core modules
+# as the use-cases directory is not part of the Python package structure
