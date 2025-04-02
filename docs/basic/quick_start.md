@@ -8,11 +8,15 @@ In this quick guide, you'll optimize a prompt for classifying customer service m
 - **Sentiment**: positive, neutral, or negative
 - **Categories**: relevant service categories from a predefined list
 
+You can explore the complete dataset and prompt in the `dataset/facility-synth` directory, which contains the sample data and system prompts used in this guide.
+
 ## Step 1: Install prompt-ops
 
 ```bash
 # Clone the repository (if you haven't already)
-git clone https://github.com/yourusername/prompt-ops.git
+git clone https://github.com/meta-llama/prompt-ops.git
+# or with ssh
+# git clone git@github.com:meta-llama/prompt-ops.git
 cd prompt-ops
 
 # Install the package in development mode

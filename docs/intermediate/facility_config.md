@@ -12,11 +12,13 @@ The facility management classification task involves categorizing customer servi
 2. Customer sentiment
 3. Relevant service categories
 
+You can explore the complete dataset and prompt in the `dataset/facility-synth` directory, which contains the sample data and system prompts used in this guide. This will help you understand the specific use case and how the configuration options apply to real-world data.
+
 By understanding the advanced configuration options, you can fine-tune the optimization process to achieve better results for your specific use case.
 
 ## Complete Configuration Structure
 
-Here's the complete configuration structure for the facility management classification task:
+Create a new file named `facility.yaml` in your `configs` directory with the following complete configuration structure. This example shows all available options for the facility management classification task:
 
 ```yaml
 # Model Configuration
@@ -272,9 +274,12 @@ optimization:
 To run prompt-ops with your advanced configuration:
 
 ```bash
-# Set your API key
-export OPENROUTER_API_KEY=your_key_here
-
+# Create a .env file with your API key
+cat > .env << 'EOL'
+OPENROUTER_API_KEY=your_key_here
+# OR use one of these instead
+# TOGETHER_API_KEY=your_key_here
+EOL
 # Run optimization
 prompt-ops migrate --config configs/facility.yaml
 ```
@@ -289,7 +294,7 @@ prompt-ops migrate --config configs/facility.yaml --model together/meta-llama/Ll
 prompt-ops migrate --config configs/facility.yaml --dataset-path /path/to/new/dataset.json
 ```
 
-## Advanced Output Analysis
+## Output Files
 
 After optimization, prompt-ops generates detailed output files:
 
