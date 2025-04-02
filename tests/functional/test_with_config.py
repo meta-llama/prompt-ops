@@ -1,0 +1,744 @@
+#!/usr/bin/env python
+"""
+Test the prompt-ops tool with YAML configuration support.
+
+This script provides a configurable interface for testing the prompt-ops tool's 
+ability to optimize prompts for various tasks. It supports configuration via 
+YAML files and command-line arguments.
+
+You need to set the OPENROUTER_API_KEY environment variable before running this script.
+
+Usage:
+    export OPENROUTER_API_KEY=your_key_here
+    python test_with_config.py --config configs/joule.yaml
+    python test_with_config.py --config configs/dox.yaml
+    python test_with_config.py --config configs/joule.yaml --model openrouter/anthropic/claude-3-opus
+    python test_with_config.py --adapter-class my_package.custom_adapters.MyCustomAdapter
+
+Configuration:
+    The script can be configured using a YAML file with the following structure:
+    
+    model:
+      name: "openrouter/meta-llama/llama-3.3-70b-instruct"
+      api_base: "https://openrouter.ai/api/v1"
+      temperature: 0.0
+      
+    dataset:
+      adapter_class: "prompt_ops.adapters.joule.JouleAdapter"  # Full import path to adapter class
+      path: "path/to/dataset.json"
+      train_size: 0.25
+      validation_size: 0.25
+      adapter_params:  # Optional adapter-specific parameters
+        param1: value1
+        param2: value2
+      
+    prompt:
+      text: "Your prompt text here..."
+      inputs: ["question", "context"]
+      outputs: ["answer"]
+      
+    See example configuration files in the configs/ directory.
+"""
+
+import logging
+import os
+import json
+import sys
+import argparse
+import yaml
+import importlib
+from pathlib import Path
+from typing import Dict, List, Any, Tuple, Optional
+import typing as t
+from dotenv import load_dotenv
+
+# Add src directory to Python path
+src_path = Path(__file__).parent.parent.parent / "src"
+if src_path.exists() and str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
+
+# Load environment variables from .env file
+load_dotenv()
+
+from prompt_ops.core.migrator import PromptMigrator
+from prompt_ops.core.prompt_strategies import (
+    BasicOptimizationStrategy, OptimizationError
+)
+from prompt_ops.core.model_strategies import LlamaStrategy
+from prompt_ops.core.metrics import DSPyMetricAdapter, StandardJSONMetric
+from prompt_ops.core.datasets import DatasetAdapter, load_dataset
+from prompt_ops.core.model import setup_model
+
+# Constants
+SEED = 42
+
+# Default adapter class map for convenience
+ADAPTER_CLASS_MAP = {
+    "standard_json": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
+    "rag_json": "prompt_ops.core.datasets.RAGJSONAdapter",
+}
+
+# Default metric class map for convenience
+METRIC_CLASS_MAP = {
+    "similarity": "prompt_ops.core.metrics.DSPyMetricAdapter",
+    "standard_json": "prompt_ops.core.metrics.StandardJSONMetric",
+    "facility": "prompt_ops.core.metrics.FacilityMetric",
+}
+
+# Default strategy class map for convenience
+STRATEGY_CLASS_MAP = {
+    "basic": "prompt_ops.core.prompt_strategies.BasicOptimizationStrategy",
+
+}
+
+
+def resolve_class(class_type_or_path, class_map):
+    """
+    Resolve a class type to full class path.
+    
+    Args:
+        class_type_or_path: Either a known type (e.g., 'joule', 'dox') 
+                            or a full class path
+        class_map: Mapping of shorthand names to full class paths
+                               
+    Returns:
+        str: Full class path
+    """
+    # If it's a known type, use the mapping
+    if class_type_or_path.lower() in class_map:
+        return class_map[class_type_or_path.lower()]
+    
+    # Otherwise assume it's already a full class path
+    return class_type_or_path
+
+
+def resolve_adapter_class(adapter_type_or_class):
+    """
+    Resolve adapter type to full class path.
+    
+    Args:
+        adapter_type_or_class: Either a known adapter type (e.g., 'joule') 
+                               or a full class path
+                               
+    Returns:
+        str: Full class path
+    """
+    return resolve_class(adapter_type_or_class, ADAPTER_CLASS_MAP)
+
+
+def resolve_metric_class(metric_type_or_class):
+    """
+    Resolve metric type to full class path.
+    
+    Args:
+        metric_type_or_class: Either a known metric type (e.g., 'similarity') 
+                              or a full class path
+                               
+    Returns:
+        str: Full class path
+    """
+    return resolve_class(metric_type_or_class, METRIC_CLASS_MAP)
+
+
+def load_class_dynamically(class_path):
+    """
+    Dynamically import and return a class from its path.
+    
+    Args:
+        class_path: Full import path to the class
+        
+    Returns:
+        The class object
+        
+    Raises:
+        ValueError: If the class cannot be imported
+    """
+    try:
+        # Check if the class_path contains a dot
+        if "." in class_path:
+            module_path, class_name = class_path.rsplit(".", 1)
+            module = importlib.import_module(module_path)
+            return getattr(module, class_name)
+        else:
+            # If no dot, assume it's in the current module
+            print(f"Warning: Class path '{class_path}' doesn't contain a module path. " 
+                  f"Make sure it's a valid class name in the METRIC_CLASS_MAP.")
+            raise ValueError(f"Invalid class path: {class_path}. Must include module path.")
+    except (ValueError, ImportError, AttributeError) as e:
+        raise ValueError(f"Failed to import class {class_path}: {str(e)}")
+
+
+def get_dataset_adapter(config):
+    """
+    Create adapter from configuration.
+    
+    Args:
+        config: The configuration dictionary
+        
+    Returns:
+        DatasetAdapter: Instantiated adapter
+        
+    Raises:
+        ValueError: If adapter configuration is invalid
+    """
+    dataset_config = config.get("dataset", {})
+    adapter_class_path = dataset_config.get("adapter_class", "standard_json")
+    dataset_path = dataset_config.get("path")
+    
+    if not dataset_path:
+        raise ValueError("Dataset path not specified in configuration")
+    
+    # Resolve adapter class path if it's a known type
+    adapter_class_path = resolve_adapter_class(adapter_class_path)
+    
+    try:
+        # Import the class dynamically
+        adapter_class = load_class_dynamically(adapter_class_path)
+        
+        # Get file format if specified
+        file_format = dataset_config.get("file_format")
+        
+        # Extract all parameters except known non-parameter keys
+        adapter_params = {k: v for k, v in dataset_config.items() 
+                         if k not in ["adapter_class", "path", "file_format", 
+                                      "train_size", "validation_size", "seed", "shuffle"]}
+        
+        # Create and return the adapter instance
+        return adapter_class(dataset_path=dataset_path, file_format=file_format, **adapter_params)
+    except ValueError as e:
+        raise ValueError(f"Failed to load adapter: {str(e)}")
+
+
+def get_metric(config, model):
+    """
+    Create metric from configuration.
+    
+    Args:
+        config: The configuration dictionary
+        model: The model to use for the metric
+        
+    Returns:
+        A metric instance
+    """
+    # Default metric class map for convenience
+    METRIC_CLASS_MAP = {
+        "standard_json": "prompt_ops.core.metrics.StandardJSONMetric",
+        "similarity": "prompt_ops.core.metrics.DSPyMetricAdapter",
+    }
+    
+    metric_config = config.get("metric", {})
+    
+    # Get metric class from config - using 'class' field
+    metric_class_path = metric_config.get("class")
+    
+    # If no class is specified, default to similarity metric
+    if not metric_class_path:
+        print("No metric class specified, defaulting to similarity metric")
+        return DSPyMetricAdapter(
+            model=model,
+            signature_name="similarity"
+        )
+    
+    # Resolve metric class path if it's a known shorthand
+    if metric_class_path.lower() in METRIC_CLASS_MAP:
+        print(f"Resolved shorthand class name to: {METRIC_CLASS_MAP[metric_class_path.lower()]}")
+        metric_class_path = METRIC_CLASS_MAP[metric_class_path.lower()]
+    
+    # Import the metric class dynamically
+    try:
+        metric_class = load_class_dynamically(metric_class_path)
+        
+        # Extract all parameters except known non-parameter keys
+        metric_params = {}
+        if "params" in metric_config:
+            # Handle params being in a nested 'params' field
+            metric_params = metric_config["params"]
+        else:
+            # Extract params directly from the metric config
+            metric_params = {k: v for k, v in metric_config.items() 
+                            if k not in ["class"]}
+        
+        # Create and return the metric instance
+        if metric_class.__name__ == "DSPyMetricAdapter":
+            # DSPyMetricAdapter requires the model parameter
+            return metric_class(model=model, **metric_params)
+        else:
+            # Other metric classes don't need the model
+            return metric_class(**metric_params)
+    except Exception as e:
+        raise ValueError(f"Failed to create metric instance: {str(e)}")
+
+
+def check_api_key():
+    """Check if the OpenRouter API key is set."""
+    if not os.getenv("OPENROUTER_API_KEY"):
+        print("Error: OPENROUTER_API_KEY environment variable is not set.")
+        print("Please set it with: export OPENROUTER_API_KEY=your_key_here")
+        sys.exit(1)
+    print(" OpenRouter API key is set.")
+
+
+def find_config() -> Optional[str]:
+    """Find configuration file in standard locations."""
+    config_paths = [
+        "./config.yaml",                                # Current directory
+        "./configs/default.yaml",                       # Configs subdirectory
+        os.path.expanduser("~/.prompt_ops.yaml"),  # User home directory
+    ]
+    
+    for path in config_paths:
+        if os.path.exists(path):
+            return path
+    
+    return None
+
+
+def load_config(config_path: str) -> Dict[str, Any]:
+    """Load configuration from YAML file."""
+    try:
+        with open(config_path, 'r') as f:
+            return yaml.safe_load(f)
+    except Exception as e:
+        print(f"Error loading configuration from {config_path}: {str(e)}")
+        sys.exit(1)
+
+
+def parse_arguments():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Optimize prompts using configuration from YAML files and command-line arguments"
+    )
+    
+    # Config file option
+    parser.add_argument(
+        "--config", 
+        help="Path to YAML configuration file"
+    )
+    
+    # Model configuration
+    parser.add_argument(
+        "--model", 
+        help="Model name to use for optimization"
+    )
+    parser.add_argument(
+        "--api-base", 
+        help="API base URL"
+    )
+    parser.add_argument(
+        "--temperature", 
+        type=float, 
+        help="Model temperature"
+    )
+    
+    # Dataset configuration
+    parser.add_argument(
+        "--dataset", 
+        help="Path to the dataset file"
+    )
+    parser.add_argument(
+        "--adapter-class",
+        help="Full import path to dataset adapter class"
+    )
+    parser.add_argument(
+        "--dataset-type",
+        choices=list(ADAPTER_CLASS_MAP.keys()),
+        help="Type of dataset (shorthand for adapter class)"
+    )
+    parser.add_argument(
+        "--file-format",
+        choices=["json", "csv", "yaml"],
+        help="Format of the dataset file. If not specified, inferred from file extension."
+    )
+    parser.add_argument(
+        "--train-size", 
+        type=float, 
+        help="Proportion of data to use for training"
+    )
+    parser.add_argument(
+        "--val-size", 
+        type=float, 
+        help="Proportion of data to use for validation"
+    )
+    
+    # Prompt configuration
+    parser.add_argument(
+        "--prompt", 
+        help="Base prompt to optimize"
+    )
+    parser.add_argument(
+        "--prompt-file", 
+        help="File containing the base prompt to optimize"
+    )
+    
+    # Output configuration
+    parser.add_argument(
+        "--output-dir", 
+        help="Directory to save results"
+    )
+    parser.add_argument(
+        "--output-prefix", 
+        help="Prefix for output files"
+    )
+    
+    # Logging configuration
+    parser.add_argument(
+        "--log-level", 
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Logging level"
+    )
+    
+    # Metric arguments
+    parser.add_argument(
+        "--metric-class", 
+        type=str,
+        help="Metric class to use"
+    )
+    parser.add_argument(
+        "--metric-type", 
+        type=str,
+        choices=["similarity", "dox"],
+        help="Type of metric to use (shorthand for metric-class)"
+    )
+    
+    # List available components
+    parser.add_argument(
+        "--list-adapters",
+        action="store_true",
+        help="List available dataset adapters and exit"
+    )
+    parser.add_argument(
+        "--list-metrics",
+        action="store_true",
+        help="List available metrics and exit"
+    )
+    
+    args = parser.parse_args()
+    
+    # Handle information requests
+    if args.list_adapters:
+        print("Available dataset adapters:")
+        for name, path in sorted(ADAPTER_CLASS_MAP.items()):
+            print(f"  {name}: {path}")
+        sys.exit(0)
+        
+    if args.list_metrics:
+        print("Available metrics:")
+        for name, path in sorted(METRIC_CLASS_MAP.items()):
+            print(f"  {name}: {path}")
+        sys.exit(0)
+    
+    return args
+
+
+def get_merged_config(args) -> Dict[str, Any]:
+    """Merge YAML config with command-line arguments."""
+    config = {}
+    
+    # Load from YAML if provided
+    if args.config:
+        config = load_config(args.config)
+    else:
+        # Try to find a default config
+        default_config = find_config()
+        if default_config:
+            print(f"Using default configuration from {default_config}")
+            config = load_config(default_config)
+    
+    # Override with command-line arguments if provided
+    # Model settings
+    if not "model" in config:
+        config["model"] = {}
+    if args.model:
+        config["model"]["name"] = args.model
+    if args.api_base:
+        config["model"]["api_base"] = args.api_base
+    if args.temperature is not None:
+        config["model"]["temperature"] = args.temperature
+    
+    # Dataset settings
+    if not "dataset" in config:
+        config["dataset"] = {}
+    if args.dataset:
+        config["dataset"]["path"] = args.dataset
+    if args.train_size is not None:
+        config["dataset"]["train_size"] = args.train_size
+    if args.val_size is not None:
+        config["dataset"]["validation_size"] = args.val_size
+    if args.file_format:
+        config["dataset"]["file_format"] = args.file_format
+        
+    # Handle adapter class/type
+    if args.adapter_class:
+        config["dataset"]["adapter_class"] = args.adapter_class
+    elif args.dataset_type:
+        config["dataset"]["adapter_class"] = resolve_adapter_class(args.dataset_type)
+        
+    # Handle metric class/type
+    if not "metric" in config:
+        config["metric"] = {}
+    if args.metric_class:
+        config["metric"]["metric_class"] = args.metric_class
+    elif args.metric_type:
+        config["metric"]["metric_class"] = args.metric_type
+    
+    # Prompt settings
+    if not "prompt" in config:
+        config["prompt"] = {}
+    if args.prompt:
+        config["prompt"]["text"] = args.prompt
+    elif args.prompt_file:
+        with open(args.prompt_file, 'r') as f:
+            config["prompt"]["text"] = f.read().strip()
+    
+    # Output settings
+    if not "output" in config:
+        config["output"] = {}
+    if args.output_dir:
+        config["output"]["directory"] = args.output_dir
+    if args.output_prefix:
+        config["output"]["prefix"] = args.output_prefix
+    
+    # Logging settings
+    if not "logging" in config:
+        config["logging"] = {}
+    if args.log_level:
+        config["logging"]["level"] = args.log_level
+    
+    return config
+
+
+def main():
+    """Run the prompt optimization with configuration."""
+    args = parse_arguments()
+    config = get_merged_config(args)
+    
+    print("=== Testing Prompt-ops with Configuration ===\n")
+    
+    # Set up logging
+    logging_level = getattr(logging, config.get("logging", {}).get("level", "INFO"))
+    logging.basicConfig(level=logging_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    
+    check_api_key()
+
+    # Use config values for model setup
+    model_config = config.get("model", {})
+    adapter_type = model_config.get("adapter_type", "dspy")
+    model = setup_model(
+        model_name=model_config.get("name", "openrouter/meta-llama/llama-3.3-70b-instruct"),
+        adapter_type=adapter_type,
+        api_base=model_config.get("api_base", "https://openrouter.ai/api/v1"),
+        api_key=os.getenv("OPENROUTER_API_KEY"),
+        max_tokens=model_config.get("max_tokens", 100000),
+        temperature=model_config.get("temperature", 0.0),
+        cache=model_config.get("cache", False)
+    )
+    
+    # Create metric based on config
+    try:
+        # Print metric configuration for debugging
+        metric_config = config.get("metric", {})
+        print(f"\nMetric configuration: {metric_config}")
+        print(f"Using metric class: {metric_config.get('class')}")
+        if "params" in metric_config:
+            print(f"Metric params: {metric_config.get('params')}")
+        
+        metric = get_metric(config, model)
+        print(f"Using metric: {metric.__class__.__name__}")
+        print(f"Metric parameters: {metric.__dict__}")
+    except ValueError as e:
+        print(f"Error creating metric: {str(e)}")
+        sys.exit(1)
+    
+    # Get dataset adapter from config
+    try:
+        # Handle relative dataset paths
+        dataset_config = config.get("dataset", {})
+        if "path" in dataset_config and not os.path.isabs(dataset_config["path"]):
+            # Make dataset path relative to the config file location
+            config_dir = os.path.dirname(os.path.abspath(args.config)) if args.config else os.getcwd()
+            dataset_config["path"] = os.path.join(config_dir, dataset_config["path"])
+            print(f"Resolved relative dataset path to: {dataset_config['path']}")
+        
+        dataset_adapter = get_dataset_adapter(config)
+        print(f"Using dataset adapter: {dataset_adapter.__class__.__name__}")
+    except ValueError as e:
+        print(f"Error: {str(e)}")
+        sys.exit(1)
+
+    # Create strategy based on config
+    model_name = model_config.get("name", "").split("/")[-1]
+    
+    # Check if strategy is specified in config
+    strategy_config = config.get("strategy", {})
+    strategy_type = strategy_config.get("type")
+    
+    # If strategy type is specified in config, use it
+    if strategy_type:
+        if strategy_type.lower() == "llama":
+            # Get Llama-specific parameters
+            apply_formatting = strategy_config.get("apply_formatting", True)
+            apply_templates = strategy_config.get("apply_templates", True)
+            template_type = strategy_config.get("template_type", "basic")
+            
+            strategy = LlamaStrategy(
+                model_name=model_name,
+                metric=metric,
+                task_model=model,
+                prompt_model=model,
+                apply_formatting=apply_formatting,
+                apply_templates=apply_templates,
+                template_type=template_type
+            )
+            print(f"Using LlamaStrategy from config for model: {model_name}")
+        elif strategy_type.lower() == "basic":
+            strategy = LightOptimizationStrategy(
+                model_name=model_name,
+                metric=metric,
+                task_model=model,
+                prompt_model=model
+            )
+            print(f"Using BasicOptimizationStrategy from config for model: {model_name}")
+        else:
+            print(f"Unknown strategy type: {strategy_type}, falling back to auto-detection")
+            # Fall back to auto-detection
+            if "llama" in model_name.lower():
+                strategy = LlamaStrategy(
+                    model_name=model_name,
+                    metric=metric,
+                    task_model=model,
+                    prompt_model=model,
+                    apply_formatting=True,
+                    apply_templates=True
+                )
+                print(f"Auto-detected LlamaStrategy for model: {model_name}")
+            else:
+                strategy = LightOptimizationStrategy(
+                    model_name=model_name,
+                    metric=metric,
+                    task_model=model,
+                    prompt_model=model
+                )
+                print(f"Auto-detected LightOptimizationStrategy for model: {model_name}")
+    else:
+        # Auto-detect based on model name
+        if "llama" in model_name.lower():
+            strategy = LlamaStrategy(
+                model_name=model_name,
+                metric=metric,
+                task_model=model,
+                prompt_model=model,
+                apply_formatting=True,
+                apply_templates=True
+            )
+            print(f"Auto-detected LlamaStrategy for model: {model_name}")
+        else:
+            strategy = LightOptimizationStrategy(
+                model_name=model_name,
+                metric=metric,
+                task_model=model,
+                prompt_model=model
+            )
+            print(f"Auto-detected LightOptimizationStrategy for model: {model_name}")
+    
+    # Create migrator
+    migrator = PromptMigrator(
+        strategy=strategy,
+        task_model=model,
+        prompt_model=model
+    )
+    
+    # Load dataset with configured splits
+    dataset_config = config.get("dataset", {})
+    trainset, valset, testset = migrator.load_dataset_with_adapter(
+        dataset_adapter, 
+        train_size=dataset_config.get("train_size", 0.25), 
+        validation_size=dataset_config.get("validation_size", 0.25)
+    )
+
+    # Get prompt from config
+    prompt_config = config.get("prompt", {})
+    prompt_file = prompt_config.get("file", None)
+    prompt_text = prompt_config.get("text", "")
+    
+    # Load prompt text from file if specified and text is not provided
+    if prompt_file and not prompt_text:
+        # Handle relative paths - relative to the config file location
+        config_dir = os.path.dirname(os.path.abspath(args.config)) if args.config else os.getcwd()
+        if not os.path.isabs(prompt_file):
+            prompt_file = os.path.join(config_dir, prompt_file)
+            
+        if os.path.exists(prompt_file):
+            try:
+                with open(prompt_file, 'r') as f:
+                    prompt_text = f.read()
+                print(f"Loaded prompt from file: {prompt_file}")
+            except Exception as e:
+                print(f"Error loading prompt file: {str(e)}")
+                sys.exit(1)
+        else:
+            print(f"Warning: Prompt file not found: {prompt_file}")
+            print("Using empty prompt text instead.")
+    
+    prompt_inputs = prompt_config.get("inputs", ["question", "context"])
+    prompt_outputs = prompt_config.get("outputs", ["answer"])
+
+    # Set up output path
+    output_config = config.get("output", {})
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = output_config.get("directory", "results")
+    
+    # Handle relative output directory path - relative to current working directory
+    if not os.path.isabs(output_dir):
+        output_dir = os.path.abspath(output_dir)
+    
+    # Use the specified prefix from config, or fall back to the config file name
+    if "prefix" in output_config:
+        output_prefix = output_config.get("prefix")
+        logging.info(f"Using output prefix from config: {output_prefix}")
+    else:
+        output_prefix = Path(args.config).stem if args.config else "optimized_prompt"
+        logging.info(f"Using config filename as output prefix: {output_prefix}")
+    
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    file_path = os.path.join(output_dir, f"{output_prefix}_{timestamp}.json")
+    
+    # Try to optimize the prompt and save it to a file
+    try:
+        # Wrap the optimization in a try/except block to catch parallelizer errors
+        try:
+            basic_optimized = migrator.optimize(
+                {
+                    "text": prompt_text, 
+                    "inputs": prompt_inputs, 
+                    "outputs": prompt_outputs
+                },
+                trainset=trainset,
+                valset=valset,
+                testset=testset,
+                save_to_file=True,
+                file_path=file_path
+            )
+            
+            print("\n=== Summary ===")
+            print("Basic optimized prompt:")
+            print("=" * 80)
+            print(basic_optimized.signature.instructions)
+            print("=" * 80)
+        except RuntimeError as re:
+            if "cannot schedule new futures after shutdown" in str(re):
+                print("\nEncountered a parallelizer shutdown error. This is likely due to a threading issue in DSPy.")
+                print("The optimization may have partially completed. Check the output file for results.")
+                print(f"Output file: {file_path}")
+            else:
+                raise
+    except OptimizationError as e:
+        print(f"\nOptimization failed: {str(e)}")
+        print("No optimized prompt was generated.")
+    except Exception as e:
+        print(f"\nUnexpected error during optimization: {str(e)}")
+        print("No optimized prompt was generated.")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,32 @@
+prompt:
+  file: "../../dataset/facility-synth/facility_prompt_sys.txt"
+  inputs: ["question"]
+  outputs: ["answer"]
+
+# Dataset configuration with custom adapter
+dataset:
+  adapter_class: "docs.advanced.example_custom_adapters.FacilityAdapter"
+  path: "../../dataset/facility-synth/facility_v2_test.json"
+  adapter_params:
+    include_metadata: true
+
+# Model configuration
+model:
+  name: "openrouter/meta-llama/llama-3.3-70b-instruct"
+  api_base: "https://openrouter.ai/api/v1"
+  temperature: 0.0
+
+# Custom metric configuration
+metric:
+  metric_class: "docs.advanced.example_custom_adapters.FacilityMetric"
+  metric_params:
+    weights:
+      category: 1.0
+      sentiment: 1.0
+      urgency: 1.0
+
+# Optimization settings
+optimization:
+  strategy: "basic"
+  max_rounds: 3
+  max_examples_per_round: 5

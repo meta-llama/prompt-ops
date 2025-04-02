@@ -1,0 +1,42 @@
+# Default configuration for prompt-migrator
+model:
+  name: "openrouter/meta-llama/llama-3.3-70b-instruct"
+  api_base: "https://openrouter.ai/api/v1"
+  temperature: 0.0
+  max_tokens: 100000
+  cache: false
+
+dataset:
+  adapter_class: "prompt_ops.datasets.default.DefaultAdapter"  # Default adapter
+  train_size: 0.25
+  validation_size: 0.25
+  adapter_params: {}  # Empty by default, specify as needed
+
+prompt:
+  text: |
+    You are a helpful assistant answering questions. 
+    Given a question and relevant context, provide a 
+    concise and accurate answer based only on the information in the context. 
+    If the context doesn't contain the information needed to answer the question, 
+    say that you don't have enough information.
+  inputs: ["question", "context"]
+  outputs: ["answer"]
+
+metric:
+  type: "similarity"  # Built-in signature name
+  # For custom metrics, uncomment and modify:
+  # input_mapping:
+  #   pred: "prediction"
+  #   gold: "reference"
+  # output_fields: ["relevance", "accuracy"]
+  # score_range: [0, 100]
+  # normalize_to: [0, 1]
+  # custom_instructions: |
+  #   Evaluate the prediction against the reference.
+
+output:
+  directory: "results"
+  prefix: "optimized_prompt"
+
+logging:
+  level: "INFO"
