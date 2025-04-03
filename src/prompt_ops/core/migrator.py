@@ -162,7 +162,6 @@ class PromptMigrator:
         
         if save_to_file:
             saved_path = self.save_optimized_prompt(optimized_program, file_path, save_yaml, user_prompt)
-            logging.info(f"Saved optimized prompt to {saved_path}")
         
         return optimized_program
    

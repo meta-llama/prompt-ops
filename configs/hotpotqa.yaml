@@ -1,0 +1,45 @@
+model:
+  name: "openrouter/meta-llama/llama-3.3-70b-instruct"
+  api_base: "https://openrouter.ai/api/v1"
+  temperature: 0.0
+  max_tokens: 2048
+
+dataset:
+  adapter_class: "prompt_ops.datasets.hotpotqa.HotpotQAAdapter"
+  path: "/Users/justinai/Documents/Code/prompt-ops/use-cases/hotpotqa/hotpotqa_sample.json"
+  train_size: 0.4
+  validation_size: 0.2
+  test_size: 0.4
+  adapter_params:
+    passages_per_hop: 3
+    max_hops: 2
+    retriever_url: null  # Set to a valid ColBERT URL if available
+
+prompt:
+  text: |
+    You are an expert at answering complex questions that require multi-hop reasoning.
+    
+    Given a question, you need to:
+    1. Identify the key entities in the question
+    2. Analyze the provided context to find connections between entities
+    3. Provide a concise answer based on the information
+    
+    Context:
+    {context}
+    
+    Question: {question}
+    
+    First, reason step-by-step through the context to find the answer.
+    Then, provide your final answer.
+  inputs: ["question", "context"]
+  outputs: ["answer"]
+
+metric:
+  class: "prompt_ops.datasets.hotpotqa.HotpotQAMetric"
+  output_field: "answer"
+  passage_weight: 0.5
+
+strategy:
+  class: "prompt_ops.core.prompt_strategies.BasicOptimizationStrategy"
+  num_threads: 2
+  max_examples: 1

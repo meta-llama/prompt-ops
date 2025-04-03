@@ -92,7 +92,6 @@ coverage/
 /.pytest_cache
 
 configs/dox*.yaml
-
 tests/functional/test_with_dox*.py
 use-cases/dox/
 configs/joule*.yaml
