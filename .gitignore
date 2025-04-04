@@ -93,13 +93,19 @@ coverage/
 
 configs/dox*.yaml
 tests/functional/test_with_dox*.py
-use-cases/dox/
+
 configs/joule*.yaml
 examples/joule_*.sh
 examples/joule_*.py
 src/prompt_ops/datasets/joule/
 tests/functional/test_with_joule*.py
-use-cases/joule/
+
 test_with_config_client.py
 src/prompt_ops/datasets/dox/
 src/prompt_ops/datasets/joule/
+
+
+use-cases/hotpotqa
+use-cases/joule/
+use-cases/dox/
+datasets/dropbox_qa/dropbox_data.json
