@@ -11,6 +11,16 @@ import os
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Union, Tuple
 
+# Import dspy for Example class
+try:
+    import dspy
+    from dspy.primitives import Example as DSPyExample
+    DSPY_AVAILABLE = True
+except ImportError:
+    DSPY_AVAILABLE = False
+    # Fallback to dict if dspy not available
+    DSPyExample = dict
+
 from prompt_ops.core.datasets import DatasetAdapter
 from prompt_ops.core.exceptions import DatasetError
 
@@ -31,6 +41,10 @@ class HotpotQAAdapter(DatasetAdapter):
         passages_per_hop: int = 3,
         max_hops: int = 2,
         retriever_url: str = None,
+        input_field: Union[str, List[str], Dict[str, str]] = None,
+        golden_output_field: Union[str, List[str], Dict[str, str]] = None,
+        context_field: str = None,
+        supporting_facts_field: str = None,
         **kwargs
     ):
         """
@@ -42,6 +56,10 @@ class HotpotQAAdapter(DatasetAdapter):
             passages_per_hop: Number of passages to retrieve per hop
             max_hops: Maximum number of retrieval hops
             retriever_url: URL for the retriever service (optional)
+            input_field: Field(s) to use as input (string, list, or dict)
+            golden_output_field: Field to use as ground truth/reference output
+            context_field: Field name for context passages
+            supporting_facts_field: Field name for supporting facts
             **kwargs: Additional arguments
         """
         super().__init__(dataset_path, file_format or "json")
@@ -49,6 +67,14 @@ class HotpotQAAdapter(DatasetAdapter):
         self.max_hops = max_hops
         self.retriever_url = retriever_url
         self.retriever = None
+        
+        # Store input and output field mappings
+        self.input_field = input_field or "question"
+        self.output_field = golden_output_field or "answer"
+        self.context_field = context_field or "context"
+        self.supporting_facts_field = supporting_facts_field or "supporting_facts"
+        
+        logger.info(f"Initialized HotpotQA adapter with input_field={self.input_field}, context_field={self.context_field}, supporting_facts_field={self.supporting_facts_field}, and output_field={self.output_field}")
         
         # Initialize retriever if URL is provided
         if retriever_url:
@@ -111,7 +137,7 @@ class HotpotQAAdapter(DatasetAdapter):
             logger.error(f"Error adapting HotpotQA dataset: {e}")
             raise DatasetError(f"Failed to adapt HotpotQA dataset: {e}")
     
-    def _process_example(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _process_example(self, item: Dict[str, Any]) -> Optional[Any]:
         """
         Process a single example from the dataset.
         
@@ -119,53 +145,109 @@ class HotpotQAAdapter(DatasetAdapter):
             item: The raw example from the dataset
             
         Returns:
-            Standardized example or None if invalid
+            Standardized example with inputs and outputs fields for DSPy compatibility
         """
         try:
-            # Extract question and answer
+            # Extract required fields
+            _id = item.get('_id', '')
             question = item.get('question', '')
             answer = item.get('answer', '')
+            
+            # Use the configured field names for context and supporting facts
+            supporting_facts = item.get(self.supporting_facts_field, [])
+            context = item.get(self.context_field, [])
+            level = item.get('level', '')
+            type_field = item.get('type', '')
             
             # Skip invalid examples
             if not question or not answer:
                 return None
             
-            # Extract supporting facts (for evaluation)
-            supporting_facts = item.get('supporting_facts', [])
-            gold_titles = []
+            # Create inputs and outputs dictionaries based on configured fields
+            inputs = {}
             
-            if supporting_facts:
-                if isinstance(supporting_facts, list):
-                    if supporting_facts and isinstance(supporting_facts[0], dict):
-                        # Format: [{"title": "...", "sent_id": ...}, ...]
-                        gold_titles = [fact.get('title', '') for fact in supporting_facts]
+            # Handle different types of input field configurations
+            if isinstance(self.input_field, str):
+                # Single input field
+                inputs[self.input_field] = item.get(self.input_field, "")
+                # Always add context field separately
+                inputs[self.context_field] = context
+            elif isinstance(self.input_field, list):
+                # List of input fields
+                for field in self.input_field:
+                    if field == "question":
+                        inputs[field] = question
+                    elif field == self.context_field:
+                        inputs[field] = context
                     else:
-                        # Format: ["title1", "title2", ...]
-                        gold_titles = supporting_facts
+                        inputs[field] = item.get(field, "")
+            elif isinstance(self.input_field, dict):
+                # Dictionary mapping source fields to destination fields
+                for src_field, dst_field in self.input_field.items():
+                    if src_field == "question":
+                        inputs[dst_field] = question
+                    elif src_field == self.context_field:
+                        inputs[dst_field] = context
+                    else:
+                        inputs[dst_field] = item.get(src_field, "")
+            else:
+                # Default to question and context
+                inputs = {
+                    "question": question,
+                    self.context_field: context
+                }
             
-            # Extract context if available
-            context = item.get('context', [])
-            if not context and self.retriever:
-                # If no context is provided but we have a retriever, perform retrieval
-                retrieval_result = self.perform_multi_hop_retrieval(question)
-                context = retrieval_result.get("context", [])
-            
-            # Create standardized example with inputs and outputs dictionaries
-            example = {
-                "inputs": {
-                    "question": question
-                },
-                "outputs": {
+            # Create outputs dictionary based on configured output field
+            outputs = {}
+            if isinstance(self.output_field, str):
+                outputs[self.output_field] = answer
+            elif isinstance(self.output_field, list):
+                for field in self.output_field:
+                    if field == "answer":
+                        outputs[field] = answer
+                    else:
+                        outputs[field] = item.get(field, "")
+            elif isinstance(self.output_field, dict):
+                for src_field, dst_field in self.output_field.items():
+                    if src_field == "answer":
+                        outputs[dst_field] = answer
+                    else:
+                        outputs[dst_field] = item.get(src_field, "")
+            else:
+                # Default to answer
+                outputs = {
                     "answer": answer
-                },
-                "gold_titles": gold_titles
+                }
+            
+            # Always create a dictionary with the standardized format expected by create_dspy_example()
+            # This ensures compatibility with the rest of the pipeline
+            
+            # Make sure the question is always included in inputs for consistency
+            if "question" not in inputs and self.input_field != "question":
+                inputs["question"] = question
+                
+            # Make sure the answer is always included in outputs for consistency
+            if "answer" not in outputs and self.output_field != "answer":
+                outputs["answer"] = answer
+                
+            example_dict = {
+                "inputs": inputs,
+                "outputs": outputs,
+                "metadata": {
+                    "_id": _id,
+                    self.supporting_facts_field: supporting_facts,
+                    "type": type_field,
+                    "level": level
+                }
             }
             
-            # Add context if available
-            if context:
-                example["inputs"]["context"] = context
-            
-            return example
+            # Log the created dictionary
+            input_preview = {k: str(v)[:30] + '...' if isinstance(v, str) and len(str(v)) > 30 else v 
+                           for k, v in inputs.items()}
+            output_preview = {k: str(v)[:30] + '...' if isinstance(v, str) and len(str(v)) > 30 else v 
+                            for k, v in outputs.items()}
+            logger.debug(f"Created example dictionary with inputs: {input_preview} and outputs: {output_preview}")
+            return example_dict
             
         except Exception as e:
             logger.warning(f"Error processing example: {e}")
@@ -257,16 +339,17 @@ class HotpotQAAdapter(DatasetAdapter):
             processed["inputs"]["question"] = ""
         
         # Ensure context is present
-        if "context" not in processed["inputs"] and self.retriever:
+        if self.context_field not in processed["inputs"] and self.retriever:
             # Perform retrieval to get context
             retrieval_result = self.perform_multi_hop_retrieval(processed["inputs"]["question"])
-            processed["inputs"]["context"] = retrieval_result.get("context", [])
-        elif "context" not in processed["inputs"]:
+            processed["inputs"][self.context_field] = retrieval_result.get("context", [])
+        elif self.context_field not in processed["inputs"]:
             # No retriever available, use empty context
-            processed["inputs"]["context"] = []
+            processed["inputs"][self.context_field] = []
         
-        # Format context as a string if it's a list
-        if isinstance(processed["inputs"]["context"], list):
-            processed["inputs"]["context"] = "\n\n".join(processed["inputs"]["context"])
+        # Format context as a string if it's a list of passages
+        if isinstance(processed["inputs"][self.context_field], list):
+            # If it's already a list of formatted passages, just join them
+            processed["inputs"][self.context_field] = "\n\n".join(processed["inputs"][self.context_field])
         
         return processed

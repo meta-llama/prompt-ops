@@ -7,28 +7,33 @@ model:
 dataset:
   adapter_class: "prompt_ops.datasets.hotpotqa.HotpotQAAdapter"
   path: "/Users/justinai/Documents/Code/prompt-ops/use-cases/hotpotqa/hotpotqa_sample.json"
-  train_size: 0.4
-  validation_size: 0.2
-  test_size: 0.4
+  train_size: 0.005
+  validation_size: 0.005
+  test_size: 0.008
   adapter_params:
     passages_per_hop: 3
     max_hops: 2
-    retriever_url: null  # Set to a valid ColBERT URL if available
+    retriever_url: null # Set to a valid ColBERT URL if available
+    # Explicitly define input and output field mappings
+    input_field: "question"  # Primary input field is the question
+    context_field: "context"  # Field containing context passages
+    supporting_facts_field: "supporting_facts"  # Field containing supporting facts
+    golden_output_field: "answer"  # Field to use as ground truth/reference output
 
 prompt:
   text: |
     You are an expert at answering complex questions that require multi-hop reasoning.
-    
+
     Given a question, you need to:
     1. Identify the key entities in the question
     2. Analyze the provided context to find connections between entities
     3. Provide a concise answer based on the information
-    
+
     Context:
     {context}
-    
+
     Question: {question}
-    
+
     First, reason step-by-step through the context to find the answer.
     Then, provide your final answer.
   inputs: ["question", "context"]
@@ -41,5 +46,10 @@ metric:
 
 strategy:
   class: "prompt_ops.core.prompt_strategies.BasicOptimizationStrategy"
-  num_threads: 2
-  max_examples: 1
+  num_threads: 1
+  max_examples: 3
+  max_bootstrapped_demos: 0
+  max_labeled_demos: 0
+  num_candidates: 1
+  auto: "basic"
+  minibatch: false

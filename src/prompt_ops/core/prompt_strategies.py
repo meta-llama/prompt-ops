@@ -8,6 +8,8 @@ optimization strategies for migrating prompts to Llama models.
 import json
 import logging
 import os
+import sys
+import traceback
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, List, Union, Callable
 import dspy
@@ -334,39 +336,159 @@ class BasicOptimizationStrategy(BaseStrategy):
                 
                 # Create a wrapper that injects our custom tip
                 def custom_propose_instructions(self, *args, **kwargs):
-                    # Override the tip parameter with our custom tip
-                    if 'tip' in kwargs:
-                        logging.info(f"Using default tip parameter: {kwargs['tip'][:50]}...")
+                    logging.info("Starting custom_propose_instructions with enhanced error handling")
                     
-                    # Inject our custom tip
-                    custom_tip = optimizer.proposer_kwargs.get('tip')
-                    if custom_tip:
-                        logging.info(f"Injecting custom tip: {custom_tip[:50]}...")
-                        kwargs['tip'] = custom_tip
-                    
-                    # Call the original method
-                    return original_propose_instructions(self, *args, **kwargs)
+                    try:
+                        # Log arguments for debugging
+                        if len(args) >= 3:
+                            trainset = args[0]
+                            program = args[1]
+                            demo_candidates = args[2]
+                            
+                            logging.info(f"Trainset size: {len(trainset) if trainset else 0}")
+                            logging.info(f"Program type: {type(program)}")
+                            logging.info(f"Demo candidates: {'Present' if demo_candidates else 'None'}")
+                            
+                            # Check for potential issues
+                            if not trainset or len(trainset) == 0:
+                                logging.warning("Empty trainset provided to instruction proposer")
+                            
+                            if demo_candidates is None:
+                                logging.warning("Demo candidates is None, which may cause issues")
+                                
+                            # Log first training example for debugging
+                            if trainset and len(trainset) > 0:
+                                example = trainset[0]
+                                logging.info(f"First trainset example: {example}")
+                                if hasattr(example, 'inputs') and hasattr(example, 'outputs'):
+                                    logging.info(f"Example inputs: {example.inputs}")
+                                    logging.info(f"Example outputs: {example.outputs}")
+                                else:
+                                    logging.warning("Example missing required 'inputs' or 'outputs' attributes")
+                        
+                        # Override the tip parameter with our custom tip
+                        if 'tip' in kwargs:
+                            logging.info(f"Using default tip parameter: {kwargs['tip'][:50] if kwargs['tip'] else 'None'}")
+                        
+                        # Inject our custom tip
+                        custom_tip = optimizer.proposer_kwargs.get('tip')
+                        if custom_tip:
+                            logging.info(f"Injecting custom tip: {custom_tip[:50]}...")
+                            kwargs['tip'] = custom_tip
+                        
+                        # Call the original method with enhanced error handling
+                        logging.info("Calling original propose_instructions_for_program")
+                        result = original_propose_instructions(self, *args, **kwargs)
+                        
+                        # Log the result for debugging
+                        if result is None:
+                            logging.error("Instruction proposer returned None")
+                            # Create a fallback result
+                            if len(args) >= 2:
+                                program = args[1]
+                                fallback_result = {}
+                                for i, pred in enumerate(program.predictors()):
+                                    fallback_result[i] = [getattr(pred, 'instructions', "Default instruction due to error")]
+                                logging.info("Created fallback instructions")
+                                return fallback_result
+                        else:
+                            logging.info(f"Instruction proposer returned result with keys: {result.keys()}")
+                        
+                        return result
+                    except Exception as e:
+                        logging.error(f"Error in custom_propose_instructions: {str(e)}")
+                        logging.error(traceback.format_exc())
+                        
+                        # Create a fallback result
+                        if len(args) >= 2:
+                            program = args[1]
+                            fallback_result = {}
+                            for i, pred in enumerate(program.predictors()):
+                                fallback_result[i] = [getattr(pred, 'instructions', "Default instruction due to error")]
+                            logging.info("Created fallback instructions after exception")
+                            return fallback_result
+                        
+                        # Re-raise if we can't create a fallback
+                        raise
                 
                 # Apply our wrapper
                 GroundedProposer.propose_instructions_for_program = custom_propose_instructions
             
+            # Try to apply our debug wrapper to the GroundedProposer class
             try:
-                # Call compile with all parameters
-                optimized_program = optimizer.compile(
-                    program,
-                    trainset=self.trainset,
-                    valset=self.valset,
-                    num_trials=self.num_trials,
-                    minibatch=self.minibatch,
-                    minibatch_size=self.minibatch_size,
-                    minibatch_full_eval_steps=self.minibatch_full_eval_steps,
-                    program_aware_proposer=self.program_aware_proposer,
-                    data_aware_proposer=self.data_aware_proposer,
-                    view_data_batch_size=self.view_data_batch_size,
-                    tip_aware_proposer=self.tip_aware_proposer,
-                    fewshot_aware_proposer=self.fewshot_aware_proposer,
-                    requires_permission_to_run=self.requires_permission_to_run
-                )
+                from prompt_ops.debug import patch_dspy_proposer
+                debug_patched = patch_dspy_proposer()
+                if debug_patched:
+                    logging.info("Successfully applied debug wrapper to GroundedProposer")
+                else:
+                    logging.warning("Failed to apply debug wrapper to GroundedProposer")
+            except ImportError:
+                logging.warning("Debug module not available, continuing without enhanced debugging")
+            
+            try:
+                # Set up detailed logging for the instruction proposal phase
+                logging.info("Starting DSPy optimization with enhanced debugging")
+                logging.info(f"Program type: {type(program)}")
+                logging.info(f"Trainset size: {len(self.trainset)}")
+                logging.info(f"Valset size: {len(self.valset) if self.valset else 0}")
+                
+                # Log the first example in trainset to help debug data format issues
+                if self.trainset and len(self.trainset) > 0:
+                    example = self.trainset[0]
+                    logging.info(f"First trainset example structure: {type(example)}")
+                    if hasattr(example, 'inputs') and hasattr(example, 'outputs'):
+                        logging.info(f"Example inputs: {example.inputs}")
+                        logging.info(f"Example outputs: {example.outputs}")
+                    else:
+                        logging.warning("Example missing required 'inputs' or 'outputs' attributes")
+                        logging.warning(f"Example attributes: {dir(example) if hasattr(example, '__dict__') else 'No attributes'}")
+                
+                # Wrap the compile call in a try/except to catch specific errors
+                try:
+                    # Call compile with all parameters
+                    logging.info("Calling optimizer.compile")
+                    optimized_program = optimizer.compile(
+                        program,
+                        trainset=self.trainset,
+                        valset=self.valset,
+                        num_trials=self.num_trials,
+                        minibatch=self.minibatch,
+                        minibatch_size=self.minibatch_size,
+                        minibatch_full_eval_steps=self.minibatch_full_eval_steps,
+                        program_aware_proposer=self.program_aware_proposer,
+                        data_aware_proposer=self.data_aware_proposer,
+                        view_data_batch_size=self.view_data_batch_size,
+                        tip_aware_proposer=self.tip_aware_proposer,
+                        fewshot_aware_proposer=self.fewshot_aware_proposer,
+                        requires_permission_to_run=self.requires_permission_to_run,
+                        provide_traceback=True  # Add this line
+                    )
+                    logging.info("Optimizer.compile completed successfully")
+                except TypeError as e:
+                    if "'NoneType' object is not subscriptable" in str(e):
+                        logging.error(f"Error in instruction proposal phase: {str(e)}")
+                        logging.error(traceback.format_exc())
+                        
+                        # Detailed error analysis
+                        logging.error("Detailed error analysis for 'NoneType' object is not subscriptable:")
+                        logging.error("This typically occurs when the instruction proposal phase fails to generate valid instructions")
+                        logging.error("Possible causes:")
+                        logging.error("1. Dataset format issues - ensure each example has 'inputs' and 'outputs' fields")
+                        logging.error("2. Empty or insufficient training data")
+                        logging.error("3. Model API errors during instruction generation")
+                        logging.error("4. Incompatible DSPy version")
+                        
+                        # Create a fallback
+                        logging.warning("Falling back to original prompt")
+                        optimized_program = None
+                    else:
+                        logging.error(f"Unexpected TypeError during optimization: {str(e)}")
+                        logging.error(traceback.format_exc())
+                        raise
+                except Exception as e:
+                    logging.error(f"Error during optimization: {str(e)}")
+                    logging.error(traceback.format_exc())
+                    raise
             finally:
                 # Restore the original method if we modified it
                 if original_propose_instructions:
@@ -378,7 +500,13 @@ class BasicOptimizationStrategy(BaseStrategy):
             
             # Check if optimization was successful
             if optimized_program is None:
-                raise OptimizationError("Optimizer returned None. This could be due to insufficient examples or model errors.")
+                logging.warning("Optimizer returned None. Falling back to original prompt.")
+                # Create a simple program with the original prompt as a fallback
+                fallback_program = program
+                # Add a marker to indicate this is a fallback
+                setattr(fallback_program, 'is_fallback', True)
+                setattr(fallback_program, 'model_family', self.model_family)
+                return fallback_program
             
             # Log information about the optimized program
             logging.info(f"Optimized program type: {type(optimized_program)}")
