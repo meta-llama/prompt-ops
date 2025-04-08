@@ -44,7 +44,14 @@ def convert_json_to_yaml(prompt, few_shots, user_prompt=None, task_model=None, m
         
         # Format the context with proper indentation
         if context:
-            indented_context = "\n        ".join(context.strip().split("\n"))
+            # Handle case where context might be a list
+            if isinstance(context, list):
+                # Convert list to string representation
+                context_str = str(context)
+                indented_context = "\n        ".join(context_str.strip().split("\n"))
+            else:
+                # Handle string context as before
+                indented_context = "\n        ".join(context.strip().split("\n"))
             
             # Add the example to the YAML content
             yaml_content += f"""
