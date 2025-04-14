@@ -191,9 +191,68 @@ def get_dataset_adapter_from_config(config_dict, config_path):
     return get_dataset_adapter(config_dict)
 
 
+def get_models_from_config(config_dict, override_model_name=None, api_key=None):
+    """
+    Create model adapter instances from configuration.
+    
+    Args:
+        config_dict: The full configuration dictionary
+        override_model_name: Optional model name to override the ones in config
+        api_key: API key to use for the models
+        
+    Returns:
+        A tuple of (task_model, proposer_model) adapter instances
+    """
+    model_config = config_dict.get("model", {})
+    adapter_type = model_config.get("adapter_type", "dspy")
+    api_base = model_config.get("api_base", "https://openrouter.ai/api/v1")
+    max_tokens = model_config.get("max_tokens", 2048)
+    temperature = model_config.get("temperature", 0.0)
+    cache = model_config.get("cache", False)
+    
+    # If override_model_name is provided, use it for both models
+    if override_model_name:
+        task_model_name = proposer_model_name = override_model_name
+    else:
+        # Check for task_model and proposer_model in config
+        # Fall back to 'name' if either is not specified
+        default_model = model_config.get("name", "openrouter/meta-llama/llama-3.3-70b-instruct")
+        task_model_name = model_config.get("task_model", default_model)
+        proposer_model_name = model_config.get("proposer_model", default_model)
+    
+    # Create task model
+    task_model = setup_model(
+        model_name=task_model_name,
+        adapter_type=adapter_type,
+        api_base=api_base,
+        api_key=api_key,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        cache=cache
+    )
+    
+    # If task and proposer models are the same, reuse the instance
+    if task_model_name == proposer_model_name:
+        click.echo(f"Using the same model for task and proposer: {task_model_name}")
+        proposer_model = task_model
+    else:
+        click.echo(f"Using different models - Task: {task_model_name}, Proposer: {proposer_model_name}")
+        proposer_model = setup_model(
+            model_name=proposer_model_name,
+            adapter_type=adapter_type,
+            api_base=api_base,
+            api_key=api_key,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            cache=cache
+        )
+    
+    return task_model, proposer_model
+
+
 def get_model_from_config(config_dict, override_model_name=None, api_key=None):
     """
-    Create a model adapter instance from configuration.
+    Create a model adapter instance from configuration (legacy function).
     
     Args:
         config_dict: The full configuration dictionary
@@ -217,7 +276,7 @@ def get_model_from_config(config_dict, override_model_name=None, api_key=None):
     )
 
 
-def get_strategy(strategy_config, model_name_with_path, metric, model_instance):
+def get_strategy(strategy_config, model_name_with_path, metric, task_model, prompt_model):
     """
     Create a prompt optimization strategy based on configuration.
     
@@ -225,7 +284,8 @@ def get_strategy(strategy_config, model_name_with_path, metric, model_instance):
         strategy_config: Strategy configuration dictionary
         model_name_with_path: Full model name including provider path
         metric: Metric instance to use for optimization
-        model_instance: Model adapter instance
+        task_model: Model adapter instance for task execution
+        prompt_model: Model adapter instance for prompt optimization
         
     Returns:
         A strategy instance appropriate for the model and configuration
@@ -247,8 +307,8 @@ def get_strategy(strategy_config, model_name_with_path, metric, model_instance):
             strategy = LlamaStrategy(
                 model_name=model_name,
                 metric=metric,
-                task_model=model_instance,
-                prompt_model=model_instance,
+                task_model=task_model,
+                prompt_model=prompt_model,
                 apply_formatting=apply_formatting,
                 apply_templates=apply_templates,
                 template_type=template_type
@@ -260,8 +320,8 @@ def get_strategy(strategy_config, model_name_with_path, metric, model_instance):
             strategy = BasicOptimizationStrategy(
                 model_name=model_name,
                 metric=metric,
-                task_model=model_instance,
-                prompt_model=model_instance
+                task_model=task_model,
+                prompt_model=prompt_model
             )
             click.echo(f"Using BasicOptimizationStrategy from config for model: {model_name}")
             return strategy
@@ -275,8 +335,8 @@ def get_strategy(strategy_config, model_name_with_path, metric, model_instance):
         strategy = LlamaStrategy(
             model_name=model_name,
             metric=metric,
-            task_model=model_instance,
-            prompt_model=model_instance,
+            task_model=task_model,
+            prompt_model=prompt_model,
             apply_formatting=True,
             apply_templates=True
         )
@@ -285,8 +345,8 @@ def get_strategy(strategy_config, model_name_with_path, metric, model_instance):
         strategy = BasicOptimizationStrategy(
             model_name=model_name,
             metric=metric,
-            task_model=model_instance,
-            prompt_model=model_instance
+            task_model=task_model,
+            prompt_model=prompt_model
         )
         click.echo(f"Auto-detected BasicOptimizationStrategy for model: {model_name}")
     
@@ -452,12 +512,12 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)
     
-    # Set up model from config
-    model_instance = get_model_from_config(config_dict, model, api_key)
+    # Set up models from config
+    task_model, prompt_model = get_models_from_config(config_dict, model, api_key)
     
-    # Create metric based on config
+    # Create metric based on config - use task_model for metric
     try:
-        metric = get_metric(config_dict, model_instance)
+        metric = get_metric(config_dict, task_model)
         click.echo(f"Using metric: {metric.__class__.__name__}")
     except ValueError as e:
         click.echo(f"Error creating metric: {str(e)}", err=True)
@@ -476,14 +536,15 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
         config_dict.get("strategy", {}),
         config_dict.get("model", {}).get("name", ""),
         metric,
-        model_instance
+        task_model,
+        prompt_model
     )
     
     # Create migrator
     migrator = PromptMigrator(
         strategy=strategy,
-        task_model=model_instance,
-        prompt_model=model_instance
+        task_model=task_model,
+        prompt_model=prompt_model
     )
     
     # Load dataset with configured splits

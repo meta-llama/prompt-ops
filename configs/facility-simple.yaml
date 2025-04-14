@@ -11,7 +11,9 @@ dataset:
 
 # Model configuration (minimal required settings)
 model:
-  name: "togethercomputer/meta-llama/llama-3.3-70b-instruct"
+  name: "openrouter/meta-llama/llama-3.3-70b-instruct"
+  task_model: "openrouter/meta-llama/llama-3.3-70b-instruct"
+  proposer_model: "openrouter/meta-llama/llama-3.3-70b-instruct"
 
 # Metric configuration (simplified but maintains compatibility)
 metric:
