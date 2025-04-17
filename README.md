@@ -50,6 +50,11 @@ prompt-ops is a Python package that automates the process of optimizing prompts 
 ### Installation
 
 ```bash
+# Create the Environment
+
+conda create -n prompt-ops python=3.10
+conda activate prompt-ops
+
 # From PyPI
 pip install prompt-ops
 
