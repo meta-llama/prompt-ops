@@ -349,7 +349,17 @@ class HotpotQAAdapter(DatasetAdapter):
         
         # Format context as a string if it's a list of passages
         if isinstance(processed["inputs"][self.context_field], list):
-            # If it's already a list of formatted passages, just join them
-            processed["inputs"][self.context_field] = "\n\n".join(processed["inputs"][self.context_field])
+            # Handle potential nested lists in the context field
+            flattened_context = []
+            for item in processed["inputs"][self.context_field]:
+                if isinstance(item, list):
+                    # If item is a list, extend our flattened context with string versions of each subitem
+                    flattened_context.extend(str(subitem) for subitem in item)
+                else:
+                    # If item is not a list, just append the string version
+                    flattened_context.append(str(item))
+            
+            # Join the flattened context items with double newlines
+            processed["inputs"][self.context_field] = "\n\n".join(flattened_context)
         
         return processed
