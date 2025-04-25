@@ -86,7 +86,7 @@ prompt-ops allows you to specify different models for the task execution and the
 ```yaml
 model:
   task_model: "openrouter/meta-llama/llama-3.1-8b-instruct"
-  proposer_model: "openai/gpt-4o"
+  proposer_model: "openrouter/meta-llama/llama-3.3-70b-instruct"
   api_base: "https://openrouter.ai/api/v1"
   temperature: 0.0
   max_tokens: 4096
