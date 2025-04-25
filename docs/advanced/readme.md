@@ -9,6 +9,33 @@ While prompt-ops provides built-in adapters and metrics for common scenarios, yo
 1. A custom `DatasetAdapter` class - Transforms your custom data format into the [standardized format](#standardized-format)
 2. A custom `MetricBase` class - Evaluates predictions against ground truth
 
+
+## Should I create a new adapter or metric?
+Before creating custom components, consider whether existing adapters and metrics meet your needs.
+
+### 🛠️ Dataset Adapter Selection
+
+| Adapter Type | Dataset Input Format | When to Use |
+|--------------|---------------------|-------------|
+| StandardJSONAdapter | `[{"question": "What is the capital of France?", "answer": "Paris"}` | For most common datasets with question and answer fields |
+| RAGJSONAdapter | `[{"question": "Who wrote Romeo and Juliet?", "context": "Shakespeare wrote many plays...", "answer": "William Shakespeare"}]` | When your dataset includes retrieval contexts |
+| Custom Adapter | Any specialized format that doesn't fit the above patterns | When existing adapters don't meet your needs |
+
+See our [detailed adapter selection guide](adapter_selection_guide.md) for more information.
+
+### 📏 Evaluation Metrics
+
+| Metric Type | Use Case | Expected Format | When to Use |
+|-------------|----------|-----------------|-------------|
+| **ExactMatchMetric** | Simple string matching | Plain text strings | When you need exact string matching between prediction and ground truth |
+| **StandardJSONMetric** | Structured JSON evaluation | JSON objects or strings | When evaluating structured JSON responses with specific fields to compare |
+| **LLMAsJudgeMetric** | Prompt optimization quality | Text prompts | When evaluating the quality of prompt optimizations across multiple dimensions |
+| **Custom Metric** | Specialized evaluation needs | Any custom format | When existing metrics don't meet your evaluation needs |
+
+See our [detailed metric selection guide](metric_selection_guide.md) for more information.
+
+---
+
 ## Creating Custom Adapters and Metrics
 
 You can create both custom adapters and metrics in a single Python file that can be referenced in your YAML configuration.
