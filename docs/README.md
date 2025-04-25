@@ -57,13 +57,6 @@ llama-prompt-ops supports various inference providers and endpoints to fit your 
 - **CSV**: Tabular data with headers
 - **YAML**: Structured data in YAML format
 
-### Field Mapping Options
-
-- **Simple Fields**: Direct mapping from dataset to standardized format
-- **Nested Fields**: Access nested JSON structures with path arrays
-- **Custom Mappings**: Map source fields to destination fields with dictionaries
-- **Transformations**: Apply functions to transform values
-
 ## 🧩 Try Our Examples
 
 We've prepared several complete examples to help you get started:
