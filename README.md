@@ -99,6 +99,15 @@ Below is an example of how prompt-ops transforms a prompt from OpenAI to Llama:
 - **Customizable Metrics**: Evaluate prompt performance with configurable metrics
 - **CLI Interface**: Run optimizations directly from the command line
 
+## 🛠️ Multiple Inference Provider Support
+
+llama-prompt-ops supports various inference providers and endpoints to fit your infrastructure needs. See our [detailed guide on inference providers](./docs/inference_providers.md) for configuration examples with:
+
+- OpenRouter (cloud-based API)
+- vLLM (local deployment)
+- NVIDIA NIMs (optimized containers)
+- OpenAI-compatible endpoints
+
 ## Documentation and Examples
 
 For more detailed information, check out these resources:
