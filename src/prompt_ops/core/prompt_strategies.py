@@ -314,7 +314,7 @@ class BasicOptimizationStrategy(BaseStrategy):
             if hasattr(self, 'proposer_kwargs') and self.proposer_kwargs and 'tip' in self.proposer_kwargs:
                 # Use our custom instruction tips with highest priority
                 optimizer.proposer_kwargs['tip'] = self.proposer_kwargs['tip']
-                logging.info(f"Using custom instruction tips: {self.proposer_kwargs['tip'][:100]}...")
+                logging.info(f"Using custom instruction tips: {self.proposer_kwargs['tip']}...")
             # Otherwise, if we have model-specific tips, use those
             elif model_tips:
                 # Add persona and example tips to the proposer

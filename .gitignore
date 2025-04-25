@@ -105,7 +105,7 @@ src/prompt_ops/datasets/dox/
 src/prompt_ops/datasets/joule/
 
 
-use-cases/hotpotqa
+use-cases/hotpotqa/*.json
 use-cases/joule/
 use-cases/dox/
 datasets/dropbox_qa/dropbox_data.json

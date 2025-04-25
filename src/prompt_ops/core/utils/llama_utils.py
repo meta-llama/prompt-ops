@@ -26,7 +26,8 @@ LLAMA_TIPS = {
         "Use role-based prompting with clear constraints: 'You are [role] with expertise in [domain]. Your task is [specific goal]. Constraints: [list]. Example: 'You are a security auditor with expertise in Python. Your task is to review this authentication code. Constraints: Must follow OWASP guidelines.'",
         "For problem-solving, implement: 'PROBLEM: [clear statement] -> APPROACH: [methodology] -> SOLUTION: [steps] -> VERIFICATION: [tests] -> ALTERNATIVES: [other options]'",
         "When making recommendations, use: 'CURRENT STATE -> ISSUES IDENTIFIED -> PROPOSED CHANGES -> EXPECTED BENEFITS -> IMPLEMENTATION STEPS -> VALIDATION PLAN'",
-        "For technical documentation, structure as: 'PURPOSE -> PREREQUISITES -> IMPLEMENTATION -> USAGE EXAMPLES -> COMMON ISSUES -> TROUBLESHOOTING -> MAINTENANCE'"
+        "For technical documentation, structure as: 'PURPOSE -> PREREQUISITES -> IMPLEMENTATION -> USAGE EXAMPLES -> COMMON ISSUES -> TROUBLESHOOTING -> MAINTENANCE'",
+        "If the task requires the answer to be concise, make sure to include instruction to be very concise and not verbose in the prompt."
     ]
 }
 
@@ -159,7 +160,7 @@ def select_instruction_preference(task_type: str, prompt_data: Dict[str, Any]) -
         "extraction": [0, 3, 12],   # OBSERVE-DECIDE-EXECUTE, sectioned response, problem-solving
         "summarization": [3, 7, 14],  # Sectioned response, chain-of-thought, documentation
         "generation": [5, 10, 11],  # Formatting, code generation, role-based
-        "reasoning": [2, 7, 12],   # Reasoning steps, chain-of-thought, problem-solving
+        "reasoning": [2, 7, 12, 15],   # Reasoning steps, chain-of-thought, problem-solving
         "coding": [1, 4, 10],      # Function structure, error checking, code generation
         "general": [0, 3, 7]       # OBSERVE-DECIDE-EXECUTE, sectioned response, chain-of-thought
     }
