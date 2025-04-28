@@ -22,11 +22,9 @@ llama-prompt-ops is a Python package that **automatically optimizes prompts** fo
 
 **Key Benefits:**
 - **No More Trial and Error**: Stop manually tweaking prompts to get better results
-- **Fast Optimization**: Get Llama-optimized prompts in seconds with template-based optimization
+- **Fast Optimization**: Get Llama-optimized prompts minutes with template-based optimization
 - **Data-Driven Improvements**: Use your own examples to create prompts that work for your specific use case
 - **Measurable Results**: Evaluate prompt performance with customizable metrics
-
-
 
 ## How It Works
 
@@ -55,6 +53,14 @@ llama-prompt-ops is a Python package that **automatically optimizes prompts** fo
 3. **Run optimization**: Execute a single command to transform your prompt
 4. **Get results**: Receive a Llama-optimized prompt with performance metrics
 
+### Requirements
+
+To get started with llama-prompt-ops, you'll need:
+
+- Current Prompt: Your existing prompt that you want to optimize for Llama models
+- Dataset: A JSON file containing query-answer pairs for evaluation and optimization
+- Configuration File: A config file (config.yaml) specifying tool behavior, parameters, and optimization details (see [example configuration](configs/facility-simple.yaml))
+
 
 ## Quick Start (5 minutes)
 
@@ -73,6 +79,8 @@ git clone https://github.com/meta-llama/llama-prompt-ops.git
 cd llama-prompt-ops
 pip install -e .
 ```
+
+
 
 ### Set Up Your API Key
 
