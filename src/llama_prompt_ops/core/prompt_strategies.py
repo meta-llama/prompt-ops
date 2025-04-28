@@ -416,7 +416,7 @@ class BasicOptimizationStrategy(BaseStrategy):
             
             # Try to apply our debug wrapper to the GroundedProposer class
             try:
-                from prompt_ops.debug import patch_dspy_proposer
+                from llama_prompt_ops.debug import patch_dspy_proposer
                 debug_patched = patch_dspy_proposer()
                 if debug_patched:
                     logging.info("Successfully applied debug wrapper to GroundedProposer")

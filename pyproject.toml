@@ -3,9 +3,9 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "prompt_ops"
-version = "0.1.0"
-description = "A tool for migrating and optimizing prompts across different LLM providers"
+name = "llama-prompt-ops"
+version = "0.0.1a"
+description = "A tool for migrating and optimizing prompts"
 readme = "README.md"
 authors = []
 license = {text = "MIT"}
@@ -43,11 +43,11 @@ dev = [
 ]
 
 [project.scripts]
-prompt-ops = "prompt_ops.interfaces.cli:cli"
+llama-prompt-ops = "llama_prompt_ops.interfaces.cli:cli"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = ["prompt_ops"]
+packages = ["llama_prompt_ops"]
 
 [tool.black]
 line-length = 88

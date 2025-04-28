@@ -1,5 +1,5 @@
 """
-Command-line interface for the prompt-ops tool.
+Command-line interface for the llama-prompt-ops tool.
 
 This module provides a CLI for using the prompt-ops functionality,
 including commands for optimizing individual prompts, batch processing,
@@ -18,70 +18,20 @@ import logging
 import click
 from dotenv import load_dotenv
 
-from prompt_ops.core.prompt_strategies import BaseStrategy, BasicOptimizationStrategy, OptimizationError
-from prompt_ops.core.model_strategies import LlamaStrategy
-from prompt_ops.core.migrator import PromptMigrator
-from prompt_ops.core.model import setup_model
-from prompt_ops.core.metrics import DSPyMetricAdapter, StandardJSONMetric, MetricBase
-from prompt_ops.core.datasets import DatasetAdapter, load_dataset
+from llama_prompt_ops.core.prompt_strategies import BaseStrategy, BasicOptimizationStrategy, OptimizationError
+from llama_prompt_ops.core.model_strategies import LlamaStrategy
+from llama_prompt_ops.core.migrator import PromptMigrator
+from llama_prompt_ops.core.model import setup_model
+from llama_prompt_ops.core.metrics import DSPyMetricAdapter, StandardJSONMetric, MetricBase
+from llama_prompt_ops.core.datasets import DatasetAdapter, load_dataset
 
 
 @click.group()
 def cli():
     """
-    Prompt-ops - A tool for migrating and optimizing prompts for Llama models.
+    llama-prompt-ops - A tool for migrating and optimizing prompts for Llama models.
     """
     pass
-
-
-@cli.command(name="optimize")
-@click.option(
-    "--prompt",
-    required=True,
-    help="The prompt text to optimize"
-)
-@click.option(
-    "--strategy",
-    type=click.Choice(["base", "basic", "intermediate", "advanced"], case_sensitive=False),
-    default="basic",
-    show_default=True,
-    help="The optimization strategy to apply"
-)
-@click.option(
-    "--model",
-    default="llama-3",
-    show_default=True,
-    help="Target model name"
-)
-def optimize_prompt(prompt: str, strategy: str, model: str):
-    """
-    Optimize a single prompt for Llama models.
-    """
-    # Map strategy name to class
-    strategy_map = {
-        "base": BaseStrategy,
-        "basic": BasicOptimizationStrategy,
-    }
-    
-    # Create strategy instance
-    strategy_class = strategy_map[strategy.lower()]
-    strategy_instance = strategy_class(model_name=model)
-    
-    # Create migrator and optimize
-    from prompt_ops.core.migrator import PromptMigrator
-    migrator = PromptMigrator(strategy=strategy_instance)
-    
-    # Optimize the prompt
-    optimized = migrator.optimize({"text": prompt})
-    
-    # Display results
-    click.echo("\nOriginal prompt:")
-    click.echo(f"{prompt}\n")
-    click.echo("Optimized prompt:")
-    click.echo(f"{optimized}\n")
-
-
-
 
 
 # Helper functions for optimize-with-config command
@@ -204,8 +154,8 @@ def get_dataset_adapter(config):
     """
     # Default adapter class map for convenience
     ADAPTER_CLASS_MAP = {
-        "standard_json": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
-        "rag_json": "prompt_ops.core.datasets.RAGJSONAdapter",
+        "standard_json": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+        "rag_json": "llama_prompt_ops.core.datasets.RAGJSONAdapter",
     }
     
     dataset_config = config.get("dataset", {})
@@ -431,8 +381,8 @@ def get_metric(config, model):
     """
     # Default metric class map for convenience
     METRIC_CLASS_MAP = {
-        "similarity": "prompt_ops.core.metrics.DSPyMetricAdapter",
-        "standard_json": "prompt_ops.core.metrics.StandardJSONMetric",
+        "similarity": "llama_prompt_ops.core.metrics.DSPyMetricAdapter",
+        "standard_json": "llama_prompt_ops.core.metrics.StandardJSONMetric",
     }
     
     metric_config = config.get("metric", {})

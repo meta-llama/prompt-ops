@@ -9,7 +9,7 @@ import json
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Union, List, Callable, TypeVar, Generic, Type, get_type_hints
 import dspy
-from prompt_ops.core.model import ModelAdapter
+from llama_prompt_ops.core.model import ModelAdapter
 
 
 T = TypeVar('T', bound=Any)

@@ -17,7 +17,7 @@ model:
 
 ## name the data adapter take in N params
 dataset:
-  adapter_class: "prompt_ops.core.datasets.ConfigurableJSONAdapter"
+  adapter_class: "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter"
   path: "../use-cases/facility-synth/facility_v2_test.json"
   train_size: 0.7
   validation_size: 0.15
@@ -42,7 +42,7 @@ prompt:
   outputs: ["answer"]
 
 metric:
-  class: "prompt_ops.core.metrics.StandardJSONMetric"
+  class: "llama_prompt_ops.core.metrics.StandardJSONMetric"
   params:
     evaluation_mode: "full_json_comparison"
     # Fields to evaluate (with optional weights) - these will also be used as required fields

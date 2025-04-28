@@ -21,8 +21,8 @@ except ImportError:
     # Fallback to dict if dspy not available
     DSPyExample = dict
 
-from prompt_ops.core.datasets import DatasetAdapter
-from prompt_ops.core.exceptions import DatasetError
+from llama_prompt_ops.core.datasets import DatasetAdapter
+from llama_prompt_ops.core.exceptions import DatasetError
 
 logger = logging.getLogger(__name__)
 

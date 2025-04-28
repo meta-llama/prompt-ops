@@ -11,7 +11,7 @@ import logging
 from typing import Dict, List, Any, Optional, Union
 from collections import Counter
 
-from prompt_ops.core.metrics import MetricBase
+from llama_prompt_ops.core.metrics import MetricBase
 
 logger = logging.getLogger(__name__)
 
