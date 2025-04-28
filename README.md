@@ -26,7 +26,9 @@ llama-prompt-ops is a Python package that **automatically optimizes prompts** fo
 - **Data-Driven Improvements**: Use your own examples to create prompts that work for your specific use case
 - **Measurable Results**: Evaluate prompt performance with customizable metrics
 
-## ⚙️ How It Works
+
+
+## How It Works
 
 ```
 ┌────────────────────┐     ┌─────────────────┐     ┌─────────────────┐
@@ -46,7 +48,7 @@ llama-prompt-ops is a Python package that **automatically optimizes prompts** fo
                       └─────────────────────┘
 ```
 
-### 🔄 Simple Workflow
+### Simple Workflow
 
 1. **Start with your prompt**: Take your existing prompt that works with other LLMs
 2. **Configure optimization**: Set up a simple YAML file with your dataset and preferences
@@ -54,16 +56,7 @@ llama-prompt-ops is a Python package that **automatically optimizes prompts** fo
 4. **Get results**: Receive a Llama-optimized prompt with performance metrics
 
 
-## 🌟 Why use llama-prompt-ops?
-
-- **Automated Optimization**: Eliminates manual prompt engineering through data-driven optimization techniques
-- **Improved Output Quality**: Enhances LLM responses by applying model-specific best practices and formatting
-- **Simple Migration**: Easily migrate prompts from other LLM models to Llama with configurable strategies
-- **Flexible Approaches**: Choose between fast template-based optimization or thorough dataset-based optimization
-- **Standardized Evaluation**: Evaluate prompt performance with customizable metrics and datasets
-- **Production-Ready**: Designed for both development and production environments with caching and error handling
-
-## 🚀 Quick Start (5 minutes)
+## Quick Start (5 minutes)
 
 ### Installation
 
@@ -138,7 +131,7 @@ Below is an example of how prompt-ops transforms a prompt from OpenAI to Llama:
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | You are a helpful assistant. Extract and return a json with the following keys and values:<br>- "urgency" as one of `high`, `medium`, `low`<br>- "sentiment" as one of `negative`, `neutral`, `positive`<br>- "categories" Create a dictionary with categories as keys and boolean values (True/False), where the value indicates whether the category is one of the best matching support category tags from: `emergency_repair_services`, `routine_maintenance_requests`, etc.<br><br>Your complete message should be a valid json string that can be read directly. | You are an expert in analyzing customer service messages. Your task is to categorize the following message based on urgency, sentiment, and relevant categories.<br><br>Analyze the message and return a JSON object with these fields:<br>1. "urgency": Classify as "high", "medium", or "low" based on how quickly this needs attention<br>2. "sentiment": Classify as "negative", "neutral", or "positive" based on the customer's tone<br>3. "categories": Create a dictionary with facility management categories as keys and boolean values<br><br>Only include these exact keys in your response. Return a valid JSON object without code blocks, prefixes, or explanations. |
 
-## 🔍 Key Features
+## Key Features
 
 - **YAML Configuration**: Define your entire optimization pipeline in a single YAML file
 - **Standardized Dataset Adapters**: Easily work with different dataset formats (JSON, CSV, YAML)
@@ -147,20 +140,20 @@ Below is an example of how prompt-ops transforms a prompt from OpenAI to Llama:
 - **Fast Optimization Mode**: Get optimized prompts in seconds without a dataset
 - **Comprehensive Evaluation**: Compare original and optimized prompts with detailed metrics
 
-## 📚 Documentation and Examples
+## Documentation and Examples
 
 For more detailed information, check out these resources:
 
-- [📚 Quick Start Guide](docs/basic/readme.md): Get up and running with prompt-ops in 5 minutes
-- [🔧 Intermediate Configuration Guide](docs/intermediate/readme.md): Learn how to configure datasets, metrics, and optimization strategies
-- [🧩 Adapter Selection Guide](docs/adapter_selection_guide.md): Choose the right adapter for your dataset format
-- [📏 Metric Selection Guide](docs/metric_selection_guide.md): Select appropriate evaluation metrics for your use case
-- [🌐 Inference Providers Guide](docs/inference_providers.md): Configure different model providers and endpoints
+- [Quick Start Guide](docs/basic/readme.md): Get up and running with prompt-ops in 5 minutes
+- [Intermediate Configuration Guide](docs/intermediate/readme.md): Learn how to configure datasets, metrics, and optimization strategies
+- [Adapter Selection Guide](docs/adapter_selection_guide.md): Choose the right adapter for your dataset format
+- [Metric Selection Guide](docs/metric_selection_guide.md): Select appropriate evaluation metrics for your use case
+- [Inference Providers Guide](docs/inference_providers.md): Configure different model providers and endpoints
 
-## 👥 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
