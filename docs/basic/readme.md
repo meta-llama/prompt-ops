@@ -106,4 +106,4 @@ system: |-
 
 ## Next Steps
 
-**Explore our intermediate [Facility Configuration Guide](../intermediate/facility_config.md)** to learn about advanced configuration options including custom model settings, dataset parameters, and fine-tuning the FacilityMetric for better evaluation
+**Explore our intermediate [Facility Configuration Guide](../intermediate/README.md)** to learn about advanced configuration options including custom model settings, dataset parameters, and fine-tuning the FacilityMetric for better evaluation
