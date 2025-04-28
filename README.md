@@ -29,21 +29,21 @@ llama-prompt-ops is a Python package that **automatically optimizes prompts** fo
 ## How It Works
 
 ```
-┌────────────────────┐     ┌───────────────────────┐     ┌────────────────────────────────┐
-│  Existing Prompt   │     │  YAML Configuration   │     │     set(query, responses)      │
-└────────────┬───────┘     └────────────┬──────────┘     └────────────────┬───────────────┘
-             │                          │                                 │
-             │                          │                                 │
-             ▼                          ▼                                 ▼
+┌────────────────────┐    ┌────────────────────────────────┐     ┌───────────────────────┐    
+│  Existing Prompt   │    │     set(query, responses)      │     │  YAML Configuration   │    
+└────────────┬───────┘    └────────────────┬───────────────┘     └────────────┬──────────┘    
+             │                             │                                  │               
+             │                             │                                  │               
+             ▼                             ▼                                  ▼               
          ┌────────────────────────────────────────────────────────────────────────────┐
          │                         llama-prompt-ops migrate                           │
          └────────────────────────────────────────────────────────────────────────────┘
-                                                  │
-                                                  │
-                                                  ▼
-                                      ┌──────────────────────┐
-                                      │   Optimized Prompt   │
-                                      └──────────────────────┘
+                                           │
+                                           │
+                                           ▼
+                               ┌──────────────────────┐
+                               │   Optimized Prompt   │
+                               └──────────────────────┘
 ```
 
 ### Simple Workflow
@@ -58,8 +58,8 @@ llama-prompt-ops is a Python package that **automatically optimizes prompts** fo
 
 To get started with llama-prompt-ops, you'll need:
 
-- Current Prompt: Your existing prompt that you want to optimize for Llama models
-- Dataset: A JSON file containing query-answer pairs for evaluation and optimization
+- Existing Prompt: Your existing prompt that you want to optimize for Llama models
+- Existing Query-Response Dataset: A JSON file containing query-response pairs for evaluation and optimization (see [example dataset](use-cases/facility-synth/facility_v2_test.json))
 - Configuration File: A config file (config.yaml) specifying model behavior, parameters, and optimization details (see [example configuration](configs/facility-simple.yaml))
 
 
