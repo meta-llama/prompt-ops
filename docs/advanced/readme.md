@@ -1,42 +1,103 @@
-# Creating Custom Adapters and Metrics in prompt-ops
+# Using llama-prompt-ops for your use case (with Examples)
 
-> **Note:** This guide explains how to create custom dataset adapters and evaluation metrics for specialized use cases in prompt-ops.
+> **Note:** This guide explains how to add new use cases to llama-prompt-ops by either configuring existing components or creating custom components.
 
 ## Overview
 
-While prompt-ops provides built-in adapters and metrics for common scenarios, you may need to handle specialized datasets or evaluation requirements. This guide explains how to create two essential classes in a simple Python file:
+When adding your use case to llama-prompt-ops, you'll need to handle two key aspects:
 
-1. A custom `DatasetAdapter` class - Transforms your custom data format into the [standardized format](#standardized-format)
-2. A custom `MetricBase` class - Evaluates predictions against ground truth
+1. **Dataset Processing** - Converting your data into the standardized format that llama-prompt-ops can work with
+2. **Evaluation** - Measuring how well model outputs match expected results
+
+For each aspect, you have two options:
+
+- **Use existing dataset adapter and metric** with configuration - Simpler and recommended for most cases
+- **Create custom dataset adapter and metric** - For specialized requirements that can't be handled by existing dataset adapter and metric components
+
+## Dataset Processing: Two Approaches
+
+### Option 1: Use an Existing DatasetAdapter
+
+You can use the built-in dataset adapter, if your dataset follows the following dataset format:
+
+#### Available Adapters
+
+| Adapter Type | Dataset Format | When to Use |
+|--------------|----------------|-------------|
+| **StandardJSONAdapter** | `[{"question": "What is X?", "answer": "Y"}]` | For most common datasets with simple input/output pairs |
+| **RAGJSONAdapter** | `[{"question": "...", "context": "...", "answer": "..."}]` | When your dataset includes retrieval contexts |
+
+See our [detailed adapter selection guide](../dataset_adapter_selection_guide.md) for more information. For many datasets, you can use built-in datasetAdapters. with custom configuration in your YAML file: 
+
+```yaml
+dataset:
+  adapter_class: "prompt_ops.core.datasets.StandardJSONAdapter"
+  path: "/path/to/dataset.json"
+  adapter_params:
+    input_field: "question"  # or ["nested", "field", "path"]
+    output_field: "answer"   # or custom field name
+```
 
 
-## Should I create a new adapter or metric?
-Before creating custom components, consider whether existing adapters and metrics meet your needs.
+### Option 2: Create a Custom Adapter
 
-### 🛠️ Dataset Adapter Selection
+Create a custom adapter when your dataset requires specialized processing that can't be handled by existing adapters.
 
-| Adapter Type | Dataset Input Format | When to Use |
-|--------------|---------------------|-------------|
-| StandardJSONAdapter | `[{"question": "What is the capital of France?", "answer": "Paris"}` | For most common datasets with question and answer fields |
-| RAGJSONAdapter | `[{"question": "Who wrote Romeo and Juliet?", "context": "Shakespeare wrote many plays...", "answer": "William Shakespeare"}]` | When your dataset includes retrieval contexts |
-| Custom Adapter | Any specialized format that doesn't fit the above patterns | When existing adapters don't meet your needs |
+#### When to Create a Custom Adapter
 
-See our [detailed adapter selection guide](adapter_selection_guide.md) for more information.
+Create a custom adapter when:
 
-### 📏 Evaluation Metrics
+1. **Complex Structure** - Your dataset has a nested or non-standard format
+2. **Special Processing** - You need domain-specific preprocessing or normalization
+3. **Multiple Sources** - You're combining data from multiple files or sources
+4. **Custom Validation** - You need to validate or filter examples based on specific rules
+
+See the section below on [Implementing Custom Components](#implementing-custom-components) for examples of how to create custom dataset adapters.
+
+## Evaluation Metric: Two Approaches
+
+### Option 1: Use an Existing Metric
+
+You can use the built-in metric, if your metric follows the following metric format:
+
+
+#### Available Metrics
 
 | Metric Type | Use Case | Expected Format | When to Use |
 |-------------|----------|-----------------|-------------|
-| **ExactMatchMetric** | Simple string matching | Plain text strings | When you need exact string matching between prediction and ground truth |
-| **StandardJSONMetric** | Structured JSON evaluation | JSON objects or strings | When evaluating structured JSON responses with specific fields to compare |
-| **LLMAsJudgeMetric** | Prompt optimization quality | Text prompts | When evaluating the quality of prompt optimizations across multiple dimensions |
-| **Custom Metric** | Specialized evaluation needs | Any custom format | When existing metrics don't meet your evaluation needs |
+| **ExactMatchMetric** | Simple text matching | Plain text | For exact string comparison between prediction and ground truth |
+| **StandardJSONMetric** | Structured evaluation | JSON objects | For comparing specific fields in structured JSON responses |
+| **LLMAsJudgeMetric** | Quality assessment | Text prompts | For evaluating prompt quality across multiple dimensions |
 
-See our [detailed metric selection guide](metric_selection_guide.md) for more information.
+
+See our [detailed metric selection guide](metric_selection_guide.md) for more information. For common evaluation needs, use a built-in metric with custom configuration:
+
+```yaml
+metric:
+  class: "prompt_ops.core.metrics.StandardJSONMetric"
+  params:
+    output_fields: ["categories", "sentiment"]
+    required_fields: ["categories"]
+```
+
+### Option 2: Create a Custom Metric
+
+Create a custom metric when you need specialized evaluation logic that can't be handled by existing metrics.
+
+#### When to Create a Custom Metric
+
+Create a custom metric when:
+
+1. **Domain-Specific Scoring** - You need specialized scoring rules for your domain
+2. **Complex Evaluation** - Your evaluation requires multi-step or multi-aspect assessment
+3. **Custom Parsing** - You need special parsing of model outputs
+4. **Specialized Output Format** - Your model outputs in a format not supported by existing metrics
+
+See the section below on [Implementing Custom Components](#implementing-custom-components) for examples of how to create custom dataset adapters.
 
 ---
 
-## Creating Custom Adapters and Metrics
+## Implementing Custom Components
 
 You can create both custom adapters and metrics in a single Python file that can be referenced in your YAML configuration.
 
@@ -117,7 +178,7 @@ class MyCustomMetric(MetricBase):
 
 ### Standardized Format
 
-The `DatasetAdapter.adapt()` method transforms your custom dataset into a standardized format that prompt-ops can work with. This standardized format is a list of dictionaries, where each dictionary represents a single example with the following structure:
+The `DatasetAdapter.adapt()` method transforms your custom dataset into a standardized format that llama-prompt-ops can work with. This standardized format is a list of dictionaries, where each dictionary represents a single example with the following structure:
 
 ```python
 {
@@ -140,196 +201,139 @@ The `DatasetAdapter.adapt()` method transforms your custom dataset into a standa
 }
 ```
 
-The standardized format enables prompt-ops to:
+The standardized format enables llama-prompt-ops to:
 
 1. Format inputs consistently for different models
 2. Compare model outputs against expected outputs
 3. Track additional information through the metadata field
 
-## Example Implementation
 
-Here's a complete example of custom adapter and metric classes for a facility management dataset:
+## Real-World Example: Customer Service Classification
+
+Let's walk through a complete example of adding a customer service classification use case to llama-prompt-ops.
+
+### Step 1: Analyze Your Dataset
+
+First, examine your dataset structure to determine if you need a custom adapter:
+
+```json
+[
+  {
+    "customer_message": "The heating in my apartment isn't working and it's freezing!",
+    "priority": "high",
+    "categories": {"maintenance": true, "heating": true},
+    "sentiment": "negative"
+  },
+  ...
+]
+```
+
+### Step 2: Decide on Your Approach
+
+For this example, we have two options:
+
+**Option A: Use StandardJSONAdapter with configuration**
+```yaml
+dataset:
+  adapter_class: "prompt_ops.core.datasets.StandardJSONAdapter"
+  path: "/path/to/customer_service.json"
+  adapter_params:
+    input_field: "customer_message"
+    output_field: {"urgency": "priority", "categories": "categories", "sentiment": "sentiment"}
+```
+
+**Option B: Create a custom adapter for more control**
+
+Let's implement a custom adapter for this example:
 
 ```python
+# customer_service.py
 import json
-from typing import Dict, List, Any, Union
-from pathlib import Path
+from typing import Dict, List, Any
 from prompt_ops.core.datasets import DatasetAdapter
 from prompt_ops.core.metrics import MetricBase
 
-class FacilityAdapter(DatasetAdapter):
-    """
-    Custom adapter for facility management datasets with specialized formatting.
+class CustomerServiceAdapter(DatasetAdapter):
+    """Adapter for customer service datasets."""
 
-    This adapter handles datasets where each example contains a customer message,
-    priority level, and categorization information.
-    """
-
-    def __init__(self, dataset_path: str, include_metadata: bool = True, **kwargs):
-        """
-        Initialize the facility adapter.
-
-        Args:
-            dataset_path: Path to the dataset file
-            include_metadata: Whether to include additional metadata in the output
-            **kwargs: Additional configuration parameters
-        """
+    def __init__(self, dataset_path: str, **kwargs):
         super().__init__(dataset_path)
-        self.include_metadata = include_metadata
+        # Any custom initialization
 
     def adapt(self) -> List[Dict[str, Any]]:
-        """
-        Transform facility dataset format into standardized format.
-
-        Returns:
-            List of standardized examples
-        """
-        # Load the dataset
+        """Transform customer service data into standardized format."""
         with open(self.dataset_path, 'r') as f:
-            if self.file_format == 'json':
-                data = json.load(f)
-            elif self.file_format == 'jsonl':
-                data = [json.loads(line) for line in f]
-            else:
-                raise ValueError(f"Unsupported file format: {self.file_format}")
+            data = json.load(f)
 
         standardized_data = []
-
         for item in data:
-            # Extract fields from the dataset
-            message = item.get("customer_message", "")
-            priority = item.get("priority", "")
-            categories = item.get("categories", {})
-            sentiment = item.get("sentiment", "")
-
-            # Create standardized example
+            # Map priority to standardized urgency levels
+            urgency = self._map_priority(item.get("priority", ""))
+            
             example = {
                 "inputs": {
-                    "question": message
+                    "question": item.get("customer_message", "")
                 },
                 "outputs": {
                     "answer": {
-                        "urgency": self._map_priority_to_urgency(priority),
-                        "sentiment": sentiment,
-                        "categories": categories
+                        "urgency": urgency,
+                        "categories": item.get("categories", {}),
+                        "sentiment": item.get("sentiment", "")
                     }
                 }
             }
-
-            # Add metadata if requested
-            if self.include_metadata:
-                example["metadata"] = {
-                    "original_priority": priority,
-                    "timestamp": item.get("timestamp", ""),
-                    "customer_id": item.get("customer_id", "")
-                }
-
             standardized_data.append(example)
 
         return standardized_data
 
-    def _map_priority_to_urgency(self, priority: str) -> str:
-        """
-        Map priority values to standardized urgency levels.
-
-        Args:
-            priority: Original priority value
-
-        Returns:
-            Standardized urgency level
-        """
+    def _map_priority(self, priority: str) -> str:
+        """Map priority values to standardized urgency levels."""
         priority_map = {
             "critical": "high",
             "high": "high",
             "medium": "medium",
-            "low": "low",
-            "routine": "low"
+            "low": "low"
         }
         return priority_map.get(priority.lower(), "medium")
 
-    def _infer_format(self, path: Path) -> str:
-        """
-        Infer the file format from the file extension.
 
-        Args:
-            path: Path to the dataset file
-
-        Returns:
-            Inferred file format
-        """
-        suffix = path.suffix.lower()
-        if suffix == '.json':
-            return 'json'
-        elif suffix == '.jsonl':
-            return 'jsonl'
-        else:
-            raise ValueError(f"Unsupported file extension: {suffix}")
-
-
-class FacilityMetric(MetricBase):
-    """
-    Custom metric for evaluating facility management predictions.
-
-    This metric evaluates predictions based on:
-    1. Category accuracy
-    2. Sentiment accuracy
-    3. Urgency accuracy
-    """
+class CustomerServiceMetric(MetricBase):
+    """Metric for evaluating customer service predictions."""
 
     def __init__(self, weights: Dict[str, float] = None, **kwargs):
-        """
-        Initialize the facility metric.
-
-        Args:
-            weights: Optional weights for different aspects of the evaluation
-            **kwargs: Additional configuration parameters
-        """
         self.weights = weights or {
-            "category": 0.5,
+            "categories": 0.5,
             "sentiment": 0.3,
             "urgency": 0.2
         }
 
-    def __call__(self, gold: Any, pred: Any, trace: bool = False, **kwargs) -> Union[Dict[str, float], float]:
-        """
-        Evaluate the prediction against the ground truth.
-
-        Args:
-            gold: Ground truth example
-            pred: Predicted example (can be a string or dictionary)
-            trace: Whether to enable tracing for debugging
-            **kwargs: Additional metric-specific parameters
-
-        Returns:
-            A score between 0.0 and 1.0 or a dictionary of scores
-        """
-        # Parse the prediction if it's a string (common with LLM outputs)
+    def __call__(self, gold: Any, pred: Any, trace: bool = False, **kwargs):
+        """Evaluate the prediction against the ground truth."""
+        # Parse prediction if it's a string
         if isinstance(pred, str):
             try:
                 pred = json.loads(pred)
             except json.JSONDecodeError:
-                # If prediction is not valid JSON, return a low score
                 return 0.0
 
-        # Extract the relevant fields from gold
+        # Extract gold data
         gold_data = gold.get("answer", gold)
 
-        # Evaluate different aspects
+        # Calculate individual scores
         category_score = self._evaluate_categories(gold_data, pred)
         sentiment_score = self._evaluate_sentiment(gold_data, pred)
         urgency_score = self._evaluate_urgency(gold_data, pred)
 
-        # Combine scores with weights
+        # Calculate weighted score
         total_score = (
-            self.weights["category"] * category_score +
+            self.weights["categories"] * category_score +
             self.weights["sentiment"] * sentiment_score +
             self.weights["urgency"] * urgency_score
         )
 
-        # Return detailed scores if trace is enabled
         if trace:
             return {
-                "category": category_score,
+                "categories": category_score,
                 "sentiment": sentiment_score,
                 "urgency": urgency_score,
                 "overall": total_score
@@ -337,198 +341,70 @@ class FacilityMetric(MetricBase):
 
         return total_score
 
-    def _evaluate_categories(self, gold: Dict[str, Any], pred: Dict[str, Any]) -> float:
-        """
-        Evaluate category predictions.
+    def _evaluate_categories(self, gold, pred):
+        """Evaluate category predictions using F1 score."""
+        # Implementation details omitted for brevity
+        return 1.0  # Placeholder
 
-        Args:
-            gold: Ground truth example
-            pred: Predicted example
+    def _evaluate_sentiment(self, gold, pred):
+        """Evaluate sentiment prediction."""
+        # Implementation details omitted for brevity
+        return 1.0  # Placeholder
 
-        Returns:
-            A score between 0.0 and 1.0
-        """
-        gold_categories = gold.get("categories", {})
-        pred_categories = pred.get("categories", {})
-
-        # Calculate precision and recall for categories
-        correct = 0
-        for category, value in pred_categories.items():
-            if category in gold_categories and gold_categories[category] == value:
-                correct += 1
-
-        precision = correct / len(pred_categories) if pred_categories else 0
-        recall = correct / len(gold_categories) if gold_categories else 0
-
-        # Calculate F1 score
-        if precision + recall > 0:
-            return 2 * precision * recall / (precision + recall)
-        return 0.0
-
-    def _evaluate_sentiment(self, gold: Dict[str, Any], pred: Dict[str, Any]) -> float:
-        """
-        Evaluate sentiment prediction.
-
-        Args:
-            gold: Ground truth example
-            pred: Predicted example
-
-        Returns:
-            A score between 0.0 and 1.0
-        """
-        gold_sentiment = gold.get("sentiment", "").lower()
-        pred_sentiment = pred.get("sentiment", "").lower()
-
-        # Simple exact match for sentiment
-        return 1.0 if gold_sentiment == pred_sentiment else 0.0
-
-    def _evaluate_urgency(self, gold: Dict[str, Any], pred: Dict[str, Any]) -> float:
-        """
-        Evaluate urgency prediction.
-
-        Args:
-            gold: Ground truth example
-            pred: Predicted example
-
-        Returns:
-            A score between 0.0 and 1.0
-        """
-        gold_urgency = gold.get("urgency", "").lower()
-        pred_urgency = pred.get("urgency", "").lower()
-
-        # Simple exact match for urgency
-        return 1.0 if gold_urgency == pred_urgency else 0.0
+    def _evaluate_urgency(self, gold, pred):
+        """Evaluate urgency prediction."""
+        # Implementation details omitted for brevity
+        return 1.0  # Placeholder
 ```
 
-## Using Your Custom Classes in YAML Configuration
-
-Once you've created your custom adapter and metric classes, you can use them in your YAML configuration by specifying the module path:
+### Step 3: Create Your Configuration File
 
 ```yaml
+# customer_service_config.yaml
 dataset:
-  adapter_class: "docs.advanced.example_custom_adapters.FacilityAdapter"
-  path: "/path/to/dataset.json"
-  adapter_params:
-    include_metadata: true
+  adapter_class: "path.to.your.module.CustomerServiceAdapter"
+  path: "/path/to/customer_service.json"
 
 metric:
-  class: "prompt_ops.core.metrics.FacilityMetric"
-  strict_json: false
-  output_field: "answer"
-  # Optional custom weights for different components
-  weights:
-    categories: 0.5
-    sentiment: 0.3
-    urgency: 0.2
+  class: "path.to.your.module.CustomerServiceMetric"
+  params:
+    weights:
+      categories: 0.5
+      sentiment: 0.3
+      urgency: 0.2
+
+model:
+  provider: "openrouter"
+  name: "meta-llama/llama-3-70b-instruct"
+
+prompt:
+  template: |
+    Analyze the following customer service message and provide:
+    1. Urgency level (high, medium, or low)
+    2. Sentiment (positive, negative, or neutral)
+    3. Categories that apply (maintenance, billing, etc.)
+
+    Message: {{question}}
+
+    Respond in JSON format with the following structure:
+    {"urgency": "...", "sentiment": "...", "categories": {"category1": true, ...}}
 ```
 
-Once you've created your configuration file, you can run prompt-ops with your custom adapter and metric:
+### Step 4: Run llama-prompt-ops
 
 ```bash
 # Set your API key
 export OPENROUTER_API_KEY=your_key_here
 
-# Run prompt-ops with your custom configuration
-prompt-ops migrate --config docs/advanced/custom_facility_config.yaml
-```
-
-## Best Practices for Custom Adapters and Metrics
-
-1. **Input/Output Standardization**: Always normalize your dataset to use consistent field names:
-
-   - Use `"question"` for the main input field
-   - Use `"answer"` for the main output field
-
-2. **Error Handling**: Include robust error handling in your evaluation method to handle:
-
-   - Malformed predictions (e.g., non-JSON strings)
-   - Missing fields in predictions
-   - Type mismatches between gold and prediction
-
-3. **Documentation**: Document your classes with clear docstrings explaining:
-
-   - Expected input format
-   - Output format
-   - Any special handling or transformations
-
-4. **Testing**: Test your adapter and metric with sample data before using them in a full optimization run:
-
-   ```python
-   # Test your adapter
-   adapter = FacilityAdapter("/path/to/test_data.json")
-   examples = adapter.adapt()
-   print(f"Processed {len(examples)} examples")
-   print(examples[0])  # Check the first example
-
-   # Test your metric
-   metric = FacilityMetric()
-   gold = examples[0]["outputs"]["answer"]
-   pred = {"sentiment": "positive", "urgency": "high", "categories": {"maintenance": True}}
-   score = metric(gold, pred)
-   print(f"Evaluation score: {score}")
-   ```
-
-## Advanced Example: Handling Complex JSON Structures
-
-For datasets with complex nested structures, you may need more sophisticated parsing in your adapter class:
-
-```python
-class ComplexJSONAdapter(DatasetAdapter):
-    """Adapter for complex nested JSON structures."""
-
-    def __init__(self, dataset_path: str, input_path: List[str] = None, output_path: List[str] = None, **kwargs):
-        """
-        Initialize the complex JSON adapter.
-
-        Args:
-            dataset_path: Path to the dataset file
-            input_path: List of keys to navigate to the input field
-            output_path: List of keys to navigate to the output field
-            **kwargs: Additional configuration parameters
-        """
-        super().__init__(dataset_path)
-        self.input_path = input_path or ["content", "message", "text"]
-        self.output_path = output_path or ["annotations", "labels"]
-
-    def adapt(self) -> List[Dict[str, Any]]:
-        """Transform complex JSON format into standardized format."""
-        with open(self.dataset_path, 'r') as f:
-            data = json.load(f)
-
-        standardized_data = []
-
-        # Handle nested data structures
-        for item in data.get("records", []):
-            # Extract nested fields using helper function
-            input_text = self._extract_nested_field(item, self.input_path)
-            output_data = self._extract_nested_field(item, self.output_path)
-
-            if input_text is not None and output_data is not None:
-                example = {
-                    "inputs": {"question": input_text},
-                    "outputs": {"answer": output_data}
-                }
-                standardized_data.append(example)
-
-        return standardized_data
-
-    def _extract_nested_field(self, data: Dict[str, Any], path: List[str]) -> Any:
-        """Extract a value from a nested dictionary using a path of keys."""
-        current = data
-        for key in path:
-            if isinstance(current, dict) and key in current:
-                current = current[key]
-            else:
-                return None
-        return current
+# Run llama-prompt-ops with your configuration
+llama-prompt-ops migrate --config path/to/customer_service_config.yaml
 ```
 
 ## Conclusion
 
-Creating custom adapter and metric classes for prompt-ops allows you to work with specialized datasets and evaluation requirements while maintaining a clean, object-oriented approach. By implementing these classes in a simple Python file, you can:
+When adding a new use case to llama-prompt-ops, you have two approaches:
 
-1. Transform your custom data formats into the standardized format required by prompt-ops
-2. Create specialized evaluation metrics tailored to your specific use case
-3. Integrate seamlessly with the prompt-ops configuration system
+1. **Configure existing components** - Simpler and sufficient for most common use cases
+2. **Create custom components** - For specialized requirements that need custom processing
 
-This approach provides a flexible way to extend prompt-ops functionality without modifying the core codebase, allowing you to leverage the optimization framework while accommodating your unique requirements.
+Happy Prompt Engineering!

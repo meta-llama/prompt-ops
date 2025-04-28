@@ -1,26 +1,25 @@
-# Adapter Selection Guide
+# Dataset Adapter Selection Guide
 
 This guide helps you choose the right dataset adapter for your use case or determine when to create a custom adapter.
 
-## Adapter Comparison Matrix
+## Dataset Adapter Comparison Matrix
 
 | Adapter Type | Use Case | Dataset Structure | When to Use |
 |--------------|----------|-------------------|-------------|
-| **StandardJSONAdapter** | General purpose JSON processing | `[{"question": "...", "answer": "..."}]` or any JSON with configurable fields | When your dataset has a simple structure with input/output pairs that can be mapped with configuration |
+| **StandardJSONAdapter** | General purpose JSON processing | `[{"question": "...", "answer": "..."}]`  | When your dataset has a simple structure with input/output pairs that can be mapped with configuration |
 | **RAGJSONAdapter** | Retrieval-augmented generation | `[{"question": "...", "context": "...", "answer": "..."}]` | When your dataset includes retrieval contexts or documents alongside questions and answers |
-| **Custom Adapter** | Specialized formats or processing | Any custom structure | When existing adapters don't meet your needs even with configuration |
+| **Custom DatasetAdapter** | Specialized formats or processing | Any custom structure | When existing adapters don't meet your needs even with configuration |
 
-## When to Create a Custom Adapter
+## When to Create a Custom DatasetAdapter
 
-Create a custom adapter when:
+Create a custom dataset adapter when:
 
 1. **Complex Structure**: Your dataset has a complex structure that can't be handled by configuring existing adapters
 2. **Special Processing**: You need special processing logic beyond simple field extraction and transformation
 3. **Domain-Specific Logic**: Your domain requires specific validation, normalization, or enrichment
 4. **Multiple Data Sources**: You need to combine or join data from multiple sources
-5. **Performance Optimization**: You need optimized processing for very large datasets
 
-## Custom Adapter Implementation Example
+## Custom DatasetAdapter Implementation Example
 
 ```python
 from prompt_ops.core.datasets import DatasetAdapter
@@ -69,7 +68,7 @@ class MyCustomAdapter(DatasetAdapter):
         return {}
 ```
 
-## Decision Flowchart for Adapter Selection
+## Decision Flowchart for DatasetAdapter Selection
 
 1. **Is your dataset in JSON format?**
    - **Yes**: Continue to next question
@@ -91,7 +90,7 @@ class MyCustomAdapter(DatasetAdapter):
    - **Yes**: Use StandardJSONAdapter with appropriate configuration
    - **No**: Create a custom adapter
 
-## Configuration vs. Custom Adapter
+## Configuration vs. Custom DatasetAdapter
 
 In many cases, you can use StandardJSONAdapter with custom configuration instead of creating a new adapter:
 
@@ -106,4 +105,4 @@ dataset:
     default_value: "N/A"
 ```
 
-Only create a custom adapter when this level of configuration is insufficient for your needs.
+Only create a custom dataset adapter when this level of configuration is insufficient for your needs.

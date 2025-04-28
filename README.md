@@ -1,24 +1,8 @@
 <h1 align="center"> Llama Prompt Ops </h1>
 
-<p align="center">
-	<a href="https://llama.developer.meta.com/?utm_source=llama-prompt-ops&utm_medium=readme&utm_campaign=main"><img src="https://img.shields.io/badge/Llama_API-Join_Waitlist-brightgreen?logo=meta" /></a>
-	<a href="https://llama.developer.meta.com/docs?utm_source=llama-prompt-ops&utm_medium=readme&utm_campaign=main"><img src="https://img.shields.io/badge/Llama_API-Documentation-4BA9FE?logo=meta" /></a>
-	
-</p>
-<p align="center">
-	<a href="https://github.com/meta-llama/llama-models/blob/main/models/?utm_source=llama-prompt-ops&utm_medium=readme&utm_campaign=main"><img alt="Llama Model cards" src="https://img.shields.io/badge/Llama_OSS-Model_cards-green?logo=meta" /></a>
-	<a href="https://www.llama.com/docs/overview/?utm_source=llama-prompt-ops&utm_medium=readme&utm_campaign=main"><img alt="Llama Documentation" src="https://img.shields.io/badge/Llama_OSS-Documentation-4BA9FE?logo=meta" /></a>
-	<a href="https://huggingface.co/meta-llama"><img alt="Hugging Face meta-llama" src="https://img.shields.io/badge/Hugging_Face-meta--llama-yellow?logo=huggingface" /></a>
-	
-</p>
-<p align="center">
-	<a href="https://github.com/meta-llama/synthetic-data-kit"><img alt="Llama Tools Syntethic Data Kit" src="https://img.shields.io/badge/Llama_Tools-synthetic--data--kit-orange?logo=meta" /></a>
-	<a href="https://github.com/meta-llama/llama-prompt-ops"><img alt="Llama Tools Syntethic Data Kit" src="https://img.shields.io/badge/Llama_Tools-llama--prompt--ops-orange?logo=meta" /></a>
-</p>
-
 ## What is llama-prompt-ops?
 
-llama-prompt-ops is a Python package that **automatically optimizes prompts** for Llama models. It transforms prompts that might work well with other LLMs into prompts that are optimized for Llama models, improving performance and reliability.
+llama-prompt-ops is a Python package that **automatically optimizes prompts** for Llama models. It transforms prompts that work well with other LLMs into prompts that are optimized for Llama models, improving performance and reliability.
 
 **Key Benefits:**
 - **No More Trial and Error**: Stop manually tweaking prompts to get better results
@@ -26,12 +10,21 @@ llama-prompt-ops is a Python package that **automatically optimizes prompts** fo
 - **Data-Driven Improvements**: Use your own examples to create prompts that work for your specific use case
 - **Measurable Results**: Evaluate prompt performance with customizable metrics
 
+## Requirements
+
+To get started with llama-prompt-ops, you'll need:
+
+- Existing System Prompt: Your existing prompt that you want to optimize
+- Existing Query-Response Dataset: A JSON file containing query-response pairs for evaluation and optimization (see [prepare your dataset](#prepare-your-dataset) below)
+- Configuration File: A YAML configuration file (config.yaml) specifying model hyperparameters, and optimization details (see [example configuration](configs/facility-simple.yaml))
+
+
 ## How It Works
 
 ```
-┌────────────────────┐    ┌────────────────────────────────┐     ┌───────────────────────┐    
-│  Existing Prompt   │    │     set(query, responses)      │     │  YAML Configuration   │    
-└────────────┬───────┘    └────────────────┬───────────────┘     └────────────┬──────────┘    
+┌──────────────────────────┐    ┌────────────────────────────────┐     ┌───────────────────────┐    
+│  Existing System Prompt  │    │     set(query, responses)      │     │  YAML Configuration   │    
+└────────────┬─────────────┘    └────────────────┬───────────────┘     └────────────┬──────────┘    
              │                             │                                  │               
              │                             │                                  │               
              ▼                             ▼                                  ▼               
@@ -48,19 +41,12 @@ llama-prompt-ops is a Python package that **automatically optimizes prompts** fo
 
 ### Simple Workflow
 
-1. **Start with your prompt**: Take your existing prompt that works with other LLMs
-2. **Prepare your dataset**: Create a JSON file with query-answer pairs for evaluation and optimization
+1. **Start with your system prompt**: Take your existing system prompt that works with other LLMs
+2. **Prepare your dataset**: Create a JSON file with query-response pairs for evaluation and optimization
 3. **Configure optimization**: Set up a simple YAML file with your dataset and preferences
 4. **Run optimization**: Execute a single command to transform your prompt
 5. **Get results**: Receive a Llama-optimized prompt with performance metrics
 
-### Requirements
-
-To get started with llama-prompt-ops, you'll need:
-
-- Existing Prompt: Your existing prompt that you want to optimize for Llama models
-- Existing Query-Response Dataset: A JSON file containing query-response pairs for evaluation and optimization (see [example dataset](use-cases/facility-synth/facility_v2_test.json))
-- Configuration File: A config file (config.yaml) specifying model behavior, parameters, and optimization details (see [example configuration](configs/facility-simple.yaml))
 
 
 ## Quick Start (5 minutes)
@@ -157,18 +143,18 @@ To use llama-prompt-ops for prompt optimization, you'll need to prepare a datase
 ]
 ```
 
-If your data matches this format, you can use the built-in `StandardJSONAdapter` which will handle it automatically.
+If your data matches this format, you can use the built-in [`StandardJSONAdapter`](src/prompt_ops/core/datasets.py) which will handle it automatically.
 
 ### Custom Data Formats
 
-If your data is formatted differently, and there isn't a built-in adapter, you can create a custom adapter by extending the `DatasetAdapter` class. See the [Adapter Selection Guide](docs/adapter_selection_guide.md) for more details.
+If your data is formatted differently, and there isn't a built-in dataset adapter, you can create a custom dataset adapter by extending the `DatasetAdapter` class. See the [Dataset Adapter Selection Guide](docs/dataset_adapter_selection_guide.md) for more details.
 
 ## Key Features
 
 - **YAML Configuration**: Define your entire optimization pipeline in a single YAML file
 - **Standardized Dataset Adapters**: Easily work with different dataset formats (JSON, CSV, YAML)
 - **Customizable Metrics**: Evaluate prompt performance with configurable metrics
-- **Multiple Inference Providers**: Support for OpenRouter, vLLM, NVIDIA NIMs, and OpenAI-compatible endpoints
+- **Multiple Inference Providers**: Support for OpenRouter, vLLM, NVIDIA NIMs and others
 - **Fast Optimization Mode**: Get optimized prompts in seconds without a dataset
 - **Comprehensive Evaluation**: Compare original and optimized prompts with detailed metrics
 
@@ -187,7 +173,7 @@ For more detailed information, check out these resources:
 
 - [Quick Start Guide](docs/basic/readme.md): Get up and running with llama-prompt-ops in 5 minutes
 - [Intermediate Configuration Guide](docs/intermediate/readme.md): Learn how to configure datasets, metrics, and optimization strategies
-- [Adapter Selection Guide](docs/adapter_selection_guide.md): Choose the right adapter for your dataset format
+- [Dataset Adapter Selection Guide](docs/dataset_adapter_selection_guide.md): Choose the right adapter for your dataset format
 - [Metric Selection Guide](docs/metric_selection_guide.md): Select appropriate evaluation metrics for your use case
 - [Inference Providers Guide](docs/inference_providers.md): Configure different model providers and endpoints
 
