@@ -29,21 +29,21 @@ llama-prompt-ops is a Python package that **automatically optimizes prompts** fo
 ## How It Works
 
 ```
-┌────────────────────┐     ┌─────────────────┐     ┌────────────────────────────────┐
-│  Existing Prompt   │     │  Configuration  │     │     set(query, responses)      │
-└────────┬───────────┘     └────────┬────────┘     └────────────────────────────────┘
-         │                          │                       │
-         │                          │                       │
-         ▼                          ▼                       ▼
-         ┌────────────────────────────────────────────────────┐
-         │           llama-prompt-ops migrate                 │
-         └────────────────────────────────────────────────────┘
-                                  │
-                                  │
-                                  ▼
-                      ┌─────────────────────┐
-                      │   Optimized Prompt  │
-                      └─────────────────────┘
+┌────────────────────┐     ┌───────────────────────┐     ┌────────────────────────────────┐
+│  Existing Prompt   │     │  YAML Configuration   │     │     set(query, responses)      │
+└────────────┬───────┘     └────────────┬──────────┘     └────────────────┬───────────────┘
+             │                          │                                 │
+             │                          │                                 │
+             ▼                          ▼                                 ▼
+         ┌────────────────────────────────────────────────────────────────────────────┐
+         │                         llama-prompt-ops migrate                           │
+         └────────────────────────────────────────────────────────────────────────────┘
+                                                  │
+                                                  │
+                                                  ▼
+                                      ┌──────────────────────┐
+                                      │   Optimized Prompt   │
+                                      └──────────────────────┘
 ```
 
 ### Simple Workflow
@@ -117,7 +117,7 @@ optimization:
 ### Run Optimization
 
 ```bash
-prompt-ops migrate --config config.yaml
+llama-prompt-ops migrate --config config.yaml
 ```
 
 The optimized prompt will be saved to the `results` directory with performance metrics comparing the original and optimized versions.
@@ -127,7 +127,7 @@ The optimized prompt will be saved to the `results` directory with performance m
 For a more complete example with a dataset, run:
 
 ```bash
-prompt-ops migrate --config configs/facility-simple.yaml
+llama-prompt-ops migrate --config configs/facility-simple.yaml
 ```
 
 This example demonstrates how prompt-ops migrates a customer service analysis prompt to Llama models, categorizing messages by urgency, sentiment, and topic categories.
@@ -172,7 +172,7 @@ If your data is formatted differently, and there isn't a built-in adapter, you c
 - **Fast Optimization Mode**: Get optimized prompts in seconds without a dataset
 - **Comprehensive Evaluation**: Compare original and optimized prompts with detailed metrics
 
-## 🛠️ Multiple Inference Provider Support
+## Multiple Inference Provider Support
 
 llama-prompt-ops supports various inference providers and endpoints to fit your infrastructure needs. See our [detailed guide on inference providers](./docs/inference_providers.md) for configuration examples with:
 
