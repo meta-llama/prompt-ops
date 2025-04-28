@@ -30,7 +30,7 @@ llama-prompt-ops is a Python package that **automatically optimizes prompts** fo
 
 ```
 ┌────────────────────┐     ┌─────────────────┐     ┌────────────────────────────────┐
-│  Existing Prompt   │     │  Configuration  │     │     set(prompt, responses)     │
+│  Existing Prompt   │     │  Configuration  │     │     set(query, responses)      │
 └────────┬───────────┘     └────────┬────────┘     └────────────────────────────────┘
          │                          │                       │
          │                          │                       │
@@ -60,7 +60,7 @@ To get started with llama-prompt-ops, you'll need:
 
 - Current Prompt: Your existing prompt that you want to optimize for Llama models
 - Dataset: A JSON file containing query-answer pairs for evaluation and optimization
-- Configuration File: A config file (config.yaml) specifying tool behavior, parameters, and optimization details (see [example configuration](configs/facility-simple.yaml))
+- Configuration File: A config file (config.yaml) specifying model behavior, parameters, and optimization details (see [example configuration](configs/facility-simple.yaml))
 
 
 ## Quick Start (5 minutes)
@@ -134,7 +134,7 @@ This example demonstrates how prompt-ops migrates a customer service analysis pr
 
 ### Prompt Transformation Example
 
-Below is an example of how prompt-ops transforms a prompt from OpenAI to Llama:
+Below is an example of how llama-prompt-ops transforms a prompt from OpenAI to Llama:
 
 | Original OpenAI Prompt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Optimized Llama Prompt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -176,7 +176,7 @@ If your data is formatted differently, and there isn't a built-in adapter, you c
 
 For more detailed information, check out these resources:
 
-- [Quick Start Guide](docs/basic/readme.md): Get up and running with prompt-ops in 5 minutes
+- [Quick Start Guide](docs/basic/readme.md): Get up and running with llama-prompt-ops in 5 minutes
 - [Intermediate Configuration Guide](docs/intermediate/readme.md): Learn how to configure datasets, metrics, and optimization strategies
 - [Adapter Selection Guide](docs/adapter_selection_guide.md): Choose the right adapter for your dataset format
 - [Metric Selection Guide](docs/metric_selection_guide.md): Select appropriate evaluation metrics for your use case
