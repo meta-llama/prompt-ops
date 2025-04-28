@@ -26,7 +26,6 @@ See our [detailed adapter selection guide](dataset_adapter_selection_guide.md) f
 |-------------|----------|-----------------|-------------|
 | **ExactMatchMetric** | Simple string matching | Plain text strings | When you need exact string matching between prediction and ground truth |
 | **StandardJSONMetric** | Structured JSON evaluation | JSON objects or strings | When evaluating structured JSON responses with specific fields to compare |
-| **LLMAsJudgeMetric** | Prompt optimization quality | Text prompts | When evaluating the quality of prompt optimizations across multiple dimensions |
 | **Custom Metric** | Specialized evaluation needs | Any custom format | When existing metrics don't meet your evaluation needs |
 
 See our [detailed metric selection guide](./metric_selection_guide.md) for more information.

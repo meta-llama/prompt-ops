@@ -8,7 +8,6 @@ This guide helps you choose the right evaluation metric for your use case or det
 |-------------|----------|-----------------|-------------|
 | **ExactMatchMetric** | Simple string matching | Plain text strings | When you need exact string matching between prediction and ground truth |
 | **StandardJSONMetric** | Structured JSON evaluation | JSON objects or strings | When evaluating structured JSON responses with specific fields to compare |
-| **LLMAsJudgeMetric** | Prompt optimization quality | Text prompts | When evaluating the quality of prompt optimizations across multiple dimensions |
 | **Custom Metric** | Specialized evaluation needs | Any custom format | When existing metrics don't meet your evaluation needs |
 
 ## When to Create a Custom Metric
@@ -90,11 +89,8 @@ class MyCustomMetric(MetricBase):
 
 5. **Do you need semantic evaluation beyond exact matching?**
    - **Yes**: Use DSPyMetricAdapter
-   - **No**: Continue to next question
-
-6. **Are you evaluating the quality of prompt optimizations?**
-   - **Yes**: Use LLMAsJudgeMetric
    - **No**: Consider creating a custom metric
+
 
 ## Configuration Examples
 

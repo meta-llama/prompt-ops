@@ -409,57 +409,6 @@ class ExactMatchMetric(MetricBase):
         return {"exact_match": match}
 
 
-class LLMAsJudgeMetric(MetricBase):
-    """
-    Uses an LLM to evaluate the quality of optimized prompts.
-    
-    This metric sends both the original and optimized prompts to an LLM
-    and asks it to judge the quality of the optimization.
-    """
-    
-    def __init__(self, model_name: str = "llama-3", criteria: Optional[List[str]] = None):
-        """
-        Initialize the LLM-as-judge metric.
-        
-        Args:
-            model_name: Name of the LLM to use for evaluation
-            criteria: List of criteria to evaluate (e.g., clarity, specificity)
-        """
-        self.model_name = model_name
-        self.criteria = criteria or ["clarity", "specificity", "effectiveness"]
-    
-    def __call__(
-        self, 
-        gold: Any, 
-        pred: Any, 
-        trace: bool = False,
-        **kwargs
-    ) -> Union[Dict[str, float], float]:
-        """
-        Use an LLM to evaluate the optimization quality.
-        
-        Args:
-            gold: Original prompt
-            pred: Optimized prompt
-            trace: Whether to print detailed information
-            
-        Returns:
-            Dictionary with scores for each evaluation criterion
-        """
-        # TODO
-        
-        # For now, return dummy scores
-        scores = {criterion: 0.8 for criterion in self.criteria}
-        scores["overall"] = sum(scores.values()) / len(scores)
-        
-        if trace:
-            print(f"Original prompt: {gold}")
-            print(f"Optimized prompt: {pred}")
-            print(f"Evaluation scores: {scores}")
-        
-        return scores
-
-
 def json_evaluation_metric(gold: Any, pred: Any, trace: bool = False) -> Dict[str, float]:
     """
     Evaluates predictions against ground truth using JSON structure comparison.

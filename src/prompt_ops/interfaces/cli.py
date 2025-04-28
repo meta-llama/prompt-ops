@@ -7,6 +7,7 @@ and optimization using YAML configuration files.
 """
 
 import importlib
+import importlib.util
 import os
 import sys
 import yaml
@@ -21,7 +22,7 @@ from prompt_ops.core.prompt_strategies import BaseStrategy, BasicOptimizationStr
 from prompt_ops.core.model_strategies import LlamaStrategy
 from prompt_ops.core.migrator import PromptMigrator
 from prompt_ops.core.model import setup_model
-from prompt_ops.core.metrics import DSPyMetricAdapter, StandardJSONMetric
+from prompt_ops.core.metrics import DSPyMetricAdapter, StandardJSONMetric, MetricBase
 from prompt_ops.core.datasets import DatasetAdapter, load_dataset
 
 
@@ -86,20 +87,25 @@ def optimize_prompt(prompt: str, strategy: str, model: str):
 # Helper functions for optimize-with-config command
 def resolve_class(class_type_or_path, class_map):
     """
-    Resolve a class type to full class path.
+    Resolve a class type to full class path or file path.
     
     Args:
-        class_type_or_path: Either a known type or a full class path
+        class_type_or_path: Either a known type, a full class path, or a file path
         class_map: Mapping of shorthand names to full class paths
                                
     Returns:
-        str: Full class path
+        str: Full class path or file path
     """
     # If it's a known type, use the mapping
     if class_type_or_path.lower() in class_map:
         return class_map[class_type_or_path.lower()]
     
-    # Otherwise assume it's already a full class path
+    # If it's a file path, make sure it's absolute
+    if class_type_or_path.endswith('.py') and not os.path.isabs(class_type_or_path):
+        # Convert to absolute path
+        return os.path.abspath(class_type_or_path)
+    
+    # Otherwise assume it's already a full class path or absolute file path
     return class_type_or_path
 
 
@@ -108,20 +114,79 @@ def load_class_dynamically(class_path):
     Dynamically import and return a class from its path.
     
     Args:
-        class_path: Full import path to the class
+        class_path: Either a full import path to the class (e.g., 'module.submodule.ClassName')
+                   or a file path (e.g., '/path/to/file.py') that contains a suitable class
         
     Returns:
         The class object
         
     Raises:
-        ValueError: If the class cannot be imported
+        ValueError: If the class cannot be imported or detected
     """
-    try:
-        module_path, class_name = class_path.rsplit(".", 1)
-        module = importlib.import_module(module_path)
-        return getattr(module, class_name)
-    except (ValueError, ImportError, AttributeError) as e:
-        raise ValueError(f"Failed to import class {class_path}: {str(e)}")
+    # Check if this is a file path (ends with .py)
+    if class_path.endswith('.py'):
+        file_path = class_path
+        
+        if not os.path.exists(file_path):
+            raise ValueError(f"File not found: {file_path}")
+            
+        # Get the module name from the file path
+        module_name = os.path.basename(file_path)
+        if module_name.endswith('.py'):
+            module_name = module_name[:-3]
+            
+        # Add the directory to sys.path temporarily
+        dir_path = os.path.dirname(os.path.abspath(file_path))
+        original_sys_path = sys.path.copy()
+        sys.path.insert(0, dir_path)
+        
+        try:
+            # Import the module
+            spec = importlib.util.spec_from_file_location(module_name, file_path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            
+            # Find all classes in the module that inherit from our base classes
+            candidates = []
+            for name, obj in vars(module).items():
+                if not isinstance(obj, type): 
+                    continue
+                    
+                # Check if it's a subclass of one of our base classes
+                if (issubclass(obj, DatasetAdapter) and obj != DatasetAdapter) or \
+                   (issubclass(obj, MetricBase) and obj != MetricBase):
+                    candidates.append((name, obj))
+            
+            # If we found exactly one candidate, use it
+            if len(candidates) == 1:
+                return candidates[0][1]
+            elif len(candidates) > 1:
+                # If multiple candidates, prefer ones with names that match the file
+                file_base_name = module_name.replace('_', '').lower()
+                for name, cls in candidates:
+                    if file_base_name in name.lower():
+                        return cls
+                
+                # If still ambiguous, raise an error with suggestions
+                class_list = ', '.join(name for name, _ in candidates)
+                raise ValueError(f"Multiple candidate classes found in {file_path}. "
+                               f"Please specify one using a full import path. "
+                               f"Available classes: {class_list}")
+            else:
+                raise ValueError(f"No suitable classes found in {file_path}. "
+                               f"The file should contain a class that inherits from "
+                               f"DatasetAdapter or MetricBase.")
+        finally:
+            # Restore the original sys.path
+            sys.path = original_sys_path
+    else:
+        # import paths implementation
+        try:
+            module_path, class_name = class_path.rsplit(".", 1)
+            module = importlib.import_module(module_path)
+            return getattr(module, class_name)
+        except (ValueError, ImportError, AttributeError) as e:
+            raise ValueError(f"Failed to import class {class_path}: {str(e)}")
 
 
 def get_dataset_adapter(config):

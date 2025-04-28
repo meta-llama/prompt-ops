@@ -9,7 +9,7 @@ from .prompt_strategies import (
     BaseStrategy,
     BasicOptimizationStrategy
 )
-from .metrics import MetricBase, ExactMatchMetric, LLMAsJudgeMetric
+from .metrics import MetricBase, ExactMatchMetric
 from .evaluation import (
     Evaluator,
     StatisticalEvaluator,
@@ -23,7 +23,6 @@ __all__ = [
     'BasicOptimizationStrategy',
     'MetricBase',
     'ExactMatchMetric',
-    'LLMAsJudgeMetric',
     'Evaluator',
     'StatisticalEvaluator',
     'StatisticalResults',

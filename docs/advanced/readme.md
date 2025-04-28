@@ -67,7 +67,6 @@ You can use the built-in metric, if your metric follows the following metric for
 |-------------|----------|-----------------|-------------|
 | **ExactMatchMetric** | Simple text matching | Plain text | For exact string comparison between prediction and ground truth |
 | **StandardJSONMetric** | Structured evaluation | JSON objects | For comparing specific fields in structured JSON responses |
-| **LLMAsJudgeMetric** | Quality assessment | Text prompts | For evaluating prompt quality across multiple dimensions |
 
 
 See our [detailed metric selection guide](metric_selection_guide.md) for more information. For common evaluation needs, use a built-in metric with custom configuration:

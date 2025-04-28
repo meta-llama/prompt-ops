@@ -15,7 +15,7 @@ llama-prompt-ops is a Python package that **automatically optimizes prompts** fo
 To get started with llama-prompt-ops, you'll need:
 
 - Existing System Prompt: Your existing prompt that you want to optimize
-- Existing Query-Response Dataset: A JSON file containing query-response pairs for evaluation and optimization (see [prepare your dataset](#prepare-your-dataset) below)
+- Existing Query-Response Dataset: A JSON file containing query-response pairs for evaluation and optimization (see [prepare your dataset](#preparing-your-data) below)
 - Configuration File: A YAML configuration file (config.yaml) specifying model hyperparameters, and optimization details (see [example configuration](configs/facility-simple.yaml))
 
 
@@ -71,11 +71,13 @@ pip install -e .
 
 ### Set Up Your API Key
 
-Create a `.env` file in your project directory with your API key:
+Create a `.env` file in your project directory with your API key: 
 
 ```bash
 echo "OPENROUTER_API_KEY=your_key_here" > .env
 ```
+
+You can get an OpenRouter API key by creating an account at [OpenRouter](https://openrouter.ai/).
 
 ### Create a Simple Configuration
 
@@ -83,21 +85,32 @@ Create a file named `config.yaml` with this basic configuration:
 
 ```yaml
 prompt:
-  text: |
-    You are a helpful assistant. Extract and return a json with the following keys and values:
-    - "urgency" as one of `high`, `medium`, `low`
-    - "sentiment" as one of `negative`, `neutral`, `positive`
-    - "categories" Create a dictionary with categories as keys and boolean values (True/False)
-    Your complete message should be a valid json string that can be read directly.
+  file: "../use-cases/facility-synth/facility_prompt_sys.txt"
   inputs: ["question"]
   outputs: ["answer"]
 
+# Dataset configuration
+dataset:
+  path: "../use-cases/facility-synth/facility_v2_test.json"
+  input_field: ["fields", "input"]
+  golden_output_field: "answer"
+
+# Model configuration (minimal required settings)
 model:
   name: "openrouter/meta-llama/llama-3.3-70b-instruct"
+  task_model: "openrouter/meta-llama/llama-3.3-70b-instruct"
+  proposer_model: "openrouter/meta-llama/llama-3.3-70b-instruct"
 
+# Metric configuration (simplified but maintains compatibility)
+metric:
+  class: "prompt_ops.core.metrics.FacilityMetric"
+  strict_json: false
+  output_field: "answer"
+
+# Optimization settings
 optimization:
   strategy: "llama"
-  fast: true
+
 ```
 
 ### Run Optimization
