@@ -2,14 +2,14 @@
 
 Welcome to llama-prompt-ops! This guide will help you understand what's supported out of the box and how to get started quickly.
 
-## 🚀 Quick Start: Choose Your Path
+## Quick Start: Choose Your Path
 
-- [🔰 **I'm New to Automated Prompt Engineering**](./basic/readme.md) - Learn the basics with our guided examples
-- [🧪 **I Want to Configure Prompt Optimization**](./intermediate/readme.md) - Learn about the intermediate configuration options
-- [🚀 **I Have My Own Dataset and Use Case**](./advanced/readme.md) - Adapt prompt-ops to your use case
+- [I'm New to Automated Prompt Engineering](./basic/readme.md) - Learn the basics with our guided examples
+- [I Want to Configure Prompt Optimization](./intermediate/readme.md) - Learn about the intermediate configuration options
+- [I Have My Own Dataset and Use Case](./advanced/readme.md) - Adapt prompt-ops to your use case
 
 
-## 🛠️ Dataset Adapter Selection
+## Dataset Adapter Selection
 
 | Adapter Type | Dataset Input Format | When to Use |
 |--------------|---------------------|-------------|
@@ -19,7 +19,7 @@ Welcome to llama-prompt-ops! This guide will help you understand what's supporte
 
 See our [detailed adapter selection guide](adapter_selection_guide.md) for more information.
 
-## 📏 Evaluation Metrics
+## Evaluation Metrics
 
 
 | Metric Type | Use Case | Expected Format | When to Use |
@@ -33,7 +33,7 @@ See our [detailed metric selection guide](./metric_selection_guide.md) for more 
 
 ---
 
-## 🛠️ Multiple Inference Provider Support
+## Multiple Inference Provider Support
 
 llama-prompt-ops supports various inference providers and endpoints to fit your infrastructure needs. See our [detailed guide on inference providers](./inference_providers.md) for configuration examples with:
 
@@ -43,7 +43,7 @@ llama-prompt-ops supports various inference providers and endpoints to fit your 
 - OpenAI-compatible endpoints
 
 
-## 📊 Supported Formats at a Glance
+## Supported Formats at a Glance
 
 ### Prompt Formats
 
@@ -57,7 +57,7 @@ llama-prompt-ops supports various inference providers and endpoints to fit your 
 - **CSV**: Tabular data with headers
 - **YAML**: Structured data in YAML format
 
-## 🧩 Try Our Examples
+## Try Our Examples
 
 We've prepared several complete examples to help you get started:
 
