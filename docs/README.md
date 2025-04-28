@@ -12,3 +12,6 @@ This directory contains comprehensive documentation for the prompt-ops package, 
 
 ### Advanced
 - [Custom Adapters and Metrics](advanced/custom_adapters_metrics.md) - Create custom dataset adapters and evaluation metrics
+
+### Other
+- [Inference Providers](inference_providers.md) - Learn how to use different inference providers
