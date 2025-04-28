@@ -49,9 +49,10 @@ llama-prompt-ops is a Python package that **automatically optimizes prompts** fo
 ### Simple Workflow
 
 1. **Start with your prompt**: Take your existing prompt that works with other LLMs
-2. **Configure optimization**: Set up a simple YAML file with your dataset and preferences
-3. **Run optimization**: Execute a single command to transform your prompt
-4. **Get results**: Receive a Llama-optimized prompt with performance metrics
+2. **Prepare your dataset**: Create a JSON file with query-answer pairs for evaluation and optimization
+3. **Configure optimization**: Set up a simple YAML file with your dataset and preferences
+4. **Run optimization**: Execute a single command to transform your prompt
+5. **Get results**: Receive a Llama-optimized prompt with performance metrics
 
 ### Requirements
 
@@ -138,6 +139,29 @@ Below is an example of how prompt-ops transforms a prompt from OpenAI to Llama:
 | Original OpenAI Prompt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Optimized Llama Prompt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | You are a helpful assistant. Extract and return a json with the following keys and values:<br>- "urgency" as one of `high`, `medium`, `low`<br>- "sentiment" as one of `negative`, `neutral`, `positive`<br>- "categories" Create a dictionary with categories as keys and boolean values (True/False), where the value indicates whether the category is one of the best matching support category tags from: `emergency_repair_services`, `routine_maintenance_requests`, etc.<br><br>Your complete message should be a valid json string that can be read directly. | You are an expert in analyzing customer service messages. Your task is to categorize the following message based on urgency, sentiment, and relevant categories.<br><br>Analyze the message and return a JSON object with these fields:<br>1. "urgency": Classify as "high", "medium", or "low" based on how quickly this needs attention<br>2. "sentiment": Classify as "negative", "neutral", or "positive" based on the customer's tone<br>3. "categories": Create a dictionary with facility management categories as keys and boolean values<br><br>Only include these exact keys in your response. Return a valid JSON object without code blocks, prefixes, or explanations. |
+
+### Preparing Your Data
+
+To use llama-prompt-ops for prompt optimization, you'll need to prepare a dataset with your prompts and expected responses. The standard format is a JSON file structured like this:
+
+```json
+[
+    {
+        "question": "Your input query here",
+        "answer": "Expected response here"
+    },
+    {
+        "question": "Another input query",
+        "answer": "Another expected response"
+    }
+]
+```
+
+If your data matches this format, you can use the built-in `StandardJSONAdapter` which will handle it automatically.
+
+### Custom Data Formats
+
+If your data is formatted differently, and there isn't a built-in adapter, you can create a custom adapter by extending the `DatasetAdapter` class. See the [Adapter Selection Guide](docs/adapter_selection_guide.md) for more details.
 
 ## Key Features
 
