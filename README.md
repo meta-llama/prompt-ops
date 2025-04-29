@@ -40,7 +40,7 @@ To get started with llama-prompt-ops, you'll need:
 
 ### Simple Workflow
 
-1. **Start with your system prompt**: Take your existing system prompt that works with other LLMs
+1. **Start with your existing system prompt**: Take your existing system prompt that works with other LLMs
 2. [**Prepare your dataset**](#preparing-your-data): Create a JSON file with query-response pairs for evaluation and optimization
 3. [**Configure optimization**](#create-a-simple-configuration): Set up a simple YAML file with your dataset and preferences
 4. [**Run optimization**](#run-optimization): Execute a single command to transform your prompt
@@ -50,7 +50,7 @@ To get started with llama-prompt-ops, you'll need:
 
 ## Quick Start (5 minutes)
 
-### Installation
+### Step 1: Installation
 
 ```bash
 # Create a virtual environment
@@ -66,56 +66,33 @@ cd llama-prompt-ops
 pip install -e .
 ```
 
+### Step 2: Create a sample project
 
-
-### Set Up Your API Key
-
-Create a `.env` file in your project directory with your API key: 
+This will create a directory called my-project with a sample configuration and dataset in the current folder.
 
 ```bash
-echo "OPENROUTER_API_KEY=your_key_here" > .env
+llama-prompt-ops create my-project
+cd my-project
 ```
 
-You can get an OpenRouter API key by creating an account at [OpenRouter](https://openrouter.ai/).
+### Step 3: Set Up Your API Key
 
-### Create a Simple Configuration
-
-Create a file named `config.yaml` with this basic configuration:
-
-```yaml
-system_prompt:
-  file: "../use-cases/facility-synth/facility_prompt_sys.txt"
-
-# Dataset configuration
-dataset:
-  path: "../use-cases/facility-synth/facility_v2_test.json"
-  input_field: ["fields", "input"]
-  golden_output_field: "answer"
-
-# Model configuration (minimal required settings)
-model:
-  task_model: "openrouter/meta-llama/llama-3.3-70b-instruct"
-  proposer_model: "openrouter/meta-llama/llama-3.3-70b-instruct"
-
-# Metric configuration (simplified but maintains compatibility)
-metric:
-  class: "prompt_ops.core.metrics.FacilityMetric"
-  strict_json: false
-  output_field: "answer"
-
-# Optimization settings
-optimization:
-  strategy: "llama"  # (llama, basic, advanced)
-
-```
-
-### Run Optimization
+Add your API key to the `.env` file: 
 
 ```bash
-llama-prompt-ops migrate --config config.yaml
+OPENROUTER_API_KEY=your_key_here
+```
+You can get an OpenRouter API key by creating an account at [OpenRouter](https://openrouter.ai/). For more inference provider options, see [Inference Providers](./docs/inference_providers.md).
+
+### Step 4: Run Optimization
+
+```bash
+llama-prompt-ops migrate # defaults to config.yaml if --config not specified
 ```
 
-The optimized prompt will be saved to the `results` directory with performance metrics comparing the original and optimized versions.
+Done! The optimized prompt will be saved to the `results` directory with performance metrics comparing the original and optimized versions. 
+
+To read more about this use case, we go into more detail in [Basic Tutorial](./docs/basic/readme.md).
 
 
 ### Prompt Transformation Example
@@ -127,7 +104,7 @@ Below is an example of a transformed system prompt from proprietary LM to Llama:
 | You are a helpful assistant. Extract and return a JSON with the following keys and values:<br><br>1. "urgency": one of `high`, `medium`, `low`<br>2. "sentiment": one of `negative`, `neutral`, `positive`<br>3. "categories": Create a dictionary with categories as keys and boolean values (True/False), where the value indicates whether the category matches tags like `emergency_repair_services`, `routine_maintenance_requests`, etc.<br><br>Your complete message should be a valid JSON string that can be read directly. | You are an expert in analyzing customer service messages. Your task is to categorize the following message based on urgency, sentiment, and relevant categories.<br><br>Analyze the message and return a JSON object with these fields:<br><br>1. "urgency": Classify as "high", "medium", or "low" based on how quickly this needs attention<br>2. "sentiment": Classify as "negative", "neutral", or "positive" based on the customer's tone<br>3. "categories": Create a dictionary with facility management categories as keys and boolean values<br><br>Only include these exact keys in your response. Return a valid JSON object without code blocks, prefixes, or explanations. |
 
 
-### Preparing Your Data
+## Preparing Your Data
 
 To use llama-prompt-ops for prompt optimization, you'll need to prepare a dataset with your prompts and expected responses. The standard format is a JSON file structured like this:
 

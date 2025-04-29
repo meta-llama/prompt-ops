@@ -115,7 +115,7 @@ def create(project_name, output_dir, model, api_key_env):
                 "proposer_model": model
             },
             "metric": {
-                "class": "llama_prompt_ops.core.metrics.StandardJSONMetric",
+                "class": "llama_prompt_ops.core.metrics.FacilityMetric",
                 "strict_json": False,
                 "output_field": "answer"
             },

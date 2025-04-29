@@ -10,7 +10,7 @@ In this quick guide, you'll optimize a prompt for classifying customer service m
 
 You can explore the complete dataset and prompt in the `use-cases/facility-synth` directory, which contains the sample data and system prompts used in this guide.
 
-## Step 1: Install prompt-ops
+## Step 1: Installation
 
 ```bash
 # Clone the repository (if you haven't already)
@@ -19,71 +19,40 @@ git clone https://github.com/meta-llama/prompt-ops.git
 # git clone git@github.com:meta-llama/prompt-ops.git
 cd prompt-ops
 
+# Create a virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
 # Install the package in development mode
 pip install -e .
 ```
 
-## Step 2: Create Configuration File
+## Step 2: Create a sample project
 
-Run this command to create a basic configuration file:
+This will create a directory called my-project with a sample configuration and dataset in the current folder.
 
-````bash
-# Create configs directory if it doesn't exist
-mkdir -p configs
-
-# Create the configuration file
-cat > configs/facility-simple.yaml << 'EOL'
-prompt:
-  text: |
-    You are a helpful assistant. Extract and return a json with the following keys and values:
-    - "urgency" as one of `high`, `medium`, `low`
-    - "sentiment" as one of `negative`, `neutral`, `positive`
-    - "categories" Create a dictionary with categories as keys and boolean values (True/False), where the value indicates whether the category is one of the best matching support category tags from: `emergency_repair_services`, `routine_maintenance_requests`, `quality_and_safety_concerns`, `specialized_cleaning_services`, `general_inquiries`, `sustainability_and_environmental_practices`, `training_and_support_requests`, `cleaning_services_scheduling`, `customer_feedback_and_complaints`, `facility_management_issues`
-    Your complete message should be a valid json string that can be read directly and only contain the keys mentioned in the list above. Never enclose it in ```json...```, no newlines, no unnessacary whitespaces.
-  inputs: ["question"]
-  outputs: ["answer"]
-
-# Dataset configuration
-dataset:
-  path: "../use-cases/facility-synth/facility_v2_test.json"
-  input_field: ["fields", "input"]
-  golden_output_field: "answer"
-
-# Model configuration
-model:
-  name: "openrouter/meta-llama/llama-3.3-70b-instruct"
-
-# Metric configuration
-metric:
-  class: "prompt_ops.core.metrics.FacilityMetric"
-  strict_json: false
-  output_field: "answer"
-
-# Optimization settings
-optimization:
-  strategy: "llama"
-EOL
-````
+```bash
+llama-prompt-ops create my-project
+cd my-project
+```
 
 ## Step 3: Set Up Your API Key
 
-Create a `.env` file in the project root with your API key:
+Add your API key to the `.env` file:
 
 ```bash
-# Create a .env file with your API key
-echo "OPENROUTER_API_KEY=your_key_here" > .env
+OPENROUTER_API_KEY=your_key_here
 ```
 
-The prompt-ops tool will automatically load this file when running.
+You can get an OpenRouter API key by creating an account at [OpenRouter](https://openrouter.ai/). For more inference provider options, see [Inference Providers](../inference_providers.md).
 
-## Step 4: Run the Optimization
+## Step 4: Run Optimization
 
 ```bash
-# Run the optimization
-prompt-ops migrate --config configs/facility-simple.yaml
+llama-prompt-ops migrate # defaults to config.yaml if --config not specified
 ```
 
-That's it! The optimized prompt will be saved in the `results/` directory with a filename including "facility-simple" and a timestamp.
+Done! The optimized prompt will be saved to the `results` directory with performance metrics comparing the original and optimized versions.
 
 ## Example Output
 
@@ -91,11 +60,7 @@ The optimized prompt will be saved in the `results/` directory with a filename l
 
 ````yaml
 system: |-
-  You are a helpful assistant. Extract and return a json with the following keys and values:
-  - "urgency" as one of `high`, `medium`, `low`
-  - "sentiment" as one of `negative`, `neutral`, `positive`
-  - "categories" Create a dictionary with categories as keys and boolean values (True/False), where the value indicates whether the category is one of the best matching support category tags from: `emergency_repair_services`, `routine_maintenance_requests`, `quality_and_safety_concerns`, `specialized_cleaning_services`, `general_inquiries`, `sustainability_and_environmental_practices`, `training_and_support_requests`, `cleaning_services_scheduling`, `customer_feedback_and_complaints`, `facility_management_issues`
-  Your complete message should be a valid json string that can be read directly and only contain the keys mentioned in the list above. Never enclose it in ```json...```, no newlines, no unnessacary whitespaces.
+Analyze the customer's message and determine the level of urgency, sentiment, and relevant categories. Extract and return a json with the keys "urgency", "sentiment", and "categories". The "urgency" key should have a value of "high", "medium", or "low", the "sentiment" key should have a value of "negative", "neutral", or "positive", and the "categories" key should have a dictionary with categories as keys and boolean values indicating whether the category is a best matching support category tag. The categories should include "emergency_repair_services", "routine_maintenance_requests", "quality_and_safety_concerns", "specialized_cleaning_services", "general_inquiries", "sustainability_and_environmental_practices", "training_and_support_requests", "cleaning_services_scheduling", "customer_feedback_and_complaints", and "facility_management_issues".
 
   Few-shot examples:
 

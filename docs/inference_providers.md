@@ -1,10 +1,10 @@
-# Using Different Inference Providers with prompt-ops
+# Using Different Inference Providers with llama-prompt-ops
 
-This guide demonstrates how to configure prompt-ops to work with various inference providers, including OpenRouter, vLLM, and NVIDIA NIMs. By changing the model configuration in your YAML files, you can easily switch between different backends without modifying your code.
+This guide demonstrates how to configure llama-prompt-ops to work with various inference providers, including OpenRouter, vLLM, and NVIDIA NIMs. By changing the model configuration in your YAML files, you can easily switch between different backends without modifying your code.
 
 ## Understanding Model Configuration
 
-In prompt-ops, model configuration is specified in the `model` section of your YAML configuration file. The basic configuration looks like this:
+In llama-prompt-ops, model configuration is specified in the `model` section of your YAML configuration file. The basic configuration looks like this:
 
 ```yaml
 model:
@@ -14,13 +14,13 @@ model:
   max_tokens: 40960
 ```
 
-This configuration uses OpenRouter as the inference provider. Behind the scenes, prompt-ops uses LiteLLM to handle the API calls, which provides a unified interface to various LLM providers.
+This configuration uses OpenRouter as the inference provider. Behind the scenes, llama-prompt-ops uses LiteLLM to handle the API calls, which provides a unified interface to various LLM providers.
 
 ## Available Inference Providers
 
 ### 1. OpenRouter (Default)
 
-[OpenRouter](https://openrouter.ai/) provides access to a wide range of models from different providers through a unified API. This is the default configuration in prompt-ops.
+[OpenRouter](https://openrouter.ai/) provides access to a wide range of models from different providers through a unified API. This is the default configuration in llama-prompt-ops.
 
 ```yaml
 model:
@@ -81,7 +81,7 @@ docker run -it --rm --name=nim \
 
 ### Using Different Models for Task and Proposer
 
-prompt-ops allows you to specify different models for the task execution and the prompt proposal process:
+llama-prompt-ops allows you to specify different models for the task execution and the prompt proposal process:
 
 ```yaml
 model:
@@ -92,20 +92,20 @@ model:
   max_tokens: 4096
 ```
 
-## Running prompt-ops with Different Providers
+## Running llama-prompt-ops with Different Providers
 
-To run prompt-ops with your configuration:
+To run llama-prompt-ops with your configuration:
 
 ```bash
 # With OpenRouter
 export OPENROUTER_API_KEY=your_api_key_here
-prompt-ops migrate --config configs/hotpotqa_openrouter.yaml
+llama-prompt-ops migrate --config configs/hotpotqa_openrouter.yaml
 
 # With vLLM (after starting the vLLM server)
-prompt-ops migrate --config configs/hotpotqa_vllm.yaml
+llama-prompt-ops migrate --config configs/hotpotqa_vllm.yaml
 
 # With NVIDIA NIMs (after starting the NIM container)
-prompt-ops migrate --config configs/hotpotqa_nim.yaml
+llama-prompt-ops migrate --config configs/hotpotqa_nim.yaml
 ```
 
 For more information on other model provider configuration options, refer to the [LiteLLM documentation](https://docs.litellm.ai/docs/).
