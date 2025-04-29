@@ -1,0 +1,112 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# IPython
+profile_default/
+ipython_config.py
+
+# Jupyter cache
+.jupyter/
+.jupyter-cache/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual environment
+venv/
+env/
+.env
+.venv/
+
+# IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+/dist
+/build
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor directories and files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional coverage directory
+coverage/
+
+# Temporary files
+*.tmp
+*.temp
+
+**/*.csv
+**/*.tsv
+
+/notebooks/wandb/*
+
+/experiments/logs
+/logs
+
+/misc
+/results
+/.pytest_cache
+
+configs/dox*.yaml
+tests/functional/test_with_dox*.py
+
+configs/joule*.yaml
+examples/joule_*.sh
+examples/joule_*.py
+src/llama_prompt_ops/datasets/joule/
+tests/functional/test_with_joule*.py
+
+test_with_config_client.py
+src/llama_prompt_ops/datasets/dox/
+src/llama_prompt_ops/datasets/joule/
+src/prompt_ops/datasets/dox/
+src/prompt_ops/datasets/joule/
+
+use-cases/hotpotqa/*.json
+use-cases/joule/
+use-cases/dox/
+datasets/dropbox_qa/dropbox_data.json

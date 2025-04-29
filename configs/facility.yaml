@@ -1,0 +1,51 @@
+# Facility dataset configuration for prompt optimization
+
+#TODO: think if there are any way to abstract this
+# provider: openrouter/hosted_vllm/togethercomputer
+# model: meta-llama/llama-3.3-70b-instruct
+# litellm
+model:
+  name: "openrouter/meta-llama/llama-3.3-70b-instruct"
+  api_base: "https://openrouter.ai/api/v1" # rename base_url:
+  temperature: 0.0
+  # max_tokens: 2048       # Maximum number of tokens to generate
+  # top_p: 0.9             # Nucleus sampling parameter
+  # top_k: 40              # Top-k sampling parameter
+  # frequency_penalty: 0.0 # Penalize repeated tokens
+  # presence_penalty: 0.0  # Penalize tokens already in the context
+  # cache: false           # Whether to cache responses
+
+## name the data adapter take in N params
+dataset:
+  adapter_class: "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter"
+  path: "../use-cases/facility-support-analyzer/facility_v2_test.json"
+  train_size: 0.7
+  validation_size: 0.15
+  # seed: 42               # Random seed for dataset splitting
+  # shuffle: true          # Whether to shuffle the dataset before splitting
+  # Required parameters
+  input_field: ["fields", "input"] # Field to use as input (string, list, or dict)
+  golden_output_field: "answer" # Field to use as ground truth/reference output (string, list, or dict)
+
+system_prompt:
+  file: "../use-cases/facility-support-analyzer/facility_prompt_sys.txt"  # Reference to prompt file instead of inline text
+  inputs: ["question"]
+  outputs: ["answer"]
+
+metric:
+  class: "llama_prompt_ops.core.metrics.FacilityMetric"
+  strict_json: false
+  output_field: "answer"
+
+optimization:
+  strategy: "llama" # Strategy to use (llama, basic, advanced)
+  max_rounds: 3 # Maximum number of optimization rounds
+  max_examples_per_round: 5 # Maximum examples to use per round
+  max_prompt_length: 2048 # Maximum length of the optimized prompt
+  # num_candidates: 5               # Number of candidate prompts to generate
+  # bootstrap_examples: 4           # Number of examples to bootstrap
+  # num_threads: 36                 # Number of threads for parallel processing
+  # max_errors: 5                   # Maximum number of errors before stopping
+  # disable_progress_bar: false     # Whether to disable the progress bar
+  # save_intermediate: false        # Whether to save intermediate results
+  # model_family: "llama"           # Model family for optimization strategies

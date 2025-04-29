@@ -1,0 +1,26 @@
+system_prompt:
+  file: "../use-cases/facility-support-analyzer/facility_prompt_sys.txt"
+  inputs: ["question"]
+  outputs: ["answer"]
+
+# Dataset configuration
+dataset:
+  path: "../use-cases/facility-support-analyzer/facility_v2_test.json"
+  input_field: ["fields", "input"]
+  golden_output_field: "answer"
+
+# Model configuration (minimal required settings)
+model:
+  name: "openrouter/meta-llama/llama-3.3-70b-instruct"
+  task_model: "openrouter/meta-llama/llama-3.3-70b-instruct"
+  proposer_model: "openrouter/meta-llama/llama-3.3-70b-instruct"
+
+# Metric configuration (simplified but maintains compatibility)
+metric:
+  class: "llama_prompt_ops.core.metrics.FacilityMetric"
+  strict_json: false
+  output_field: "answer"
+
+# Optimization settings
+optimization:
+  strategy: "llama"
