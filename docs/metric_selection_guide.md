@@ -69,29 +69,6 @@ class MyCustomMetric(MetricBase):
         pass
 ```
 
-## Decision Flowchart for Metric Selection
-
-1. **Are you evaluating exact text matches?**
-   - **Yes**: Use ExactMatchMetric
-   - **No**: Continue to next question
-
-2. **Are you evaluating structured JSON responses?**
-   - **Yes**: Continue to next question
-   - **No**: Skip to question 5
-
-3. **Is your JSON evaluation for customer service categorization?**
-   - **Yes**: Use FacilityMetric
-   - **No**: Continue to next question
-
-4. **Do you need to evaluate specific JSON fields with custom weights?**
-   - **Yes**: Use StandardJSONMetric
-   - **No**: Continue to next question
-
-5. **Do you need semantic evaluation beyond exact matching?**
-   - **Yes**: Use DSPyMetricAdapter
-   - **No**: Consider creating a custom metric
-
-
 ## Configuration Examples
 
 ### ExactMatchMetric Configuration

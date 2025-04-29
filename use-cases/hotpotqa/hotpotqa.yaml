@@ -6,7 +6,7 @@ model:
 
 dataset:
   adapter_class: "src/llama_prompt_ops/datasets/hotpotqa/adapter.py"
-  path: "../use-cases/hotpotqa/hotpotqa_sample.json"
+  path: "hotpot_dev_distractor_v1.json"
   train_size: 0.07
   validation_size: 0.07
   test_size: 0.07

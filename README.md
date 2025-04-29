@@ -1,6 +1,7 @@
 <h1 align="center"> Llama Prompt Ops </h1>
 
 ## What is llama-prompt-ops?
+[![PyPI version](https://img.shields.io/pypi/v/llama-prompt-ops.svg)](https://pypi.org/project/llama-prompt-ops/)
 
 llama-prompt-ops is a Python package that **automatically optimizes prompts** for Llama models. It transforms prompts that work well with other LLMs into prompts that are optimized for Llama models, improving performance and reliability.
 
@@ -52,7 +53,7 @@ To get started with llama-prompt-ops, you'll need:
 ### HotpotQA
 <table>
 <tr>
-<td width="100%"><img src="./docs/_static/output-hotpotqa.png" alt="HotpotQA Benchmark Results"></td>
+<td width="100%"><img src="./docs/_static/output-hotpotqa.png" onerror="this.onerror=null;this.src='https://github.com/user-attachments/assets/52080f54-d1ca-4d21-8263-a9b2ee1d3c10'" alt="HotpotQA Benchmark Results"></td>
 </tr>
 </table>
 

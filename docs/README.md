@@ -39,8 +39,6 @@ llama-prompt-ops supports various inference providers and endpoints to fit your 
 - OpenRouter (cloud-based API)
 - vLLM (local deployment)
 - NVIDIA NIMs (optimized containers)
-- OpenAI-compatible endpoints
-
 
 ## Supported Formats at a Glance
 
@@ -61,5 +59,5 @@ llama-prompt-ops supports various inference providers and endpoints to fit your 
 We've prepared several complete examples to help you get started:
 
 - [Multi Hop Question Answering](../use-cases/hotpotqa/): Optimize prompts for Multi-hop QA tasks
-- [Customer Service](../use-cases/facility-support-analyzer/): Categorize and analyze messages
+- [Facility Support Analyzer](../use-cases/facility-support-analyzer/): Categorize and analyze messages
 

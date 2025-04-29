@@ -10,6 +10,33 @@ This guide helps you choose the right dataset adapter for your use case or deter
 | **RAGJSONAdapter** | Retrieval-augmented generation | `[{"question": "...", "context": "...", "answer": "..."}]` | When your dataset includes retrieval contexts or documents alongside questions and answers |
 | **Custom DatasetAdapter** | Specialized formats or processing | Any custom structure | When existing adapters don't meet your needs even with configuration |
 
+
+## Decision Flowchart for DatasetAdapter Selection
+
+1. **Is your dataset in JSON format?**
+   - **Yes**: Continue to next question
+   - **No**: Is it CSV or YAML? Use StandardJSONAdapter with appropriate file_format parameter
+
+2. **Does your dataset have question, context, and answer fields?**
+   - **Yes**: Use RAGJSONAdapter
+   - **No**: Create a custom adapter
+
+## Configuration vs. Custom DatasetAdapter
+
+In many cases, you can use StandardJSONAdapter with custom configuration instead of creating a new adapter:
+
+```yaml
+dataset:
+  adapter_class: "prompt_ops.core.datasets.StandardJSONAdapter"
+  path: "path/to/dataset.json"
+  adapter_params:
+    input_field: ["nested", "field", "path"]
+    output_field: "answer"
+```
+
+Only create a custom dataset adapter when this level of configuration is insufficient for your needs.
+
+
 ## When to Create a Custom DatasetAdapter
 
 Create a custom dataset adapter when:
@@ -67,41 +94,3 @@ class MyCustomAdapter(DatasetAdapter):
         # Extract any relevant metadata
         return {}
 ```
-
-## Decision Flowchart for DatasetAdapter Selection
-
-1. **Is your dataset in JSON format?**
-   - **Yes**: Continue to next question
-   - **No**: Is it CSV or YAML? Use StandardJSONAdapter with appropriate file_format parameter
-
-2. **Does your dataset have question, context, and answer fields?**
-   - **Yes**: Use RAGJSONAdapter
-   - **No**: Continue to next question
-
-3. **Is your dataset for customer service categorization?**
-   - **Yes**: Use FacilityAdapter
-   - **No**: Continue to next question
-
-4. **Is your dataset for multi-hop question answering?**
-   - **Yes**: Use HotpotQAAdapter
-   - **No**: Continue to next question
-
-5. **Can your dataset be processed with simple field mapping?**
-   - **Yes**: Use StandardJSONAdapter with appropriate configuration
-   - **No**: Create a custom adapter
-
-## Configuration vs. Custom DatasetAdapter
-
-In many cases, you can use StandardJSONAdapter with custom configuration instead of creating a new adapter:
-
-```yaml
-dataset:
-  adapter_class: "prompt_ops.core.datasets.StandardJSONAdapter"
-  path: "path/to/dataset.json"
-  adapter_params:
-    input_field: ["nested", "field", "path"]
-    output_field: "answer"
-    default_value: "N/A"
-```
-
-Only create a custom dataset adapter when this level of configuration is insufficient for your needs.
