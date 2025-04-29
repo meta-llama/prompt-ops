@@ -40,10 +40,10 @@ To get started with llama-prompt-ops, you'll need:
 
 ### Simple Workflow
 
-1. **Start with your existing system prompt**: Take your existing system prompt that works with other LLMs
+1. **Start with your existing system prompt**: Take your existing system prompt that works with other LLMs (see [example prompt](use-cases/facility-synth/facility_prompt_sys.txt))
 2. [**Prepare your dataset**](#preparing-your-data): Create a JSON file with query-response pairs for evaluation and optimization
-3. [**Configure optimization**](#create-a-simple-configuration): Set up a simple YAML file with your dataset and preferences
-4. [**Run optimization**](#run-optimization): Execute a single command to transform your prompt
+3. **Configure optimization**: Set up a simple YAML file with your dataset and preferences (see [example configuration](configs/facility-simple.yaml))
+4. [**Run optimization**](#step-4-run-optimization): Execute a single command to transform your prompt
 5. [**Get results**](#prompt-transformation-example): Receive a Llama-optimized prompt with performance metrics
 
 
@@ -121,7 +121,7 @@ To use llama-prompt-ops for prompt optimization, you'll need to prepare a datase
 ]
 ```
 
-If your data matches this format, you can use the built-in [`StandardJSONAdapter`](src/prompt_ops/core/datasets.py) which will handle it automatically.
+If your data matches this format, you can use the built-in [`StandardJSONAdapter`](src/llama_prompt_ops/core/datasets.py) which will handle it automatically.
 
 ### Custom Data Formats
 

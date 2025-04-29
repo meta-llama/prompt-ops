@@ -17,7 +17,7 @@ Welcome to llama-prompt-ops! This guide will help you understand what's supporte
 | RAGJSONAdapter | `[{"question": "Who wrote Romeo and Juliet?", "context": "Shakespeare wrote many plays...", "answer": "William Shakespeare"}]` | When your dataset includes retrieval contexts |
 | Custom Adapter | Any specialized format that doesn't fit the above patterns | When existing adapters don't meet your needs |
 
-See our [detailed adapter selection guide](dataset_adapter_selection_guide.md) for more information.
+See our [detailed dataset adapter selection guide](dataset_adapter_selection_guide.md) for more information.
 
 ## Evaluation Metrics
 
