@@ -47,6 +47,36 @@ To get started with llama-prompt-ops, you'll need:
 5. [**Get results**](#prompt-transformation-example): Receive a Llama-optimized prompt with performance metrics
 
 
+## Benchmark Results
+
+### HotpotQA
+<table>
+<tr>
+<td width="100%"><img src="./docs/_static/output-hotpotqa.png" alt="HotpotQA Benchmark Results"></td>
+</tr>
+</table>
+
+These results were measured on the [HotpotQA multi-hop reasoning benchmark](https://hotpotqa.github.io/), which tests a model's ability to answer complex questions requiring information from multiple sources. Our optimized prompts showed substantial improvements over baseline prompts across different model sizes.
+
+
+## Quick Start (5 minutes)
+
+### Step 1: Installation
+
+```bash
+# Create a virtual environment
+conda create -n prompt-ops python=3.10
+conda activate prompt-ops
+
+# Install from PyPI
+pip install llama-prompt-ops
+
+# OR install from source
+git clone https://github.com/meta-llama/llama-prompt-ops.git
+cd llama-prompt-ops
+pip install -e .
+
+
 
 ## Quick Start (5 minutes)
 

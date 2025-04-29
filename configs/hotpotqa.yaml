@@ -21,6 +21,7 @@ dataset:
     golden_output_field: "answer"  # Field to use as ground truth/reference output
 
 system_prompt:
+  # alternatively you can also add the system prompt in the a seperate text file
   text: |
     You are an expert at answering complex questions that require multi-hop reasoning. Give a short factoid answer.
   inputs: ["question", "context"]
@@ -33,7 +34,7 @@ metric:
 
 optimization:
   strategy: "llama"
-
+  
 # Output configuration
 output:
   prefix: "hotpotqa_file_path_test"
