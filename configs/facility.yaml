@@ -27,7 +27,7 @@ dataset:
   input_field: ["fields", "input"] # Field to use as input (string, list, or dict)
   golden_output_field: "answer" # Field to use as ground truth/reference output (string, list, or dict)
 
-prompt:
+system_prompt:
   text: |
     Giving the following message:
     ---
@@ -50,7 +50,7 @@ metric:
     # Nested fields to evaluate
     nested_fields:
       categories:
-        [
+        [   
           "emergency_repair_services",
           "routine_maintenance_requests",
           "quality_and_safety_concerns",
@@ -71,7 +71,7 @@ metric:
     strict_json: false
 
 optimization:
-  strategy: "llama" # Strategy to use (llama, basic, intermediate, advanced, custom)
+  strategy: "llama" # Strategy to use (llama, basic, advanced)
   max_rounds: 3 # Maximum number of optimization rounds
   max_examples_per_round: 5 # Maximum examples to use per round
   max_prompt_length: 2048 # Maximum length of the optimized prompt

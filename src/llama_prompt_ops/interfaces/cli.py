@@ -16,12 +16,27 @@ import importlib.util
 import os
 import sys
 import yaml
+import json
+import shutil
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 import logging
 import click
 from dotenv import load_dotenv
+
+# Import template utilities
+from llama_prompt_ops.templates import get_template_path, get_template_content
+
+# Helper function for real-time output
+def echo_flush(message, err=False):
+    """Echo a message and flush the output buffer for real-time display."""
+    click.echo(message, err=err)
+    if err:
+        sys.stderr.flush()
+    else:
+        sys.stdout.flush()
 
 from llama_prompt_ops.core.prompt_strategies import BaseStrategy, BasicOptimizationStrategy, OptimizationError
 from llama_prompt_ops.core.model_strategies import LlamaStrategy
@@ -37,6 +52,154 @@ def cli():
     llama-prompt-ops - A tool for migrating and optimizing prompts for Llama models.
     """
     pass
+
+
+@cli.command(name="create")
+@click.argument(
+    "project_name",
+    required=True,
+    type=str
+)
+@click.option(
+    "--output-dir",
+    default=".",
+    help="Directory where the project will be created"
+)
+@click.option(
+    "--model",
+    default="openrouter/meta-llama/llama-3.3-70b-instruct",
+    help="Model to use for prompt optimization"
+)
+@click.option(
+    "--api-key-env",
+    default="OPENROUTER_API_KEY",
+    help="Name of the environment variable for the API key"
+)
+def create(project_name, output_dir, model, api_key_env):
+    """Create a new prompt optimization project with all necessary files."""
+    project_dir = os.path.join(output_dir, project_name)
+    
+    try:
+        # Check if directory already exists
+        if os.path.exists(project_dir):
+            raise ValueError(f"Directory '{project_name}' already exists. Please choose a different name.")
+        
+        total_steps = 6
+        
+        # Step 1: Create project directory and subdirectories
+        echo_flush(f"[1/{total_steps}] Creating project structure...")
+        os.makedirs(project_dir)
+        echo_flush(f"✓ Created project directory: {project_name}")
+        
+        os.makedirs(os.path.join(project_dir, "data"))
+        echo_flush(f"✓ Created data directory")
+        
+        os.makedirs(os.path.join(project_dir, "prompts"))
+        echo_flush(f"✓ Created prompts directory")
+        
+        # Step 2: Create config file
+        echo_flush(f"\n[2/{total_steps}] Generating configuration file...")
+        config = {
+            "system_prompt": {
+                "file": "prompts/prompt.txt",
+                "inputs": ["question"],
+                "outputs": ["answer"]
+            },
+            "dataset": {
+                "path": "data/dataset.json",
+                "input_field": ["fields", "input"],
+                "golden_output_field": "answer"
+            },
+            "model": {
+                "task_model": model,
+                "proposer_model": model
+            },
+            "metric": {
+                "class": "llama_prompt_ops.core.metrics.StandardJSONMetric",
+                "strict_json": False,
+                "output_field": "answer"
+            },
+            "optimization": {
+                "strategy": "llama"
+            }
+        }
+        
+        with open(os.path.join(project_dir, "config.yaml"), "w") as f:
+            yaml.dump(config, f, sort_keys=False, default_flow_style=False)
+        echo_flush(f"✓ Created config.yaml")
+        
+        # Step 3: Create prompt file
+        echo_flush(f"\n[3/{total_steps}] Creating prompt template...")
+        # Use the bundled template file
+        prompt_text = get_template_content("sample_prompt.txt")
+        
+        with open(os.path.join(project_dir, "prompts", "prompt.txt"), "w") as f:
+            f.write(prompt_text)
+        echo_flush(f"✓ Created prompt.txt")
+        
+        # Step 4: Create sample dataset file
+        echo_flush(f"\n[4/{total_steps}] Generating sample dataset...")
+        # Use the helper function to get the sample dataset
+        from llama_prompt_ops.templates import get_sample_dataset
+        sample_data = get_sample_dataset()
+        
+        with open(os.path.join(project_dir, "data", "dataset.json"), "w") as f:
+            json.dump(sample_data, f, indent=2)
+        echo_flush(f"✓ Created dataset.json with {len(sample_data)} examples")
+        
+        # Step 5: Create .env file
+        echo_flush(f"\n[5/{total_steps}] Setting up environment...")
+        env_content = f"# API Keys\n{api_key_env}=your_api_key_here\n"
+        
+        with open(os.path.join(project_dir, ".env"), "w") as f:
+            f.write(env_content)
+        echo_flush(f"✓ Created .env file")
+        
+        # Step 6: Create README.md file
+        echo_flush(f"\n[6/{total_steps}] Creating documentation...")
+        readme_content = f"""# {project_name}
+
+A prompt optimization project created with llama-prompt-ops.
+
+## Getting Started
+
+1. Set your API key in the `.env` file:
+   ```
+   {api_key_env}=your_api_key_here
+   ```
+
+2. Run the optimization:
+   ```bash
+   cd {project_name}
+   llama-prompt-ops migrate
+   ```
+
+## Project Structure
+
+- `config.yaml`: Configuration file for the project
+- `prompts/prompt.txt`: The prompt template to optimize
+- `data/dataset.json`: Sample dataset for training and evaluation
+- `.env`: Environment variables including API keys
+"""
+        
+        with open(os.path.join(project_dir, "README.md"), "w") as f:
+            f.write(readme_content)
+        echo_flush(f"✓ Created README.md")
+        
+        # Final summary
+        echo_flush(f"\n✨ Done! Project '{project_name}' created successfully!")
+        echo_flush("\nTo get started:")
+        echo_flush(f"1. cd {project_name}")
+        echo_flush(f"2. Edit the .env file to add your {api_key_env}")
+        echo_flush(f"   You can get an API key at: https://openrouter.ai/")
+        echo_flush("3. Run: llama-prompt-ops migrate")
+        
+    except Exception as e:
+        echo_flush(f"Error creating project: {str(e)}", err=True)
+        # Clean up if something went wrong
+        if os.path.exists(project_dir):
+            shutil.rmtree(project_dir)
+        sys.exit(1)
 
 
 # Helper functions for optimize-with-config command
@@ -465,8 +628,8 @@ def load_config(config_path):
 @cli.command(name="migrate")
 @click.option(
     "--config",
-    required=True,
-    help="Path to the YAML configuration file"
+    default="config.yaml",
+    help="Path to the YAML configuration file (defaults to config.yaml)"
 )
 @click.option(
     "--model",
@@ -575,8 +738,8 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
         validation_size=dataset_config.get("validation_size", 0.25)
     )
     
-    # Get prompt from config
-    prompt_config = config_dict.get("prompt", {})
+    # Get prompt from config (support both 'system_prompt' and legacy 'prompt' keys)
+    prompt_config = config_dict.get("system_prompt", config_dict.get("prompt", {}))
     prompt_file = prompt_config.get("file", None)
     prompt_text = prompt_config.get("text", "")
     
@@ -601,6 +764,12 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
     
     prompt_inputs = prompt_config.get("inputs", ["question", "context"])
     prompt_outputs = prompt_config.get("outputs", ["answer"])
+    
+    # Log which config key was used
+    if "system_prompt" in config_dict:
+        click.echo("Using 'system_prompt' from config")
+    elif "prompt" in config_dict:
+        click.echo("Using legacy 'prompt' key from config")
     
     # Set up output path
     output_config = config_dict.get("output", {})

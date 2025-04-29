@@ -14,10 +14,9 @@ llama-prompt-ops is a Python package that **automatically optimizes prompts** fo
 
 To get started with llama-prompt-ops, you'll need:
 
-- Existing System Prompt: Your existing prompt that you want to optimize
-- Existing Query-Response Dataset: A JSON file containing query-response pairs for evaluation and optimization (see [prepare your dataset](#preparing-your-data) below)
+- Existing System Prompt: Your existing system prompt that you want to optimize
+- Existing Query-Response Dataset: A JSON file containing query-response pairs (as few as 50 examples) for evaluation and optimization (see [prepare your dataset](#preparing-your-data) below)
 - Configuration File: A YAML configuration file (config.yaml) specifying model hyperparameters, and optimization details (see [example configuration](configs/facility-simple.yaml))
-
 
 ## How It Works
 
@@ -25,27 +24,27 @@ To get started with llama-prompt-ops, you'll need:
 ┌──────────────────────────┐    ┌────────────────────────────────┐     ┌───────────────────────┐    
 │  Existing System Prompt  │    │     set(query, responses)      │     │  YAML Configuration   │    
 └────────────┬─────────────┘    └────────────────┬───────────────┘     └────────────┬──────────┘    
-             │                             │                                  │               
-             │                             │                                  │               
-             ▼                             ▼                                  ▼               
+             │                                   │                                  │               
+             │                                   │                                  │               
+             ▼                                   ▼                                  ▼               
          ┌────────────────────────────────────────────────────────────────────────────┐
          │                         llama-prompt-ops migrate                           │
          └────────────────────────────────────────────────────────────────────────────┘
-                                           │
-                                           │
-                                           ▼
-                               ┌──────────────────────┐
-                               │   Optimized Prompt   │
-                               └──────────────────────┘
+                                                 │
+                                                 │
+                                                 ▼
+                                     ┌──────────────────────┐
+                                     │   Optimized Prompt   │
+                                     └──────────────────────┘
 ```
 
 ### Simple Workflow
 
 1. **Start with your system prompt**: Take your existing system prompt that works with other LLMs
-2. **Prepare your dataset**: Create a JSON file with query-response pairs for evaluation and optimization
-3. **Configure optimization**: Set up a simple YAML file with your dataset and preferences
-4. **Run optimization**: Execute a single command to transform your prompt
-5. **Get results**: Receive a Llama-optimized prompt with performance metrics
+2. [**Prepare your dataset**](#preparing-your-data): Create a JSON file with query-response pairs for evaluation and optimization
+3. [**Configure optimization**](#create-a-simple-configuration): Set up a simple YAML file with your dataset and preferences
+4. [**Run optimization**](#run-optimization): Execute a single command to transform your prompt
+5. [**Get results**](#prompt-transformation-example): Receive a Llama-optimized prompt with performance metrics
 
 
 
@@ -84,10 +83,8 @@ You can get an OpenRouter API key by creating an account at [OpenRouter](https:/
 Create a file named `config.yaml` with this basic configuration:
 
 ```yaml
-prompt:
+system_prompt:
   file: "../use-cases/facility-synth/facility_prompt_sys.txt"
-  inputs: ["question"]
-  outputs: ["answer"]
 
 # Dataset configuration
 dataset:
@@ -97,7 +94,6 @@ dataset:
 
 # Model configuration (minimal required settings)
 model:
-  name: "openrouter/meta-llama/llama-3.3-70b-instruct"
   task_model: "openrouter/meta-llama/llama-3.3-70b-instruct"
   proposer_model: "openrouter/meta-llama/llama-3.3-70b-instruct"
 
@@ -109,7 +105,7 @@ metric:
 
 # Optimization settings
 optimization:
-  strategy: "llama"
+  strategy: "llama"  # (llama, basic, advanced)
 
 ```
 
@@ -121,23 +117,15 @@ llama-prompt-ops migrate --config config.yaml
 
 The optimized prompt will be saved to the `results` directory with performance metrics comparing the original and optimized versions.
 
-### Try the Built-in Example
-
-For a more complete example with a dataset, run:
-
-```bash
-llama-prompt-ops migrate --config configs/facility-simple.yaml
-```
-
-This example demonstrates how prompt-ops migrates a customer service analysis prompt to Llama models, categorizing messages by urgency, sentiment, and topic categories.
 
 ### Prompt Transformation Example
 
-Below is an example of how llama-prompt-ops transforms a prompt from OpenAI to Llama:
+Below is an example of a transformed system prompt from proprietary LM to Llama:
 
-| Original OpenAI Prompt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Optimized Llama Prompt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| You are a helpful assistant. Extract and return a json with the following keys and values:<br>- "urgency" as one of `high`, `medium`, `low`<br>- "sentiment" as one of `negative`, `neutral`, `positive`<br>- "categories" Create a dictionary with categories as keys and boolean values (True/False), where the value indicates whether the category is one of the best matching support category tags from: `emergency_repair_services`, `routine_maintenance_requests`, etc.<br><br>Your complete message should be a valid json string that can be read directly. | You are an expert in analyzing customer service messages. Your task is to categorize the following message based on urgency, sentiment, and relevant categories.<br><br>Analyze the message and return a JSON object with these fields:<br>1. "urgency": Classify as "high", "medium", or "low" based on how quickly this needs attention<br>2. "sentiment": Classify as "negative", "neutral", or "positive" based on the customer's tone<br>3. "categories": Create a dictionary with facility management categories as keys and boolean values<br><br>Only include these exact keys in your response. Return a valid JSON object without code blocks, prefixes, or explanations. |
+| Original Proprietary LM Prompt | Optimized Llama Prompt |
+| --- | --- |
+| You are a helpful assistant. Extract and return a JSON with the following keys and values:<br><br>1. "urgency": one of `high`, `medium`, `low`<br>2. "sentiment": one of `negative`, `neutral`, `positive`<br>3. "categories": Create a dictionary with categories as keys and boolean values (True/False), where the value indicates whether the category matches tags like `emergency_repair_services`, `routine_maintenance_requests`, etc.<br><br>Your complete message should be a valid JSON string that can be read directly. | You are an expert in analyzing customer service messages. Your task is to categorize the following message based on urgency, sentiment, and relevant categories.<br><br>Analyze the message and return a JSON object with these fields:<br><br>1. "urgency": Classify as "high", "medium", or "low" based on how quickly this needs attention<br>2. "sentiment": Classify as "negative", "neutral", or "positive" based on the customer's tone<br>3. "categories": Create a dictionary with facility management categories as keys and boolean values<br><br>Only include these exact keys in your response. Return a valid JSON object without code blocks, prefixes, or explanations. |
+
 
 ### Preparing Your Data
 
@@ -162,15 +150,6 @@ If your data matches this format, you can use the built-in [`StandardJSONAdapter
 
 If your data is formatted differently, and there isn't a built-in dataset adapter, you can create a custom dataset adapter by extending the `DatasetAdapter` class. See the [Dataset Adapter Selection Guide](docs/dataset_adapter_selection_guide.md) for more details.
 
-## Key Features
-
-- **YAML Configuration**: Define your entire optimization pipeline in a single YAML file
-- **Standardized Dataset Adapters**: Easily work with different dataset formats (JSON, CSV, YAML)
-- **Customizable Metrics**: Evaluate prompt performance with configurable metrics
-- **Multiple Inference Providers**: Support for OpenRouter, vLLM, NVIDIA NIMs and others
-- **Fast Optimization Mode**: Get optimized prompts in seconds without a dataset
-- **Comprehensive Evaluation**: Compare original and optimized prompts with detailed metrics
-
 ## Multiple Inference Provider Support
 
 llama-prompt-ops supports various inference providers and endpoints to fit your infrastructure needs. See our [detailed guide on inference providers](./docs/inference_providers.md) for configuration examples with:
@@ -178,7 +157,6 @@ llama-prompt-ops supports various inference providers and endpoints to fit your 
 - OpenRouter (cloud-based API)
 - vLLM (local deployment)
 - NVIDIA NIMs (optimized containers)
-- OpenAI-compatible endpoints
 
 ## Documentation and Examples
 

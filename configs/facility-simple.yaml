@@ -1,4 +1,4 @@
-prompt:
+system_prompt:
   file: "../use-cases/facility-synth/facility_prompt_sys.txt"
   inputs: ["question"]
   outputs: ["answer"]

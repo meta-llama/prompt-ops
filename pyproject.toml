@@ -49,6 +49,9 @@ llama-prompt-ops = "llama_prompt_ops.interfaces.cli:cli"
 package-dir = {"" = "src"}
 packages = ["llama_prompt_ops"]
 
+[tool.setuptools.package-data]
+llama_prompt_ops = ["templates/*"]
+
 [tool.black]
 line-length = 88
 target-version = ["py39"]

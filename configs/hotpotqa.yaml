@@ -6,7 +6,7 @@ model:
 
 dataset:
   adapter_class: "src/llama_prompt_ops/datasets/hotpotqa/adapter.py"
-  path: "use-cases/hotpotqa/hotpotqa_sample.json"
+  path: "../use-cases/hotpotqa/hotpotqa_sample.json"
   train_size: 0.07
   validation_size: 0.07
   test_size: 0.07
@@ -20,7 +20,7 @@ dataset:
     supporting_facts_field: "supporting_facts"  # Field containing supporting facts
     golden_output_field: "answer"  # Field to use as ground truth/reference output
 
-prompt:
+system_prompt:
   text: |
     You are an expert at answering complex questions that require multi-hop reasoning. Give a short factoid answer.
   inputs: ["question", "context"]
