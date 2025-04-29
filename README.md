@@ -1,7 +1,28 @@
 <h1 align="center"> Llama Prompt Ops </h1>
 
 ## What is llama-prompt-ops?
-[![PyPI version](https://img.shields.io/pypi/v/llama-prompt-ops.svg)](https://pypi.org/project/llama-prompt-ops/)
+<p align="center">
+  <a href="https://pypi.org/project/llama-prompt-ops/"><img src="https://img.shields.io/pypi/v/llama-prompt-ops.svg" /></a>
+</p>
+<p align="center">
+  <a href="https://llama.developer.meta.com/?utm_source=llama-prompt-ops&utm_medium=readme&utm_campaign=main"><img src="https://img.shields.io/badge/Llama_API-Join_Waitlist-brightgreen?logo=meta" /></a>
+  <a href="https://llama.developer.meta.com/docs?utm_source=llama-prompt-ops&utm_medium=readme&utm_campaign=main"><img src="https://img.shields.io/badge/Llama_API-Documentation-4BA9FE?logo=meta" /></a>
+  
+</p>
+
+<p align="center">
+  <a href="https://github.com/meta-llama/llama-models/blob/main/models/?utm_source=llama-prompt-ops&utm_medium=readme&utm_campaign=main"><img alt="Llama Model cards" src="https://img.shields.io/badge/Llama_OSS-Model_cards-green?logo=meta" /></a>
+  <a href="https://www.llama.com/docs/overview/?utm_source=llama-prompt-ops&utm_medium=readme&utm_campaign=main"><img alt="Llama Documentation" src="https://img.shields.io/badge/Llama_OSS-Documentation-4BA9FE?logo=meta" /></a>
+  <a href="https://huggingface.co/meta-llama"><img alt="Hugging Face meta-llama" src="https://img.shields.io/badge/Hugging_Face-meta--llama-yellow?logo=huggingface" /></a>
+  
+</p>
+<p align="center">
+  <a href="https://github.com/meta-llama/synthetic-data-kit"><img alt="Llama Tools Syntethic Data Kit" src="https://img.shields.io/badge/Llama_Tools-synthetic--data--kit-orange?logo=meta" /></a>
+  <a href="https://github.com/meta-llama/llama-prompt-ops"><img alt="Llama Tools Syntethic Data Kit" src="https://img.shields.io/badge/Llama_Tools-llama--prompt--ops-orange?logo=meta" /></a>
+    <a href="https://github.com/meta-llama/llama-cookbook"><img alt="Llama Cookbook" src="https://img.shields.io/badge/Llama_Cookbook-llama--cookbook-orange?logo=meta" /></a>
+</p>
+
+
 
 llama-prompt-ops is a Python package that **automatically optimizes prompts** for Llama models. It transforms prompts that work well with other LLMs into prompts that are optimized for Llama models, improving performance and reliability.
 
