@@ -1,0 +1,4 @@
+recursive-include src/llama_prompt_ops *.py
+recursive-include src/llama_prompt_ops/interfaces *.py
+recursive-include src/llama_prompt_ops/core *.py
+recursive-include src/llama_prompt_ops/templates *

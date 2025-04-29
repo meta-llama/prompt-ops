@@ -110,3 +110,4 @@ use-cases/hotpotqa/*.json
 use-cases/joule/
 use-cases/dox/
 datasets/dropbox_qa/dropbox_data.json
+publish.sh

@@ -47,7 +47,7 @@ To get started with llama-prompt-ops, you'll need:
 5. [**Get results**](#prompt-transformation-example): Receive a Llama-optimized prompt with performance metrics
 
 
-## Benchmark Results
+## Real-world Results
 
 ### HotpotQA
 <table>
@@ -97,6 +97,7 @@ OPENROUTER_API_KEY=your_key_here
 You can get an OpenRouter API key by creating an account at [OpenRouter](https://openrouter.ai/). For more inference provider options, see [Inference Providers](./docs/inference_providers.md).
 
 ### Step 4: Run Optimization
+The optimization will take about 5 minutes.
 
 ```bash
 llama-prompt-ops migrate # defaults to config.yaml if --config not specified
@@ -158,7 +159,7 @@ For more detailed information, check out these resources:
 - [Inference Providers Guide](docs/inference_providers.md): Configure different model providers and endpoints
 
 ## Acknowledgements
-Special thanks to the open-source community, especially the creators of DSPY, for their inspiring work.
+This project leverages some of awesome open source projects including [DSPy](https://github.com/stanfordnlp/dspy), thanks to the team for the inspiring work!
 
 ## Contributing
 
