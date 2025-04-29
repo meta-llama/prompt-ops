@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llama-prompt-ops"
-version = "0.0.1a"
+version = "0.0.1"
 description = "A tool for migrating and optimizing prompts"
 readme = "README.md"
 authors = []
