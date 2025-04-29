@@ -61,5 +61,5 @@ llama-prompt-ops supports various inference providers and endpoints to fit your 
 We've prepared several complete examples to help you get started:
 
 - [Multi Hop Question Answering](../use-cases/hotpotqa/): Optimize prompts for Multi-hop QA tasks
-- [Customer Service](../use-cases/facility-synth/): Categorize and analyze messages
+- [Customer Service](../use-cases/facility-support-analyzer/): Categorize and analyze messages
 

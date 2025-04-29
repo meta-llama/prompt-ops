@@ -1,11 +1,11 @@
 system_prompt:
-  file: "../use-cases/facility-synth/facility_prompt_sys.txt"
+  file: "../use-cases/facility-support-analyzer/facility_prompt_sys.txt"
   inputs: ["question"]
   outputs: ["answer"]
 
 # Dataset configuration
 dataset:
-  path: "../use-cases/facility-synth/facility_v2_test.json"
+  path: "../use-cases/facility-support-analyzer/facility_v2_test.json"
   input_field: ["fields", "input"]
   golden_output_field: "answer"
 

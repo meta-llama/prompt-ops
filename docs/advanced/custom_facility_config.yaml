@@ -1,12 +1,12 @@
 prompt:
-  file: "../../use-cases/facility-synth/facility_prompt_sys.txt"
+  file: "../../use-cases/facility-support-analyzer/facility_prompt_sys.txt"
   inputs: ["question"]
   outputs: ["answer"]
 
 # Dataset configuration with custom adapter
 dataset:
   adapter_class: "docs.advanced.example_custom_adapters.FacilityAdapter"
-  path: "../../use-cases/facility-synth/facility_v2_test.json"
+  path: "../../use-cases/facility-support-analyzer/facility_v2_test.json"
   adapter_params:
     include_metadata: true
 

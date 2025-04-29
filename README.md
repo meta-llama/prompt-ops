@@ -40,7 +40,7 @@ To get started with llama-prompt-ops, you'll need:
 
 ### Simple Workflow
 
-1. **Start with your existing system prompt**: Take your existing system prompt that works with other LLMs (see [example prompt](use-cases/facility-synth/facility_prompt_sys.txt))
+1. **Start with your existing system prompt**: Take your existing system prompt that works with other LLMs (see [example prompt](use-cases/facility-support-analyzer/facility_prompt_sys.txt))
 2. [**Prepare your dataset**](#preparing-your-data): Create a JSON file with query-response pairs for evaluation and optimization
 3. **Configure optimization**: Set up a simple YAML file with your dataset and preferences (see [example configuration](configs/facility-simple.yaml))
 4. [**Run optimization**](#step-4-run-optimization): Execute a single command to transform your prompt
