@@ -157,6 +157,9 @@ For more detailed information, check out these resources:
 - [Metric Selection Guide](docs/metric_selection_guide.md): Select appropriate evaluation metrics for your use case
 - [Inference Providers Guide](docs/inference_providers.md): Configure different model providers and endpoints
 
+## Acknowledgements
+Special thanks to the open-source community, especially the creators of DSPY, for their inspiring work.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
