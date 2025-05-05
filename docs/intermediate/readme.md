@@ -278,4 +278,4 @@ While this tutorial focuses on facility classification, you can adapt the config
 
 This intermediate guide has covered the main configuration options available in prompt-ops for optimizing prompts in the facility management classification task. By understanding and customizing these settings, you can achieve better results for your specific use case.
 
-For more advanced use cases, such as creating custom adapters and metrics for specialized datasets or evaluation requirements, see the [Advanced Guide: Creating Custom Adapters and Metrics for Your Use Case](../advanced/README.md).
+For more advanced use cases, such as creating custom adapters and metrics for specialized datasets or evaluation requirements, see the [Advanced Guide: Creating Custom Adapters and Metrics for Your Use Case](../advanced/readme.md).
