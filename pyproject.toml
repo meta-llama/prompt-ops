@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llama-prompt-ops"
-version = "0.0.5"
+version = "0.0.6"
 description = "A tool for migrating and optimizing prompts"
 readme = "README.md"
 authors = []
@@ -19,7 +19,7 @@ requires-python = ">=3.10"
 dependencies = [
     "click>=8.0.0",
     "requests>=2.25.0",
-    "dspy>=2.6.0",
+    "dspy==2.6.13",
     "numpy>=2.2.0",
     "scipy>=1.15.0",
     "pandas>=2.2.0",
