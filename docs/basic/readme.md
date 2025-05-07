@@ -137,4 +137,4 @@ Analyze the customer's message and determine the level of urgency, sentiment, an
 
 ## Next Steps
 
-**Explore our intermediate [Facility Configuration Guide](../intermediate/README.md)** to learn about advanced configuration options including custom model settings, dataset parameters, and fine-tuning the FacilityMetric for better evaluation
+**Explore our intermediate [Facility Configuration Guide](../intermediate/readme.md)** to learn about advanced configuration options including custom model settings, dataset parameters, and fine-tuning the FacilityMetric for better evaluation
