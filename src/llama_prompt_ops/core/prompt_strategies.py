@@ -48,7 +48,7 @@ class BaseStrategy(ABC):
             model_name: Name of the model to optimize for
             metric: Metric to use for evaluation
             num_threads: Number of threads to use for parallel processing
-            model_family: Model family to optimize for (e.g., "llama", "gpt", "claude")
+            model_family: Model family to optimize for (e.g., "llama")
                          If None, will be inferred from model_name
         """
         self.model_name = model_name
