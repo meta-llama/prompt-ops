@@ -1,0 +1,21 @@
+system_prompt:
+  file: prompts/prompt.txt
+  inputs:
+  - question
+  outputs:
+  - answer
+dataset:
+  path: data/dataset.json
+  input_field:
+  - fields
+  - input
+  golden_output_field: answer
+model:
+  task_model: openrouter/meta-llama/llama-3.3-70b-instruct
+  proposer_model: openrouter/meta-llama/llama-3.3-70b-instruct
+metric:
+  class: llama_prompt_ops.core.metrics.FacilityMetric
+  strict_json: false
+  output_field: answer
+optimization:
+  strategy: llama

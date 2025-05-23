@@ -111,3 +111,19 @@ use-cases/joule/
 use-cases/dox/
 datasets/dropbox_qa/dropbox_data.json
 publish.sh
+
+
+todo/
+todo/*
+
+# Cline specific files and folders
+projectbrief.md
+productContext.md
+techContext.md
+systemPatterns.md
+activeContext.md
+progress.md
+.clinerules
+
+memory-bank/
+memory-bank/*

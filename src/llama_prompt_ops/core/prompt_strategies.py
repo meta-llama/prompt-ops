@@ -13,6 +13,7 @@ optimization strategies for migrating prompts to Llama models.
 import json
 import logging
 import os
+from .utils.logging_wrappers import LoggingLM # Added for LoggingLM
 import sys
 import traceback
 from abc import ABC, abstractmethod
@@ -21,6 +22,9 @@ import dspy
 from typing_extensions import Literal
 
 from .utils import map_auto_mode_to_dspy
+
+# Get the dedicated optimizer trace logger
+optimizer_trace_logger = logging.getLogger("llama_prompt_ops.optimizer_trace")
 
 class OptimizationError(Exception):
     """Exception raised when prompt optimization fails."""
@@ -64,15 +68,15 @@ class BaseStrategy(ABC):
                 self.model_family = "llama"
             else:
                 # Default to Llama since that's our focus
-                logging.warning(f"Model '{model_name}' does not appear to be a Llama model. "
-                              f"This library is optimized for Llama models.")
+                optimizer_trace_logger.warning(f"Model '{model_name}' does not appear to be a Llama model. " # Changed to optimizer_trace_logger
+                                               f"This library is optimized for Llama models.")
                 self.model_family = "llama"
         else:
             # If model_family is explicitly provided, use it but warn if not 'llama'
             self.model_family = model_family
             if self.model_family != "llama":
-                logging.warning(f"Model family '{self.model_family}' specified, but this library "
-                              f"is optimized for Llama models.")
+                optimizer_trace_logger.warning(f"Model family '{self.model_family}' specified, but this library " # Changed to optimizer_trace_logger
+                                               f"is optimized for Llama models.")
     
     @abstractmethod
     def run(self, prompt_data: Dict[str, Any]) -> Any:
@@ -229,7 +233,26 @@ class BasicOptimizationStrategy(BaseStrategy):
         text = prompt_data["text"]
         
         if 'dspy' not in globals() or not self.trainset:
+            optimizer_trace_logger.warning("DSPy not available or trainset empty. Skipping optimization.") # Changed to optimizer_trace_logger
             return f"[Optimized for {self.model_name}] {text}"
+        
+        optimizer_trace_logger.info("--- Starting Pre-optimization Phase ---")
+        optimizer_trace_logger.info(f"Task Model: {self.task_model}")
+        optimizer_trace_logger.info(f"Proposer Model: {self.prompt_model}")
+        optimizer_trace_logger.info(f"Metric: {self.metric.__class__.__name__}") # Corrected to always use class name
+        baseline_score = prompt_data.get('baseline_score')
+        optimizer_trace_logger.info(f"Baseline Score: {baseline_score if baseline_score is not None else 'N/A'}")
+        optimizer_trace_logger.info(f"Trainset Size: {len(self.trainset) if self.trainset else 0}")
+        optimizer_trace_logger.info(f"Validation Set Size: {len(self.valset) if self.valset else 0}")
+
+        optimizer_trace_logger.debug("MIPROv2 Parameters:")
+        optimizer_trace_logger.debug(f"  Auto Mode: {self.auto} (DSPy mode: {map_auto_mode_to_dspy(self.auto)})")
+        optimizer_trace_logger.debug(f"  Num Candidates: {self.num_candidates}")
+        optimizer_trace_logger.debug(f"  Max Bootstrapped Demos: {self.max_bootstrapped_demos}")
+        optimizer_trace_logger.debug(f"  Max Labeled Demos: {self.max_labeled_demos}")
+        optimizer_trace_logger.debug(f"  Num Trials: {self.num_trials if self.num_trials is not None else 'Auto-determined'}")
+        optimizer_trace_logger.debug(f"  Initial Temperature: {self.init_temperature}")
+        optimizer_trace_logger.debug(f"  Seed: {self.seed}")
         
         try:
             # Add model-specific tips to the prompt if enabled
@@ -283,21 +306,27 @@ class BasicOptimizationStrategy(BaseStrategy):
             dspy_auto_mode = map_auto_mode_to_dspy(self.auto)
             
             # Extract the underlying DSPy model if we have model adapters
-            task_model = self.task_model
-            prompt_model = self.prompt_model
+            # And wrap the prompt_model with LoggingLM
+            task_model_to_use = self.task_model
+            if hasattr(task_model_to_use, '_model'): # Handle DSPyModelAdapter
+                task_model_to_use = task_model_to_use._model
+
+            prompt_model_to_use = self.prompt_model
+            if hasattr(prompt_model_to_use, '_model'): # Handle DSPyModelAdapter
+                prompt_model_to_use = prompt_model_to_use._model
             
-            # Handle DSPyModelAdapter instances
-            if hasattr(task_model, '_model'):
-                task_model = task_model._model
-                
-            if hasattr(prompt_model, '_model'):
-                prompt_model = prompt_model._model
-                
+            if not isinstance(prompt_model_to_use, LoggingLM): # Avoid double-wrapping
+                optimizer_trace_logger.debug(f"Wrapping prompt_model ({type(prompt_model_to_use)}) with LoggingLM.")
+                prompt_model_to_use = LoggingLM(wrapped_lm=prompt_model_to_use)
+            else:
+                optimizer_trace_logger.debug(f"prompt_model ({type(prompt_model_to_use)}) is already a LoggingLM instance.")
+
             # Configure the optimizer with all parameters
+            # Ensure DSPy's internal verbose is False to let our logger take precedence
             optimizer = dspy.MIPROv2(
                 metric=self.metric,
-                prompt_model=prompt_model,
-                task_model=task_model,
+                prompt_model=prompt_model_to_use, # Use the wrapped model
+                task_model=task_model_to_use,
                 max_bootstrapped_demos=self.max_bootstrapped_demos,
                 max_labeled_demos=self.max_labeled_demos,
                 auto=dspy_auto_mode,  # Use the mapped value
@@ -306,220 +335,155 @@ class BasicOptimizationStrategy(BaseStrategy):
                 max_errors=self.max_errors,
                 seed=self.seed,
                 init_temperature=self.init_temperature,
-                verbose=self.verbose,
-                track_stats=self.track_stats,
-                log_dir=self.log_dir,
+                verbose=False,  # Force DSPy's verbosity off for our logger
+                track_stats=self.track_stats, # Keep track_stats as per user config
+                log_dir=self.log_dir, # Keep log_dir as per user config
                 metric_threshold=self.metric_threshold
             )
             
             # Initialize proposer_kwargs if not already present
             optimizer.proposer_kwargs = getattr(optimizer, 'proposer_kwargs', {}) or {}
             
-            # First check if we have custom instruction tips from LlamaStrategy
+            # Logic for setting tip (remains largely the same, just logging changes)
+            proposer_tip_to_log = "None"
             if hasattr(self, 'proposer_kwargs') and self.proposer_kwargs and 'tip' in self.proposer_kwargs:
-                # Use our custom instruction tips with highest priority
                 optimizer.proposer_kwargs['tip'] = self.proposer_kwargs['tip']
-                logging.info(f"Using custom instruction tips: {self.proposer_kwargs['tip']}...")
-            # Otherwise, if we have model-specific tips, use those
+                proposer_tip_to_log = self.proposer_kwargs['tip']
+                optimizer_trace_logger.debug(f"Using custom instruction tip for proposer: {proposer_tip_to_log}")
             elif model_tips:
-                # Add persona and example tips to the proposer
                 if 'persona' in model_tips or 'examples' in model_tips:
                     persona_tip = model_tips.get('persona', '')
                     examples_tip = model_tips.get('examples', '')
-                    optimizer.proposer_kwargs['tip'] = f"{persona_tip} {examples_tip}".strip()
+                    combined_tip = f"{persona_tip} {examples_tip}".strip()
+                    if combined_tip:
+                        optimizer.proposer_kwargs['tip'] = combined_tip
+                        proposer_tip_to_log = combined_tip
+                        optimizer_trace_logger.debug(f"Using model-specific tip for proposer: {proposer_tip_to_log}")
+            if proposer_tip_to_log == "None":
+                 optimizer_trace_logger.debug("No specific tip provided to instruction proposer.")
+
+
+            optimizer_trace_logger.info(f"--- Starting Instruction Proposal Phase ---")
+            optimizer_trace_logger.info(f"MIPROv2 using {self.max_labeled_demos} labeled demos, {self.max_bootstrapped_demos} bootstrapped demos with {self.num_threads} threads.")
+            optimizer_trace_logger.info(f"Compiling program with {len(self.trainset)} training examples and {len(self.valset) if self.valset else 0} validation examples.")
+            actual_num_trials = self.num_trials if self.num_trials is not None else "auto-determined based on 'auto' mode"
+            optimizer_trace_logger.info(f"Number of optimization trials: {actual_num_trials}.")
             
-            logging.info(f"Optimization strategy using {self.max_labeled_demos} labeled demos, {self.max_bootstrapped_demos} bootstrapped demos with {self.num_threads} threads")
-            
-            logging.info(f"Compiling program with {len(self.trainset)} training examples and {len(self.valset)} validation examples")
-            
-            # Create a custom compile method that injects our tip directly
+            # Create a custom compile method that injects our tip directly (existing logic, ensure logging uses optimizer_trace_logger)
             original_propose_instructions = None
             if hasattr(self, 'proposer_kwargs') and self.proposer_kwargs and 'tip' in self.proposer_kwargs:
-                # Store the original method
                 from dspy.propose.grounded_proposer import GroundedProposer
                 original_propose_instructions = GroundedProposer.propose_instructions_for_program
                 
-                # Create a wrapper that injects our custom tip
-                def custom_propose_instructions(self, *args, **kwargs):
-                    logging.info("Starting custom_propose_instructions with enhanced error handling")
-                    
+                def custom_propose_instructions(self_proposer, *args, **kwargs): # Renamed self to self_proposer
+                    optimizer_trace_logger.debug("Starting custom_propose_instructions (tip injection wrapper)")
                     try:
-                        # Log arguments for debugging
                         if len(args) >= 3:
-                            trainset = args[0]
-                            program = args[1]
-                            demo_candidates = args[2]
-                            
-                            logging.info(f"Trainset size: {len(trainset) if trainset else 0}")
-                            logging.info(f"Program type: {type(program)}")
-                            logging.info(f"Demo candidates: {'Present' if demo_candidates else 'None'}")
-                            
-                            # Check for potential issues
-                            if not trainset or len(trainset) == 0:
-                                logging.warning("Empty trainset provided to instruction proposer")
-                            
-                            if demo_candidates is None:
-                                logging.warning("Demo candidates is None, which may cause issues")
-                                
-                            # Log first training example for debugging
-                            if trainset and len(trainset) > 0:
-                                example = trainset[0]
-                                logging.info(f"First trainset example: {example}")
-                                if hasattr(example, 'inputs') and hasattr(example, 'outputs'):
-                                    logging.info(f"Example inputs: {example.inputs}")
-                                    logging.info(f"Example outputs: {example.outputs}")
-                                else:
-                                    logging.warning("Example missing required 'inputs' or 'outputs' attributes")
+                            trainset_arg, program_arg, _ = args[0], args[1], args[2]
+                            optimizer_trace_logger.debug(f"Proposer Trainset size: {len(trainset_arg) if trainset_arg else 0}, Program type: {type(program_arg)}")
                         
-                        # Override the tip parameter with our custom tip
-                        if 'tip' in kwargs:
-                            logging.info(f"Using default tip parameter: {kwargs['tip'][:50] if kwargs['tip'] else 'None'}")
+                        custom_tip_val = optimizer.proposer_kwargs.get('tip')
+                        if custom_tip_val:
+                            optimizer_trace_logger.debug(f"Injecting custom tip into proposer: {custom_tip_val[:100]}...")
+                            kwargs['tip'] = custom_tip_val
                         
-                        # Inject our custom tip
-                        custom_tip = optimizer.proposer_kwargs.get('tip')
-                        if custom_tip:
-                            logging.info(f"Injecting custom tip: {custom_tip[:50]}...")
-                            kwargs['tip'] = custom_tip
-                        
-                        # Call the original method with enhanced error handling
-                        logging.info("Calling original propose_instructions_for_program")
-                        result = original_propose_instructions(self, *args, **kwargs)
-                        
-                        # Log the result for debugging
-                        if result is None:
-                            logging.error("Instruction proposer returned None")
-                            # Create a fallback result
-                            if len(args) >= 2:
-                                program = args[1]
-                                fallback_result = {}
-                                for i, pred in enumerate(program.predictors()):
-                                    fallback_result[i] = [getattr(pred, 'instructions', "Default instruction due to error")]
-                                logging.info("Created fallback instructions")
-                                return fallback_result
-                        else:
-                            logging.info(f"Instruction proposer returned result with keys: {result.keys()}")
-                        
+                        result = original_propose_instructions(self_proposer, *args, **kwargs)
+                        if result is None: optimizer_trace_logger.error("Instruction proposer (custom_propose_instructions) returned None")
                         return result
-                    except Exception as e:
-                        logging.error(f"Error in custom_propose_instructions: {str(e)}")
-                        logging.error(traceback.format_exc())
-                        
-                        # Create a fallback result
+                    except Exception as e_proposer:
+                        optimizer_trace_logger.error(f"Error in custom_propose_instructions: {str(e_proposer)}", exc_info=True)
                         if len(args) >= 2:
-                            program = args[1]
-                            fallback_result = {}
-                            for i, pred in enumerate(program.predictors()):
-                                fallback_result[i] = [getattr(pred, 'instructions', "Default instruction due to error")]
-                            logging.info("Created fallback instructions after exception")
+                            program_arg = args[1]
+                            fallback_result = {i: [getattr(pred, 'instructions', "Default instruction due to proposer error")] for i, pred in enumerate(program_arg.predictors())}
+                            optimizer_trace_logger.info("Created fallback instructions after proposer exception.")
                             return fallback_result
-                        
-                        # Re-raise if we can't create a fallback
                         raise
-                
-                # Apply our wrapper
                 GroundedProposer.propose_instructions_for_program = custom_propose_instructions
             
-            # Try to apply our debug wrapper to the GroundedProposer class
+            # Debug patch logic (existing, ensure logging uses optimizer_trace_logger)
             try:
                 from llama_prompt_ops.debug import patch_dspy_proposer
                 debug_patched = patch_dspy_proposer()
-                if debug_patched:
-                    logging.info("Successfully applied debug wrapper to GroundedProposer")
-                else:
-                    logging.warning("Failed to apply debug wrapper to GroundedProposer")
+                if debug_patched: optimizer_trace_logger.debug("Successfully applied debug wrapper to GroundedProposer")
+                else: optimizer_trace_logger.warning("Failed to apply debug wrapper to GroundedProposer")
             except ImportError:
-                logging.warning("Debug module not available, continuing without enhanced debugging")
+                optimizer_trace_logger.warning("Debug module not available, continuing without enhanced proposer debugging")
             
+            optimized_program = None
             try:
-                # Set up detailed logging for the instruction proposal phase
-                logging.info("Starting DSPy optimization with enhanced debugging")
-                logging.info(f"Program type: {type(program)}")
-                logging.info(f"Trainset size: {len(self.trainset)}")
-                logging.info(f"Valset size: {len(self.valset) if self.valset else 0}")
-                
-                # Log the first example in trainset to help debug data format issues
-                if self.trainset and len(self.trainset) > 0:
-                    example = self.trainset[0]
-                    logging.info(f"First trainset example structure: {type(example)}")
-                    if hasattr(example, 'inputs') and hasattr(example, 'outputs'):
-                        logging.info(f"Example inputs: {example.inputs}")
-                        logging.info(f"Example outputs: {example.outputs}")
-                    else:
-                        logging.warning("Example missing required 'inputs' or 'outputs' attributes")
-                        logging.warning(f"Example attributes: {dir(example) if hasattr(example, '__dict__') else 'No attributes'}")
-                
-                # Wrap the compile call in a try/except to catch specific errors
-                try:
-                    # Call compile with all parameters
-                    logging.info("Calling optimizer.compile")
-                    optimized_program = optimizer.compile(
-                        program,
-                        trainset=self.trainset,
-                        valset=self.valset,
-                        num_trials=self.num_trials,
-                        minibatch=self.minibatch,
-                        minibatch_size=self.minibatch_size,
-                        minibatch_full_eval_steps=self.minibatch_full_eval_steps,
-                        program_aware_proposer=self.program_aware_proposer,
-                        data_aware_proposer=self.data_aware_proposer,
-                        view_data_batch_size=self.view_data_batch_size,
-                        tip_aware_proposer=self.tip_aware_proposer,
-                        fewshot_aware_proposer=self.fewshot_aware_proposer,
-                        requires_permission_to_run=self.requires_permission_to_run,
-                        provide_traceback=True  # Add this line
-                    )
-                    logging.info("Optimizer.compile completed successfully")
-                except TypeError as e:
-                    if "'NoneType' object is not subscriptable" in str(e):
-                        logging.error(f"Error in instruction proposal phase: {str(e)}")
-                        logging.error(traceback.format_exc())
-                        
-                        # Detailed error analysis
-                        logging.error("Detailed error analysis for 'NoneType' object is not subscriptable:")
-                        logging.error("This typically occurs when the instruction proposal phase fails to generate valid instructions")
-                        logging.error("Possible causes:")
-                        logging.error("1. Dataset format issues - ensure each example has 'inputs' and 'outputs' fields")
-                        logging.error("2. Empty or insufficient training data")
-                        logging.error("3. Model API errors during instruction generation")
-                        logging.error("4. Incompatible DSPy version")
-                        
-                        # Create a fallback
-                        logging.warning("Falling back to original prompt")
-                        optimized_program = None
-                    else:
-                        logging.error(f"Unexpected TypeError during optimization: {str(e)}")
-                        logging.error(traceback.format_exc())
-                        raise
-                except Exception as e:
-                    logging.error(f"Error during optimization: {str(e)}")
-                    logging.error(traceback.format_exc())
+                optimizer_trace_logger.info("Calling optimizer.compile...")
+                optimized_program = optimizer.compile(
+                    program,
+                    trainset=self.trainset,
+                    valset=self.valset,
+                    num_trials=self.num_trials,
+                    minibatch=self.minibatch,
+                    minibatch_size=self.minibatch_size,
+                    minibatch_full_eval_steps=self.minibatch_full_eval_steps,
+                    program_aware_proposer=self.program_aware_proposer,
+                    data_aware_proposer=self.data_aware_proposer,
+                    view_data_batch_size=self.view_data_batch_size,
+                    tip_aware_proposer=self.tip_aware_proposer,
+                    fewshot_aware_proposer=self.fewshot_aware_proposer,
+                    requires_permission_to_run=self.requires_permission_to_run,
+                    provide_traceback=True
+                )
+                optimizer_trace_logger.info("Optimizer.compile completed.")
+            except TypeError as e_compile:
+                if "'NoneType' object is not subscriptable" in str(e_compile):
+                    optimizer_trace_logger.error(f"Error in MIPROv2 compile (likely instruction proposal phase): {str(e_compile)}", exc_info=True)
+                    optimizer_trace_logger.error("This typically occurs if the instruction proposer fails. Check dataset format, data quantity, or API errors during proposal.")
+                    optimized_program = None # Ensure it's None for fallback
+                else:
+                    optimizer_trace_logger.error(f"Unexpected TypeError during optimization: {str(e_compile)}", exc_info=True)
                     raise
+            except Exception as e_compile_generic:
+                optimizer_trace_logger.error(f"Generic error during optimization: {str(e_compile_generic)}", exc_info=True)
+                raise
             finally:
-                # Restore the original method if we modified it
                 if original_propose_instructions:
                     GroundedProposer.propose_instructions_for_program = original_propose_instructions
+                    optimizer_trace_logger.debug("Restored original GroundedProposer.propose_instructions_for_program.")
             
-            # Store model family information in the optimized program for reference
+            optimizer_trace_logger.info("--- Starting Post-optimization Phase ---")
             if hasattr(self, 'model_family') and optimized_program is not None:
                 setattr(optimized_program, 'model_family', self.model_family)
             
-            # Check if optimization was successful
             if optimized_program is None:
-                logging.warning("Optimizer returned None. Falling back to original prompt.")
-                # Create a simple program with the original prompt as a fallback
-                fallback_program = program
-                # Add a marker to indicate this is a fallback
+                optimizer_trace_logger.warning("Optimizer returned None or failed. Falling back to original prompt structure.")
+                fallback_program = program # program has the original/Llama-tipped prompt
                 setattr(fallback_program, 'is_fallback', True)
                 setattr(fallback_program, 'model_family', self.model_family)
+                optimizer_trace_logger.info(f"Final selected prompt (fallback): {fallback_program.signature.instructions}")
                 return fallback_program
             
-            # Log information about the optimized program
-            logging.info(f"Optimized program type: {type(optimized_program)}")
-            logging.info(f"Optimized program attributes: {dir(optimized_program)}")
+            final_instructions = "Error retrieving final instructions"
+            try:
+                # For dspy.Predict, instructions are in program.signature.instructions
+                if hasattr(optimized_program, 'signature') and hasattr(optimized_program.signature, 'instructions'):
+                    final_instructions = optimized_program.signature.instructions
+                # If it's a more complex program, it might be nested. This is a simple case.
+                # For MultiChain, it would be program.predictors()[0].signature.instructions, etc.
+            except Exception as e_instr:
+                optimizer_trace_logger.error(f"Could not extract final instructions: {e_instr}")
+
+            optimizer_trace_logger.info(f"Optimization process finished.")
+            optimizer_trace_logger.info(f"Final selected prompt: {final_instructions}")
             
+            # DSPy's MIPROv2 logs its own "Best score so far" and "Returning best identified program with score X"
+            # The `optimizer.best_score` attribute might not always reflect the final reported score immediately
+            # or in the way we expect. Relying on DSPy's own logs for this is currently more robust.
+            # best_score_val = getattr(optimizer, 'best_score', 'N/A')
+            # if best_score_val != 'N/A' and isinstance(best_score_val, float):
+            #      best_score_val = f"{best_score_val:.4f}"
+            # optimizer_trace_logger.info(f"Best score achieved (via optimizer_trace_logger): {best_score_val}")
+            
+            # The optimizer.history attribute did not yield easily parseable per-trial scores.
+            # DSPy's own INFO logs (e.g., "Scores so far: [...]") provide this information.
+            optimizer_trace_logger.debug("DSPy's internal INFO logs should show per-trial scores if global log level permits.")
+
             return optimized_program
             
-        except Exception as e:
-            logging.error(f"Error in optimization: {str(e)}")
-            # Instead of creating a mock program, raise a more descriptive exception
-            raise OptimizationError(f"Optimization failed: {str(e)}")
+        except Exception as e_outer:
+            optimizer_trace_logger.error(f"Outer error in optimization run: {str(e_outer)}", exc_info=True)
+            raise OptimizationError(f"Optimization failed: {str(e_outer)}")

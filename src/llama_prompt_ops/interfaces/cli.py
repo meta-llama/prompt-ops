@@ -465,7 +465,7 @@ def get_strategy(strategy_config, model_name_with_path, metric, task_model, prom
     
     Args:
         strategy_config: Strategy configuration dictionary
-        model_name_with_path: Full model name including provider path
+        model_name_with_path: Full model name including provider path (used to derive the simple model name)
         metric: Metric instance to use for optimization
         task_model: Model adapter instance for task execution
         prompt_model: Model adapter instance for prompt optimization
@@ -473,11 +473,13 @@ def get_strategy(strategy_config, model_name_with_path, metric, task_model, prom
     Returns:
         A strategy instance appropriate for the model and configuration
     """
-    # Extract just the model name without provider path
-    model_name = model_name_with_path.split("/")[-1]
+    # Extract just the model name without provider path from the provided model_name_with_path
+    # This model_name_with_path is typically the task_model's full name.
+    simple_model_name = model_name_with_path.split("/")[-1] if model_name_with_path else "unknown_model"
+    # click.echo(f"[DEBUG CLI get_strategy] model_name_with_path: '{model_name_with_path}', simple_model_name: '{simple_model_name}'") # DEBUG - Removed
     
     # Check if strategy is specified in config
-    strategy_type = strategy_config.get("type")
+    strategy_type = strategy_config.get("type", strategy_config.get("strategy")) # Support "strategy" for backward compatibility
     
     # If strategy type is specified in config, use it
     if strategy_type:
@@ -488,7 +490,7 @@ def get_strategy(strategy_config, model_name_with_path, metric, task_model, prom
             template_type = strategy_config.get("template_type", "basic")
             
             strategy = LlamaStrategy(
-                model_name=model_name,
+                model_name=simple_model_name, # Use the derived simple_model_name
                 metric=metric,
                 task_model=task_model,
                 prompt_model=prompt_model,
@@ -496,42 +498,44 @@ def get_strategy(strategy_config, model_name_with_path, metric, task_model, prom
                 apply_templates=apply_templates,
                 template_type=template_type
             )
-            click.echo(f"Using LlamaStrategy from config for model: {model_name}")
+            click.echo(f"Using LlamaStrategy from config for model: {simple_model_name}")
             return strategy
             
         elif strategy_type.lower() == "basic":
             strategy = BasicOptimizationStrategy(
-                model_name=model_name,
+                model_name=simple_model_name, # Use the derived simple_model_name
                 metric=metric,
                 task_model=task_model,
-                prompt_model=prompt_model
+                prompt_model=prompt_model,
+                **strategy_config # Pass through other strategy params
             )
-            click.echo(f"Using BasicOptimizationStrategy from config for model: {model_name}")
+            click.echo(f"Using BasicOptimizationStrategy from config for model: {simple_model_name}")
             return strategy
             
         else:
-            click.echo(f"Unknown strategy type: {strategy_type}, falling back to auto-detection")
+            click.echo(f"Unknown strategy type: {strategy_type}, falling back to auto-detection based on model name.")
             # Fall through to auto-detection
     
-    # Auto-detect based on model name
-    if "llama" in model_name.lower():
+    # Auto-detect based on model name if no specific strategy type is given in config
+    if "llama" in simple_model_name.lower():
         strategy = LlamaStrategy(
-            model_name=model_name,
+            model_name=simple_model_name,
             metric=metric,
             task_model=task_model,
             prompt_model=prompt_model,
-            apply_formatting=True,
-            apply_templates=True
+            apply_formatting=True, # Default for auto-detected LlamaStrategy
+            apply_templates=True   # Default for auto-detected LlamaStrategy
         )
-        click.echo(f"Auto-detected LlamaStrategy for model: {model_name}")
+        click.echo(f"Auto-detected LlamaStrategy for model: {simple_model_name}")
     else:
         strategy = BasicOptimizationStrategy(
-            model_name=model_name,
+            model_name=simple_model_name,
             metric=metric,
             task_model=task_model,
-            prompt_model=prompt_model
+            prompt_model=prompt_model,
+            **strategy_config # Pass through strategy params if any, for auto-detected Basic
         )
-        click.echo(f"Auto-detected BasicOptimizationStrategy for model: {model_name}")
+        click.echo(f"Auto-detected BasicOptimizationStrategy for model: {simple_model_name}")
     
     return strategy
 
@@ -660,8 +664,14 @@ def load_config(config_path):
     "--log-level",
     type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], case_sensitive=False),
     default="INFO",
-    help="Set the logging level")
-def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_level):
+    help="Set the global logging level for the application")
+@click.option(
+    "--optimizer-log-level",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], case_sensitive=False),
+    default=None, # Default to None, will be handled later with YAML config
+    help="Set the logging level specifically for the optimizer trace (overrides YAML if set)"
+)
+def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_level, optimizer_log_level):
     """
     Migrate and optimize prompts using a YAML configuration file.
     
@@ -671,7 +681,7 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
     Example:
         prompt-ops migrate --config configs/facility.yaml
     """
-    # Set up logging
+    # Set up global logging
     numeric_level = getattr(logging, log_level.upper())
     logging.basicConfig(level=numeric_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
@@ -694,6 +704,54 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
     except ValueError as e:
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)
+
+    # Determine optimizer log level: CLI > YAML > Default (INFO)
+    final_optimizer_log_level_str = "INFO" # Default
+    yaml_opt_log_level = config_dict.get("optimization", {}).get("optimizer_log_level")
+    if yaml_opt_log_level:
+        final_optimizer_log_level_str = yaml_opt_log_level.upper()
+    if optimizer_log_level: # CLI overrides YAML and default
+        final_optimizer_log_level_str = optimizer_log_level.upper()
+
+    try:
+        optimizer_numeric_level = getattr(logging, final_optimizer_log_level_str)
+        # Get the specific logger and set its level
+        from llama_prompt_ops.core.utils import optimizer_trace_logger # Ensure logger is initialized
+        optimizer_trace_logger.setLevel(optimizer_numeric_level)
+        click.echo(f"Optimizer trace log level set to: {final_optimizer_log_level_str}")
+        
+        # Ensure handlers are present if not already configured by basicConfig
+        # This setup is now primarily done in core/utils/__init__.py when the logger is first retrieved.
+        # We just ensure it's set to the correct level here.
+        if not optimizer_trace_logger.handlers:
+            # This block might be redundant if utils/__init__.py always adds a handler.
+            # However, it's a safeguard.
+            console_handler = logging.StreamHandler(sys.stdout) 
+            optimizer_trace_logger.addHandler(console_handler)
+            # Consider if propagate should be False if we want ONLY optimizer_trace_logger
+            # to show its messages and not also the root logger if root is at same/lower level.
+            # For now, let basicConfig handle root logger, and this logger will also output.
+            # optimizer_trace_logger.propagate = False
+
+        # If our optimizer logger is set to INFO or DEBUG, and global log level isn't DEBUG,
+        # tone down dspy and litellm to avoid excessive noise.
+        global_log_level_numeric = getattr(logging, log_level.upper()) # numeric_level from earlier
+        if optimizer_numeric_level <= logging.INFO and global_log_level_numeric > logging.DEBUG:
+            logging.getLogger('dspy').setLevel(logging.WARNING)
+            logging.getLogger('litellm').setLevel(logging.WARNING)
+            logging.getLogger('httpx').setLevel(logging.WARNING) # httpx can also be verbose
+            
+            # Also call dspy's function to disable LiteLLM's own verbose outputs
+            import dspy # Explicitly import dspy here to ensure it's defined
+            dspy.disable_litellm_logging()
+            
+            click.echo(f"Set dspy, litellm, httpx loggers to WARNING and called dspy.disable_litellm_logging() to reduce noise as optimizer log level is {final_optimizer_log_level_str}.")
+        
+    except AttributeError:
+        click.echo(f"Error: Invalid optimizer log level '{final_optimizer_log_level_str}'. Using INFO.", err=True)
+        # Ensure optimizer_trace_logger is available before setting level
+        from llama_prompt_ops.core.utils import optimizer_trace_logger
+        optimizer_trace_logger.setLevel(logging.INFO)
     
     # Set up models from config
     task_model, prompt_model = get_models_from_config(config_dict, model, api_key)
@@ -715,9 +773,13 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
         sys.exit(1)
     
     # Create strategy based on config
+    # Pass the task_model's name for strategy auto-detection if model:name is not present
+    # The task_model.model attribute should hold the full model identifier.
+    model_identifier_for_strategy = config_dict.get("model", {}).get("name", getattr(task_model, 'model', ""))
+
     strategy = get_strategy(
-        config_dict.get("strategy", {}),
-        config_dict.get("model", {}).get("name", ""),
+        config_dict.get("optimization", {}).get("strategy_settings", config_dict.get("strategy", {})), # Allow strategy settings under optimization
+        model_identifier_for_strategy,
         metric,
         task_model,
         prompt_model

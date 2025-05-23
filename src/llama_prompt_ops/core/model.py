@@ -108,6 +108,7 @@ class DSPyModelAdapter(ModelAdapter):
             'cache': cache,
             **kwargs
         }
+        self.model = model_name # Explicitly store model_name as self.model
             
         # Create the DSPy model
         self._model = dspy.LM(
