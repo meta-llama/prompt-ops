@@ -225,6 +225,7 @@ def test_end_to_end_flow_with_mocks(facility_config_path):
     """Test the entire optimization process with simplified components."""
     try:
         import yaml
+        from unittest.mock import patch
         
         # Load the config
         with open(facility_config_path, 'r') as f:
