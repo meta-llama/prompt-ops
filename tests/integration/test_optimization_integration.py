@@ -15,33 +15,7 @@ except ImportError:
     pass  # Tests will be skipped if imports fail
 
 
-@pytest.fixture
-def facility_dataset_path():
-    """Fixture providing path to the facility dataset."""
-    base_dir = Path(__file__).parent.parent.parent
-    return str(base_dir / "use-cases" / "facility-support-analyzer" / "facility_v2_test.json")
-
-
-@pytest.fixture
-def facility_prompt_path():
-    """Fixture providing path to the facility system prompt."""
-    base_dir = Path(__file__).parent.parent.parent
-    return str(base_dir / "use-cases" / "facility-support-analyzer" / "facility_prompt_sys.txt")
-
-
-@pytest.fixture
-def mock_model_response():
-    """Mock model response for testing."""
-    return json.dumps({
-        "categories": {
-            "routine_maintenance_requests": True,
-            "customer_feedback_and_complaints": False,
-            "specialized_cleaning_services": False,
-            "emergency_repair_services": False
-        },
-        "sentiment": "neutral",
-        "urgency": "medium"
-    })
+# Fixtures are now defined in conftest.py
 
 
 class TestOptimizationIntegration:

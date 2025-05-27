@@ -14,30 +14,7 @@ except ImportError:
     pass  # Tests will be skipped if imports fail
 
 
-@pytest.fixture
-def facility_dataset_path():
-    """Fixture providing path to the facility dataset."""
-    base_dir = Path(__file__).parent.parent.parent
-    return str(base_dir / "use-cases" / "facility-support-analyzer" / "facility_v2_test.json")
-
-
-@pytest.fixture
-def facility_config_path():
-    """Fixture providing path to the facility config."""
-    base_dir = Path(__file__).parent.parent.parent
-    return str(base_dir / "use-cases" / "facility-support-analyzer" / "facility-simple.yaml")
-
-
-@pytest.fixture
-def sample_facility_data(facility_dataset_path):
-    """Fixture providing a small sample of facility data for testing."""
-    try:
-        with open(facility_dataset_path, 'r') as f:
-            data = json.load(f)
-            # Return just the first 2 items for faster testing
-            return data[:2]
-    except (FileNotFoundError, json.JSONDecodeError):
-        return []
+# Fixtures are now defined in conftest.py
 
 
 class MockModelAdapter:

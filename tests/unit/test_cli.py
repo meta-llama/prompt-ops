@@ -29,4 +29,4 @@ def test_cli_commands_exist():
     command_candidates = ['migrate', 'create']
     found_commands = [cmd for cmd in command_candidates if cmd in help_text]
     
-    assert len(found_commands) > 0, "No expected commands found in CLI help output"
+    assert len(found_commands) == len(command_candidates), f"Expected all commands {command_candidates} to be present, but only found {found_commands}"

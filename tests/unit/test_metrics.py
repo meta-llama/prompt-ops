@@ -1,6 +1,5 @@
 import json
 import pytest
-from unittest import mock
 
 # Import the metrics classes
 try:
@@ -174,10 +173,6 @@ def test_standard_json_metric_exists():
         )
     except (NameError, ImportError):
         pytest.skip("StandardJSONMetric not available")
-    except ImportError:
-        pytest.skip("StandardJSONMetric not available")
-    except NameError:
-        pytest.skip("StandardJSONMetric not available")
 
 
 def test_standard_json_metric_has_required_methods():
@@ -194,10 +189,6 @@ def test_standard_json_metric_has_required_methods():
         assert callable(metric.__call__)
         assert callable(metric.extract_value)
     except (NameError, ImportError):
-        pytest.skip("StandardJSONMetric not available")
-    except ImportError:
-        pytest.skip("StandardJSONMetric not available")
-    except NameError:
         pytest.skip("StandardJSONMetric not available")
 
 
@@ -221,18 +212,21 @@ def test_facility_metric():
         gold_str = json.dumps(gold)
         pred_str = json.dumps(pred)
         
-        # Test if the metric returns a float directly
+        # Test with exact match inputs
         result = metric(gold_str, pred_str)
         
-        # Check if the result is a float (perfect match should be 1.0)
-        if isinstance(result, float):
-            assert result == 1.0
-        else:
-            # If it returns a dictionary, check the fields
-            assert result["correct_categories"] == 1.0
-            assert result["correct_sentiment"] is True
-            assert result["correct_urgency"] is True
-            assert result["total"] == 1.0
+        # FacilityMetric should return a dictionary with specific fields
+        assert isinstance(result, dict), "FacilityMetric should return a dictionary"
+        assert "correct_categories" in result, "Result should contain 'correct_categories'"
+        assert "correct_sentiment" in result, "Result should contain 'correct_sentiment'"
+        assert "correct_urgency" in result, "Result should contain 'correct_urgency'"
+        assert "total" in result, "Result should contain 'total'"
+        
+        # Check values for exact match
+        assert result["correct_categories"] == 1.0
+        assert result["correct_sentiment"] is True
+        assert result["correct_urgency"] is True
+        assert result["total"] == 1.0
         
         # Test with partially matching fields
         pred_partial = {
@@ -245,15 +239,18 @@ def test_facility_metric():
         
         result = metric(gold_str, pred_partial_str)
         
-        # Check if the result is a float (partial match should be < 1.0)
-        if isinstance(result, float):
-            assert result < 1.0
-        else:
-            # If it returns a dictionary, check the fields
-            assert result["correct_categories"] < 1.0
-            assert result["correct_sentiment"] is True
-            assert result["correct_urgency"] is False
-            assert result["total"] < 1.0
+        # FacilityMetric should return a dictionary with specific fields
+        assert isinstance(result, dict), "FacilityMetric should return a dictionary"
+        assert "correct_categories" in result, "Result should contain 'correct_categories'"
+        assert "correct_sentiment" in result, "Result should contain 'correct_sentiment'"
+        assert "correct_urgency" in result, "Result should contain 'correct_urgency'"
+        assert "total" in result, "Result should contain 'total'"
+        
+        # Check values for partial match
+        assert result["correct_categories"] < 1.0
+        assert result["correct_sentiment"] is True
+        assert result["correct_urgency"] is False
+        assert result["total"] < 1.0
     except NameError:
         pytest.skip("FacilityMetric not available")
 
