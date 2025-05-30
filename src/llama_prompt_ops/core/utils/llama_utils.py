@@ -37,10 +37,10 @@ LLAMA_TIPS = {
 }
 
 LLAMA_TEMPLATES = {
-    "basic": "<s>[INST] {instruction} [/INST]",
-    "with_context": "<s>[INST] {instruction} [/INST] {context}",
-    "with_examples": "<s>[INST] {instruction}\n\nExamples:\n{examples} [/INST]",
-    "full": "<s>[INST] {instruction}\n\n{context}\n\nExamples:\n{examples} [/INST]",
+    "basic": "<s> {instruction} </s>",
+    "with_context": "<s> {instruction}\n\n{context} </s>",
+    "with_examples": "<s> {instruction}\n\nExamples:\n{examples} </s>",
+    "full": "<s> {instruction}\n\n{context}\n\nExamples:\n{examples} </s>"
 }
 
 
