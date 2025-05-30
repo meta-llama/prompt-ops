@@ -40,7 +40,7 @@ LLAMA_TEMPLATES = {
     "basic": "<s> {instruction} </s>",
     "with_context": "<s> {instruction}\n\n{context} </s>",
     "with_examples": "<s> {instruction}\n\nExamples:\n{examples} </s>",
-    "full": "<s> {instruction}\n\n{context}\n\nExamples:\n{examples} </s>"
+    "full": "<s> {instruction}\n\n{context}\n\nExamples:\n{examples} </s>",
 }
 
 
@@ -91,7 +91,9 @@ def get_llama_template(template_type: str = "basic") -> str:
     return LLAMA_TEMPLATES.get(template_type, LLAMA_TEMPLATES["basic"])
 
 
-def get_task_type_from_prompt(prompt_text: str, input_fields: List[str], output_fields: List[str]) -> str:
+def get_task_type_from_prompt(
+    prompt_text: str, input_fields: List[str], output_fields: List[str]
+) -> str:
     """
     Determine the task type from the prompt text and input/output fields.
 
@@ -160,7 +162,9 @@ def get_task_type_from_prompt(prompt_text: str, input_fields: List[str], output_
     return "general"
 
 
-def select_instruction_preference(task_type: str, prompt_data: Dict[str, Any]) -> List[str]:
+def select_instruction_preference(
+    task_type: str, prompt_data: Dict[str, Any]
+) -> List[str]:
     """
     Select appropriate instruction preferences based on the task type.
 

@@ -10,7 +10,9 @@ Utility functions for working with optimization strategies.
 from typing import Literal, Optional
 
 
-def map_auto_mode_to_dspy(auto_mode: Optional[Literal["basic", "intermediate", "advanced"]]) -> str:
+def map_auto_mode_to_dspy(
+    auto_mode: Optional[Literal["basic", "intermediate", "advanced"]]
+) -> str:
     """Map our naming convention to DSPy's expected values.
 
     Args:
