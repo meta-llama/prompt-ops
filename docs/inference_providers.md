@@ -50,7 +50,9 @@ pip install vllm
 vllm serve meta-llama/Llama-3.1-8B-Instruct --tensor-parallel-size=1
 ```
 
-### 3. NVIDIA NIMs
+3. 
+
+### 4. NVIDIA NIMs
 
 [NVIDIA NIMs](https://docs.nvidia.com/nim/large-language-models/latest/introduction.html) (NVIDIA Inference Microservices) provide optimized containers for running LLMs on NVIDIA GPUs.
 
@@ -75,6 +77,35 @@ docker run -it --rm --name=nim \
   -u $(id -u) \
   -p 8000:8000 \
   nvcr.io/nim/meta/llama-3.1-8b-instruct:1.5.0
+```
+
+### 4. Together AI
+
+[Together AI](https://www.together.ai/) provides a platform for running various open-source models with optimized performance and competitive pricing.
+
+```yaml
+model:
+  name: "together_ai/meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"
+  api_base: "https://api.together.xyz/v1"
+  api_key: "${TOGETHER_API_KEY}"
+  temperature: 0.0
+  max_tokens: 4096
+```
+
+To use Together AI, you'll need to:
+
+1. Sign up for an account at [Together AI](https://www.together.ai/)
+2. Generate an API key from your account dashboard
+3. Set the API key as an environment variable:
+
+```bash
+export TOGETHER_API_KEY=your_api_key_here
+```
+
+Then run the optimization:
+
+```bash
+llama-prompt-ops migrate --api-key-env TOGETHER_API_KEY
 ```
 
 ## Advanced Configuration
