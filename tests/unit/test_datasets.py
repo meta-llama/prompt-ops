@@ -62,15 +62,22 @@ def test_load_data_simple_fields(simple_data_file):
     
     # Test with simple field names
     adapter = ConfigurableJSONAdapter(
-        path=temp_file.name,
+        dataset_path=temp_file.name,
         input_field="question",
-        output_field="answer"
+        golden_output_field="answer"
     )
-    data = adapter.load_data()
+    data = adapter.load_raw_data()
     
     assert len(data) == 2
+    # The raw data should have the original fields
     assert data[0]["question"] == "Test question 1"
     assert data[0]["answer"] == "Test answer 1"
+    
+    # Test the adapt method which returns the standardized format
+    adapted_data = adapter.adapt()
+    assert len(adapted_data) == 2
+    assert adapted_data[0]["inputs"]["question"] == "Test question 1"
+    assert adapted_data[0]["outputs"]["answer"] == "Test answer 1"
 
 
 def test_load_data_nested_fields(nested_data_file):
@@ -79,15 +86,20 @@ def test_load_data_nested_fields(nested_data_file):
     
     # Test with nested field paths
     adapter = ConfigurableJSONAdapter(
-        path=temp_file.name,
+        dataset_path=temp_file.name,
         input_field=["fields", "input"],
-        output_field=["output", "text"]
+        golden_output_field=["output", "text"]
     )
-    data = adapter.load_data()
+    data = adapter.load_raw_data()
     
     assert len(data) == 2
-    assert data[0]["question"] == "Nested question 1"
-    assert data[0]["answer"] == "Nested answer 1"
+    # Raw data doesn't have the mapped fields yet
+    
+    # Test the adapt method which returns the standardized format
+    adapted_data = adapter.adapt()
+    assert len(adapted_data) == 2
+    assert adapted_data[0]["inputs"]["question"] == "Nested question 1"
+    assert adapted_data[0]["outputs"]["answer"] == "Nested answer 1"
 
 
 def test_transform_functions(simple_data_file):
@@ -102,16 +114,22 @@ def test_transform_functions(simple_data_file):
         return text.upper()
         
     adapter = ConfigurableJSONAdapter(
-        path=temp_file.name,
+        dataset_path=temp_file.name,
         input_field="question",
-        output_field="answer",
+        golden_output_field="answer",
         input_transform=input_transform,
         output_transform=output_transform
     )
-    data = adapter.load_data()
+    data = adapter.load_raw_data()
     
-    assert data[0]["question"] == "Transformed: Test question 1"
-    assert data[0]["answer"] == "TEST ANSWER 1"
+    # Raw data doesn't have transformed values
+    assert data[0]["question"] == "Test question 1"
+    assert data[0]["answer"] == "Test answer 1"
+    
+    # Test the adapt method which applies transformations
+    adapted_data = adapter.adapt()
+    assert adapted_data[0]["inputs"]["question"] == "Transformed: Test question 1"
+    assert adapted_data[0]["outputs"]["answer"] == "TEST ANSWER 1"
 
 
 def test_load_dataset_default_splits(mock_dataset_adapter):

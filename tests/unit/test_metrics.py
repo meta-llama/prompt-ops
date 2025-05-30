@@ -212,8 +212,8 @@ def test_facility_metric():
         gold_str = json.dumps(gold)
         pred_str = json.dumps(pred)
         
-        # Test with exact match inputs
-        result = metric(gold_str, pred_str)
+        # Test with exact match inputs - pass trace=True to get dictionary result
+        result = metric(gold_str, pred_str, trace=True)
         
         # FacilityMetric should return a dictionary with specific fields
         assert isinstance(result, dict), "FacilityMetric should return a dictionary"
@@ -237,7 +237,7 @@ def test_facility_metric():
         
         pred_partial_str = json.dumps(pred_partial)
         
-        result = metric(gold_str, pred_partial_str)
+        result = metric(gold_str, pred_partial_str, trace=True)
         
         # FacilityMetric should return a dictionary with specific fields
         assert isinstance(result, dict), "FacilityMetric should return a dictionary"
