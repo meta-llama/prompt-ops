@@ -13,21 +13,22 @@ and optimization using YAML configuration files.
 
 import importlib
 import importlib.util
-import os
-import sys
-import yaml
 import json
+import logging
+import os
 import shutil
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
-import logging
+from typing import Any, Dict, List, Optional, Tuple
+
 import click
+import yaml
 from dotenv import load_dotenv
 
 # Import template utilities
-from llama_prompt_ops.templates import get_template_path, get_template_content
+from llama_prompt_ops.templates import get_template_content, get_template_path
 
 
 # Helper function for real-time output
@@ -40,20 +41,20 @@ def echo_flush(message, err=False):
         sys.stdout.flush()
 
 
+from llama_prompt_ops.core.datasets import DatasetAdapter, load_dataset
+from llama_prompt_ops.core.metrics import (
+    DSPyMetricAdapter,
+    MetricBase,
+    StandardJSONMetric,
+)
+from llama_prompt_ops.core.migrator import PromptMigrator
+from llama_prompt_ops.core.model import setup_model
+from llama_prompt_ops.core.model_strategies import LlamaStrategy
 from llama_prompt_ops.core.prompt_strategies import (
     BaseStrategy,
     BasicOptimizationStrategy,
     OptimizationError,
 )
-from llama_prompt_ops.core.model_strategies import LlamaStrategy
-from llama_prompt_ops.core.migrator import PromptMigrator
-from llama_prompt_ops.core.model import setup_model
-from llama_prompt_ops.core.metrics import (
-    DSPyMetricAdapter,
-    StandardJSONMetric,
-    MetricBase,
-)
-from llama_prompt_ops.core.datasets import DatasetAdapter, load_dataset
 
 
 @click.group()

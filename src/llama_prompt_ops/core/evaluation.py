@@ -11,8 +11,8 @@ including statistical evaluation with confidence intervals.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Union, Callable, Tuple, Type
 from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 try:
     import dspy

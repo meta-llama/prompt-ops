@@ -1,11 +1,12 @@
 import os
-import pytest
 import tempfile
-import yaml
 from pathlib import Path
 
 # import unittest.mock which should always be available
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
+import yaml
 
 # check if cli components are available
 # there are legitimate scenarios where these might not be available:::
@@ -14,8 +15,8 @@ from unittest.mock import patch, MagicMock
 # 3. when running tests for specific components in isolation
 CLI_COMPONENTS_AVAILABLE = False
 try:
-    from llama_prompt_ops.interfaces.cli import cli
     from llama_prompt_ops.core.migrator import PromptMigrator
+    from llama_prompt_ops.interfaces.cli import cli
 
     CLI_COMPONENTS_AVAILABLE = True
 except ImportError as e:

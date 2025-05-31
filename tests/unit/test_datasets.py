@@ -1,12 +1,13 @@
 import json
 import os
 import tempfile
-import pytest
 from unittest.mock import MagicMock
 
+import pytest
+
 from llama_prompt_ops.core.datasets import (
-    DatasetAdapter,
     ConfigurableJSONAdapter,
+    DatasetAdapter,
     load_dataset,
 )
 

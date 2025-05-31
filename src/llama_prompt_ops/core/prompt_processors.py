@@ -10,12 +10,12 @@ This module contains the base PromptProcessor class and specific processors
 that can be chained together to process prompts in a flexible, composable way.
 """
 
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 
 from .utils.llama_utils import (
+    format_prompt_for_llama,
     get_task_type_from_prompt,
     select_instruction_preference,
-    format_prompt_for_llama,
 )
 
 

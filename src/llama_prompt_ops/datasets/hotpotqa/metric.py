@@ -10,11 +10,11 @@ This module provides metrics for evaluating HotpotQA predictions,
 including answer correctness and supporting facts accuracy.
 """
 
+import logging
 import re
 import string
-import logging
-from typing import Dict, List, Any, Optional, Union
 from collections import Counter
+from typing import Any, Dict, List, Optional, Union
 
 from llama_prompt_ops.core.metrics import MetricBase
 

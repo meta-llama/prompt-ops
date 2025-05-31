@@ -14,19 +14,20 @@ import json
 from abc import ABC, abstractmethod
 from typing import (
     Any,
-    Dict,
-    Optional,
-    Union,
-    List,
     Callable,
-    TypeVar,
+    Dict,
     Generic,
+    List,
+    Optional,
     Type,
+    TypeVar,
+    Union,
     get_type_hints,
 )
-import dspy
-from llama_prompt_ops.core.model import ModelAdapter
 
+import dspy
+
+from llama_prompt_ops.core.model import ModelAdapter
 
 T = TypeVar("T", bound=Any)
 U = TypeVar("U", bound=Any)
@@ -239,7 +240,7 @@ class DSPyMetricAdapter(MetricBase):
         )
 
         return f"""Evaluate the similarity between the inputs.
-Score from {self.score_range[0]}-{self.score_range[1]}, where {self.score_range[0]} means completely different 
+Score from {self.score_range[0]}-{self.score_range[1]}, where {self.score_range[0]} means completely different
 and {self.score_range[1]} means identical in meaning.
 
 {input_placeholders}
@@ -1062,12 +1063,12 @@ class StandardJSONMetric(MetricBase):
         # Otherwise use field-based comparison
         """
         Evaluate a prediction against the ground truth.
-        
+
         Args:
             ground_truth: The ground truth
             predictions: The model's prediction
             **kwargs: Additional arguments
-            
+
         Returns:
             Dictionary with evaluation results
         """

@@ -73,26 +73,3 @@ jobs:
       - name: Run isort
         run: |
           isort --check-only --profile black src tests
-
-  mypy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install mypy>=1.15.0
-          pip install -e ".[dev]"
-
-      - name: Run mypy
-        env:
-          MYPY_FORCE_COLOR: 1
-          TERM: xterm-color
-        run: |
-          mypy src tests

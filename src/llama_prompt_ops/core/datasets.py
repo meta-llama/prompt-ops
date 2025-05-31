@@ -10,15 +10,15 @@ This module provides a standardized way to load and process different datasets
 for use with the prompt-ops tool.
 """
 
-import json
 import csv
+import json
 import logging
-import yaml
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Tuple, Any, Set, Optional, Union, Callable
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import dspy
+import yaml
 
 
 class DatasetAdapter(ABC):

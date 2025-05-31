@@ -12,16 +12,16 @@ building on the base strategies in prompt_strategies.py.
 
 import logging
 import warnings
-from typing import Dict, Any, List, Optional, Callable, Literal, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Union
 
 import dspy
 
+from .prompt_processors import PromptProcessor, create_llama_processing_chain
 from .prompt_strategies import (
     BaseStrategy,
     BasicOptimizationStrategy,
     OptimizationError,
 )
-from .prompt_processors import PromptProcessor, create_llama_processing_chain
 from .utils.llama_utils import is_llama_model
 
 

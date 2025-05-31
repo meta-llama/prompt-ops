@@ -1,19 +1,20 @@
 import json
 import os
-import pytest
 from pathlib import Path
 
 # Import unittest.mock which should always be available
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 # Check if core components are available
 CORE_COMPONENTS_AVAILABLE = False
 try:
     from llama_prompt_ops.core.datasets import ConfigurableJSONAdapter
     from llama_prompt_ops.core.metrics import FacilityMetric
+    from llama_prompt_ops.core.migrator import PromptMigrator
     from llama_prompt_ops.core.model import ModelAdapter
     from llama_prompt_ops.core.prompt_strategies import BasicOptimizationStrategy
-    from llama_prompt_ops.core.migrator import PromptMigrator
 
     CORE_COMPONENTS_AVAILABLE = True
 except ImportError as e:

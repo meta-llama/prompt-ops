@@ -16,7 +16,8 @@ import os
 import sys
 import traceback
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List, Union, Callable
+from typing import Any, Callable, Dict, List, Optional, Union
+
 import dspy
 from typing_extensions import Literal
 

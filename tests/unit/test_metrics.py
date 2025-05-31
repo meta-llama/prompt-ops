@@ -1,14 +1,15 @@
 import json
+
 import pytest
 
 # Import the metrics classes
 try:
     from llama_prompt_ops.core.metrics import (
-        MetricBase,
         ExactMatchMetric,
-        json_evaluation_metric,
-        StandardJSONMetric,
         FacilityMetric,
+        MetricBase,
+        StandardJSONMetric,
+        json_evaluation_metric,
     )
 except ImportError:
     # If the imports fail, the tests will be skipped

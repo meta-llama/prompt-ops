@@ -10,10 +10,9 @@ This module contains Llama-specific tips, templates, and utilities
 for optimizing prompts for Llama models.
 """
 
-from typing import Dict, Any, List, Optional
 import random
 import re
-
+from typing import Any, Dict, List, Optional
 
 LLAMA_TIPS = {
     "instruction_preferences": [

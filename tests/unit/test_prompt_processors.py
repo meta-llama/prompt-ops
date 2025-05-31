@@ -2,9 +2,9 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from llama_prompt_ops.core.prompt_processors import (
-    PromptProcessor,
-    LlamaFormatting,
     InstructionPreference,
+    LlamaFormatting,
+    PromptProcessor,
     create_llama_processing_chain,
 )
 

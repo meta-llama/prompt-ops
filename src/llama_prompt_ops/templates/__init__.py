@@ -2,8 +2,8 @@
 Template files for project scaffolding.
 """
 
-import os
 import json
+import os
 
 # Directory containing the template files
 TEMPLATE_DIR = os.path.dirname(os.path.abspath(__file__))
