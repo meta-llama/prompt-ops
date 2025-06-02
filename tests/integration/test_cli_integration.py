@@ -101,8 +101,12 @@ class TestCLIIntegration:
         mock_migrator.load_dataset_with_adapter.return_value = ([], [], [])
         mock_migrator.optimize.return_value = mock_optimized
 
+        # Set up environment variables for testing
+        env_vars = {"PROMPT_OPS_TEST_ENV": "1", "OPENROUTER_API_KEY": "mock_api_key"}
+
         # Set up multiple patches
         with (
+            patch.dict(os.environ, env_vars),
             patch(
                 "llama_prompt_ops.interfaces.cli.PromptMigrator",
                 return_value=mock_migrator,
@@ -164,8 +168,12 @@ class TestCLIIntegration:
         mock_migrator.load_dataset_with_adapter.return_value = ([], [], [])
         mock_migrator.optimize.return_value = mock_optimized
 
+        # Set up environment variables for testing
+        env_vars = {"PROMPT_OPS_TEST_ENV": "1", "OPENROUTER_API_KEY": "mock_api_key"}
+
         # Set up multiple patches
         with (
+            patch.dict(os.environ, env_vars),
             patch(
                 "llama_prompt_ops.interfaces.cli.PromptMigrator",
                 return_value=mock_migrator,
