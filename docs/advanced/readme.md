@@ -1,6 +1,6 @@
 # Using llama-prompt-ops for your use case (with Examples)
 
-> **Note:** This guide explains how to add new use cases to llama-prompt-ops by either configuring existing components or creating custom components. 
+> **Note:** This guide explains how to add new use cases to llama-prompt-ops by either configuring existing components or creating custom components.
 
 ## Overview
 
@@ -27,7 +27,7 @@ You can use the built-in dataset adapter, if your dataset follows the following 
 | **StandardJSONAdapter** | `[{"question": "What is X?", "answer": "Y"}]` | For most common datasets with simple input/output pairs |
 | **RAGJSONAdapter** | `[{"question": "...", "context": "...", "answer": "..."}]` | When your dataset includes retrieval contexts |
 
-See our [detailed adapter selection guide](../dataset_adapter_selection_guide.md) for more information. For many datasets, you can use built-in datasetAdapters. with custom configuration in your YAML file: 
+See our [detailed adapter selection guide](../dataset_adapter_selection_guide.md) for more information. For many datasets, you can use built-in datasetAdapters. with custom configuration in your YAML file:
 
 ```yaml
 dataset:
@@ -268,7 +268,7 @@ class CustomerServiceAdapter(DatasetAdapter):
         for item in data:
             # Map priority to standardized urgency levels
             urgency = self._map_priority(item.get("priority", ""))
-            
+
             example = {
                 "inputs": {
                     "question": item.get("customer_message", "")

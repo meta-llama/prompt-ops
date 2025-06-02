@@ -29,26 +29,26 @@ class MyCustomMetric(MetricBase):
     def __init__(self, custom_param=None, **kwargs):
         # Initialize any custom parameters
         self.custom_param = custom_param
-        
+
     def __call__(self, gold, pred, trace=False, **kwargs):
         """
         Evaluate the prediction against the ground truth.
-        
+
         Args:
             gold: Ground truth example
             pred: Predicted example
             trace: Whether to enable tracing for debugging
-            
+
         Returns:
             Either a dictionary containing metric scores or a single float score
         """
         # Extract values from gold and pred
         gold_value = self.extract_value(gold, "answer", gold)
         pred_value = self.extract_value(pred, "answer", pred)
-        
+
         # Your custom evaluation logic here
         score = self._calculate_score(gold_value, pred_value)
-        
+
         if trace:
             # Return detailed results for debugging
             return {
@@ -59,10 +59,10 @@ class MyCustomMetric(MetricBase):
                     # Add any other details
                 }
             }
-        
+
         # Return a single score for normal use
         return score
-    
+
     def _calculate_score(self, gold, pred):
         # Implement your custom scoring logic here
         # Return a float score between 0.0 and 1.0
@@ -113,4 +113,3 @@ metric:
 For more complex evaluation needs, you can implement specialized metrics. For example:
 
 - The [HotpotQA Metric](src/llama_prompt_ops/datasets/hotpotqa/metric.py) shows how to implement specialized evaluation for multi-hop question answering, handling answer correctness and supporting fact verification.
-

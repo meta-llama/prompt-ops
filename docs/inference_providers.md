@@ -50,7 +50,7 @@ pip install vllm
 vllm serve meta-llama/Llama-3.1-8B-Instruct --tensor-parallel-size=1
 ```
 
-3. 
+3.
 
 ### 4. NVIDIA NIMs
 
