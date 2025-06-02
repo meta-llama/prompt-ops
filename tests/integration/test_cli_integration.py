@@ -72,6 +72,15 @@ def get_skip_reason():
     return "CLI components available"
 
 
+@pytest.fixture
+def mock_api_key_check():
+    """Mock the API key check function to always return a test API key."""
+    with patch(
+        "llama_prompt_ops.interfaces.cli.check_api_key", return_value="test_api_key"
+    ):
+        yield
+
+
 # Use a more explicit skipif with a function that provides detailed information
 @pytest.mark.skipif(not CLI_COMPONENTS_AVAILABLE, reason=get_skip_reason())
 class TestCLIIntegration:
@@ -84,7 +93,7 @@ class TestCLIIntegration:
         with patch.dict(os.environ, {"PROMPT_OPS_TEST_ENV": "1"}):
             yield
 
-    def test_cli_migrate_command(self, temp_config_file):
+    def test_cli_migrate_command(self, mock_api_key_check, temp_config_file):
         """Test the migrate command with a config file."""
         # Use Click's test runner instead of directly calling cli()
         from click.testing import CliRunner
@@ -101,12 +110,8 @@ class TestCLIIntegration:
         mock_migrator.load_dataset_with_adapter.return_value = ([], [], [])
         mock_migrator.optimize.return_value = mock_optimized
 
-        # Set up environment variables for testing
-        env_vars = {"PROMPT_OPS_TEST_ENV": "1", "OPENROUTER_API_KEY": "mock_api_key"}
-
         # Set up multiple patches
         with (
-            patch.dict(os.environ, env_vars),
             patch(
                 "llama_prompt_ops.interfaces.cli.PromptMigrator",
                 return_value=mock_migrator,
@@ -151,7 +156,7 @@ class TestCLIIntegration:
             PromptMigrator.assert_called_once()
             # what was loaded from temp_config_file
 
-    def test_cli_config_loading(self, facility_config_path):
+    def test_cli_config_loading(self, mock_api_key_check, facility_config_path):
         """Test loading a real config file through the CLI."""
         # Use Click's test runner instead of directly calling cli()
         from click.testing import CliRunner
@@ -168,12 +173,8 @@ class TestCLIIntegration:
         mock_migrator.load_dataset_with_adapter.return_value = ([], [], [])
         mock_migrator.optimize.return_value = mock_optimized
 
-        # Set up environment variables for testing
-        env_vars = {"PROMPT_OPS_TEST_ENV": "1", "OPENROUTER_API_KEY": "mock_api_key"}
-
         # Set up multiple patches
         with (
-            patch.dict(os.environ, env_vars),
             patch(
                 "llama_prompt_ops.interfaces.cli.PromptMigrator",
                 return_value=mock_migrator,
@@ -222,8 +223,8 @@ class TestCLIIntegration:
 
             load_config.assert_called_once_with(facility_config_path)
 
-    def test_end_to_end_cli_flow(self, temp_config_file):
-        """Test the complete flow from CLI to optimization."""
+    def test_end_to_end_cli_flow(self, mock_api_key_check, temp_config_file):
+        """Test the end-to-end CLI flow with mocked components."""
         # Use Click's test runner instead of directly calling cli()
         from click.testing import CliRunner
 
@@ -267,8 +268,6 @@ class TestCLIIntegration:
                     return_value=MagicMock(),
                 ),
                 patch("llama_prompt_ops.interfaces.cli.load_config", return_value={}),
-                # Mock the API key check
-                patch.dict(os.environ, {"OPENROUTER_API_KEY": "mock_api_key"}),
             ):
 
                 # Run the migrate command with the actual file output

@@ -31,6 +31,41 @@ from dotenv import load_dotenv
 from llama_prompt_ops.templates import get_template_content, get_template_path
 
 
+def check_api_key(api_key_env, dotenv_path=".env"):
+    """Check if API key is set and return it.
+
+    Args:
+        api_key_env: Environment variable name for the API key
+        dotenv_path: Path to the .env file containing API keys
+
+    Returns:
+        str: The API key
+
+    Raises:
+        SystemExit: If API key is not set and not in test environment
+    """
+    # Load environment variables from .env file if it exists
+    if os.path.exists(dotenv_path):
+        load_dotenv(dotenv_path)
+        click.echo(f"Loaded environment variables from {dotenv_path}")
+
+    api_key = os.getenv(api_key_env)
+    is_test_env = os.getenv("PROMPT_OPS_TEST_ENV") == "1"
+
+    if is_test_env and not api_key:
+        return "test_api_key"
+
+    if not api_key:
+        click.echo(f"Error: {api_key_env} environment variable not set", err=True)
+        click.echo(
+            f"Please set it with: export {api_key_env}=your_key_here or add it to your .env file",
+            err=True,
+        )
+        sys.exit(1)
+
+    return api_key
+
+
 # Helper function for real-time output
 def echo_flush(message, err=False):
     """Echo a message and flush the output buffer for real-time display."""
@@ -712,20 +747,8 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    # Load environment variables from .env file if it exists
-    if os.path.exists(dotenv_path):
-        load_dotenv(dotenv_path)
-        click.echo(f"Loaded environment variables from {dotenv_path}")
-
-    # Check if API key is set
-    api_key = os.getenv(api_key_env)
-    if not api_key:
-        click.echo(f"Error: {api_key_env} environment variable not set", err=True)
-        click.echo(
-            f"Please set it with: export {api_key_env}=your_key_here or add it to your .env file",
-            err=True,
-        )
-        sys.exit(1)
+    # Get API key using the extracted function
+    api_key = check_api_key(api_key_env, dotenv_path)
 
     # Load configuration
     try:
