@@ -60,4 +60,3 @@ We've prepared several complete examples to help you get started:
 
 - [Multi Hop Question Answering](../use-cases/hotpotqa/): Optimize prompts for Multi-hop QA tasks
 - [Facility Support Analyzer](../use-cases/facility-support-analyzer/): Categorize and analyze messages
-

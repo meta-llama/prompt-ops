@@ -7,14 +7,14 @@
 <p align="center">
   <a href="https://llama.developer.meta.com/?utm_source=llama-prompt-ops&utm_medium=readme&utm_campaign=main"><img src="https://img.shields.io/badge/Llama_API-Join_Waitlist-brightgreen?logo=meta" /></a>
   <a href="https://llama.developer.meta.com/docs?utm_source=llama-prompt-ops&utm_medium=readme&utm_campaign=main"><img src="https://img.shields.io/badge/Llama_API-Documentation-4BA9FE?logo=meta" /></a>
-  
+
 </p>
 
 <p align="center">
   <a href="https://github.com/meta-llama/llama-models/blob/main/models/?utm_source=llama-prompt-ops&utm_medium=readme&utm_campaign=main"><img alt="Llama Model cards" src="https://img.shields.io/badge/Llama_OSS-Model_cards-green?logo=meta" /></a>
   <a href="https://www.llama.com/docs/overview/?utm_source=llama-prompt-ops&utm_medium=readme&utm_campaign=main"><img alt="Llama Documentation" src="https://img.shields.io/badge/Llama_OSS-Documentation-4BA9FE?logo=meta" /></a>
   <a href="https://huggingface.co/meta-llama"><img alt="Hugging Face meta-llama" src="https://img.shields.io/badge/Hugging_Face-meta--llama-yellow?logo=huggingface" /></a>
-  
+
 </p>
 <p align="center">
   <a href="https://github.com/meta-llama/synthetic-data-kit"><img alt="Llama Tools Syntethic Data Kit" src="https://img.shields.io/badge/Llama_Tools-synthetic--data--kit-orange?logo=meta" /></a>
@@ -43,12 +43,12 @@ To get started with llama-prompt-ops, you'll need:
 ## How It Works
 
 ```
-┌──────────────────────────┐  ┌──────────────────────────┐  ┌────────────────────┐    
-│  Existing System Prompt  │  │  set(query, responses)   │  │ YAML Configuration │    
-└────────────┬─────────────┘  └─────────────┬────────────┘  └───────────┬────────┘    
-             │                              │                           │             
-             │                              │                           │             
-             ▼                              ▼                           ▼             
+┌──────────────────────────┐  ┌──────────────────────────┐  ┌────────────────────┐
+│  Existing System Prompt  │  │  set(query, responses)   │  │ YAML Configuration │
+└────────────┬─────────────┘  └─────────────┬────────────┘  └───────────┬────────┘
+             │                              │                           │
+             │                              │                           │
+             ▼                              ▼                           ▼
          ┌────────────────────────────────────────────────────────────────────┐
          │                     llama-prompt-ops migrate                       │
          └────────────────────────────────────────────────────────────────────┘
@@ -111,7 +111,7 @@ cd my-project
 
 ### Step 3: Set Up Your API Key
 
-Add your API key to the `.env` file: 
+Add your API key to the `.env` file:
 
 ```bash
 OPENROUTER_API_KEY=your_key_here
@@ -125,7 +125,7 @@ The optimization will take about 5 minutes.
 llama-prompt-ops migrate # defaults to config.yaml if --config not specified
 ```
 
-Done! The optimized prompt will be saved to the `results` directory with performance metrics comparing the original and optimized versions. 
+Done! The optimized prompt will be saved to the `results` directory with performance metrics comparing the original and optimized versions.
 
 To read more about this use case, we go into more detail in [Basic Tutorial](./docs/basic/readme.md).
 

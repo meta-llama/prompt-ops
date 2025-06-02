@@ -1,0 +1,75 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pre-commit
+          pip install -e ".[dev]"
+
+      - name: Run pre-commit on all files
+        run: |
+          pre-commit run --all-files
+
+      - name: What to do if this action fails
+        if: ${{ failure() }}
+        run: |
+          echo "To fix these issues locally:"
+          echo "1. Install pre-commit: pip install pre-commit"
+          echo "2. Set up pre-commit hooks: pre-commit install"
+          echo "3. Run pre-commit on all files: pre-commit run --all-files"
+          echo "4. Commit the changes and push again"
+
+  black-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install black>=25.1.0
+
+      - name: Run Black
+        run: |
+          black --check src tests
+
+  isort-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install isort>=6.0.0
+
+      - name: Run isort
+        run: |
+          isort --check-only --profile black src tests

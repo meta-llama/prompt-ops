@@ -34,7 +34,7 @@ metric:
 
 optimization:
   strategy: "llama"
-  
+
 # Output configuration
 output:
   prefix: "hotpotqa_file_path_test"

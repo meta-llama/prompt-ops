@@ -56,17 +56,17 @@ class MyCustomAdapter(DatasetAdapter):
         super().__init__(dataset_path)
         # Initialize any custom parameters
         self.special_param = kwargs.get('special_param')
-        
+
     def adapt(self):
         # Load raw data
         raw_data = self.load_raw_data()
-        
+
         # Transform into standardized format
         standardized_data = []
         for item in raw_data:
             # Your custom transformation logic here
             # This is where you can implement any special processing
-            
+
             standardized_example = {
                 "inputs": {
                     "question": self._process_question(item),
@@ -79,17 +79,17 @@ class MyCustomAdapter(DatasetAdapter):
                 "metadata": self._extract_metadata(item)
             }
             standardized_data.append(standardized_example)
-        
+
         return standardized_data
-    
+
     def _process_question(self, item):
         # Custom question processing logic
         pass
-    
+
     def _process_answer(self, item):
         # Custom answer processing logic
         pass
-    
+
     def _extract_metadata(self, item):
         # Extract any relevant metadata
         return {}

@@ -128,7 +128,7 @@ The optimized prompt will be saved in the `results/` directory with a filename l
 system: |-
 Analyze the customer's message and determine the level of urgency, sentiment, and relevant categories. Extract and return a json with the keys "urgency", "sentiment", and "categories". The "urgency" key should have a value of "high", "medium", or "low", the "sentiment" key should have a value of "negative", "neutral", or "positive", and the "categories" key should have a dictionary with categories as keys and boolean values indicating whether the category is a best matching support category tag. The categories should include "emergency_repair_services", "routine_maintenance_requests", "quality_and_safety_concerns", "specialized_cleaning_services", "general_inquiries", "sustainability_and_environmental_practices", "training_and_support_requests", "cleaning_services_scheduling", "customer_feedback_and_complaints", and "facility_management_issues".
 
-  Few-shot examples: 
+  Few-shot examples:
 
   Example 1:
       Question: Our office bathroom needs cleaning urgently. The toilets are clogged and there's water on the floor.
