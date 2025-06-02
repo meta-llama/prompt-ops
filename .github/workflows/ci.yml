@@ -46,5 +46,7 @@ jobs:
         pip install -e ".[dev]"
 
     - name: Run tests
+      env:
+        PROMPT_OPS_TEST_ENV: "1"
       run: |
         pytest tests/

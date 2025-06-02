@@ -77,6 +77,13 @@ def get_skip_reason():
 class TestCLIIntegration:
     """Integration tests for the CLI interface."""
 
+    @pytest.fixture(autouse=True)
+    def setup_test_env(self):
+        """Set up test environment for all tests in this class."""
+        # Set the test environment variable to bypass API key check
+        with patch.dict(os.environ, {"PROMPT_OPS_TEST_ENV": "1"}):
+            yield
+
     def test_cli_migrate_command(self, temp_config_file):
         """Test the migrate command with a config file."""
         # Use Click's test runner instead of directly calling cli()
@@ -252,6 +259,8 @@ class TestCLIIntegration:
                     return_value=MagicMock(),
                 ),
                 patch("llama_prompt_ops.interfaces.cli.load_config", return_value={}),
+                # Mock the API key check
+                patch.dict(os.environ, {"OPENROUTER_API_KEY": "mock_api_key"}),
             ):
 
                 # Run the migrate command with the actual file output
