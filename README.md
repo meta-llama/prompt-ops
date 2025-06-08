@@ -28,7 +28,7 @@ llama-prompt-ops is a Python package that **automatically optimizes prompts** fo
 
 **Key Benefits:**
 - **No More Trial and Error**: Stop manually tweaking prompts to get better results
-- **Fast Optimization**: Get Llama-optimized prompts minutes with template-based optimization
+- **Fast Optimization**: Get Llama-optimized prompts in minutes with template-based optimization
 - **Data-Driven Improvements**: Use your own examples to create prompts that work for your specific use case
 - **Measurable Results**: Evaluate prompt performance with customizable metrics
 
