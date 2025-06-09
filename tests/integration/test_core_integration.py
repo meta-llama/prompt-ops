@@ -310,3 +310,150 @@ def test_end_to_end_flow_with_mocks(facility_config_path):
             # Check results
             assert result is not None
             assert result.signature.instructions == "Optimized prompt"
+
+
+@pytest.mark.skipif(
+    not CORE_COMPONENTS_AVAILABLE,
+    reason=get_core_skip_reason() or "Core components available",
+)
+def test_basic_optimization_strategy_num_threads_integration():
+    """
+    Integration test for the MIPROv2 num_threads bug fix.
+
+    This test verifies that BasicOptimizationStrategy correctly passes num_threads
+    to the dspy library without causing parameter errors. This is a regression test
+    for the bug where num_threads was incorrectly passed to MIPROv2 constructor.
+    """
+    import json
+    import tempfile
+
+    # Create minimal test data
+    test_data = [
+        {
+            "inputs": {"question": "Test maintenance request"},
+            "outputs": {
+                "answer": json.dumps(
+                    {
+                        "categories": {"routine_maintenance_requests": True},
+                        "sentiment": "neutral",
+                        "urgency": "low",
+                    }
+                )
+            },
+        },
+        {
+            "inputs": {"question": "Emergency repair needed"},
+            "outputs": {
+                "answer": json.dumps(
+                    {
+                        "categories": {"emergency_repair_services": True},
+                        "sentiment": "urgent",
+                        "urgency": "high",
+                    }
+                )
+            },
+        },
+    ]
+
+    # Create temporary dataset file
+    with tempfile.NamedTemporaryFile(mode="w+", suffix=".json", delete=False) as tmp:
+        json.dump(test_data, tmp)
+        tmp_path = tmp.name
+
+    try:
+        # Load dataset
+        adapter = ConfigurableJSONAdapter(
+            dataset_path=tmp_path,
+            input_field=["inputs", "question"],
+            golden_output_field=["outputs", "answer"],
+        )
+
+        dataset = adapter.adapt()
+
+        # Create strategy with specific num_threads value to test the fix
+        strategy = BasicOptimizationStrategy(
+            num_threads=2,  # Specific value to verify correct parameter passing
+            max_bootstrapped_demos=1,  # Minimal for faster testing
+            max_labeled_demos=1,
+            num_trials=1,  # Single trial for speed
+            metric=FacilityMetric(),
+        )
+
+        # Set up datasets (minimal size for integration test)
+        strategy.trainset = dataset[:1]  # Use just one example
+        strategy.valset = dataset[1:2] if len(dataset) > 1 else dataset[:1]
+
+        # Mock the models to avoid real API calls but test dspy integration
+        with patch("dspy.LM") as mock_lm:
+            # Configure mock to return valid responses
+            mock_instance = MagicMock()
+            mock_lm.return_value = mock_instance
+
+            # The key test: verify that strategy instantiation and basic setup
+            # works without TypeError from incorrect num_threads parameter passing
+            strategy.task_model = mock_instance
+            strategy.prompt_model = mock_instance
+
+            prompt_data = {
+                "text": "Categorize customer messages",
+                "inputs": ["question"],
+                "outputs": ["answer"],
+            }
+
+            # This is the critical test - the strategy should be able to configure
+            # without throwing a TypeError about num_threads parameter
+            try:
+                # We patch the actual dspy.MIPROv2 to verify it's called correctly
+                with (
+                    patch("dspy.MIPROv2") as mock_mipro,
+                    patch("dspy.ChainOfThought") as mock_cot,
+                ):
+
+                    mock_optimizer = MagicMock()
+                    mock_mipro.return_value = mock_optimizer
+                    mock_program = MagicMock()
+                    mock_cot.return_value = mock_program
+                    mock_optimizer.compile.return_value = mock_program
+
+                    # This call should succeed without TypeError
+                    result = strategy.run(prompt_data)
+
+                    # Verify correct API usage:
+                    # 1. num_threads should NOT be in MIPROv2 constructor
+                    mock_mipro.assert_called_once()
+                    constructor_kwargs = mock_mipro.call_args.kwargs
+                    assert (
+                        "num_threads" not in constructor_kwargs
+                    ), "num_threads should not be passed to MIPROv2 constructor"
+
+                    # 2. num_threads SHOULD be in compile eval_kwargs
+                    mock_optimizer.compile.assert_called_once()
+                    compile_kwargs = mock_optimizer.compile.call_args.kwargs
+                    assert (
+                        "eval_kwargs" in compile_kwargs
+                    ), "eval_kwargs should be present in compile call"
+                    assert (
+                        compile_kwargs["eval_kwargs"]["num_threads"] == 2
+                    ), "num_threads should be correctly passed via eval_kwargs"
+
+                    # 3. Strategy should return a result
+                    assert result is not None
+
+                    print(
+                        "✅ Integration test passed: num_threads correctly handled by dspy"
+                    )
+
+            except TypeError as e:
+                if "num_threads" in str(e):
+                    pytest.fail(
+                        f"Bug regression detected: {e}. "
+                        "The num_threads parameter is being incorrectly passed to MIPROv2 constructor."
+                    )
+                else:
+                    # Re-raise other TypeErrors as they might be legitimate
+                    raise
+
+    finally:
+        # Clean up temporary file
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
