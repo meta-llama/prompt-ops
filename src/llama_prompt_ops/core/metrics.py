@@ -11,6 +11,7 @@ for evaluating the quality of optimized prompts.
 """
 
 import json
+import logging  # Keep existing logging import for warnings/errors
 from abc import ABC, abstractmethod
 from typing import (
     Any,
@@ -28,6 +29,7 @@ from typing import (
 import dspy
 
 from llama_prompt_ops.core.model import ModelAdapter
+from llama_prompt_ops.core.utils.logging import get_logger  # Added import
 
 T = TypeVar("T", bound=Any)
 U = TypeVar("U", bound=Any)
@@ -186,6 +188,9 @@ class DSPyMetricAdapter(MetricBase):
         # Input field descriptions (used for building custom signatures)
         self.input_field_descriptions = {}
 
+        # Initialize logger
+        self.logger = get_logger()  # Added logger initialization
+
         # Initialize signature template if a built-in name is provided
         if signature_name and signature_name in self.SIGNATURES:
             template = self.SIGNATURES[signature_name]
@@ -298,7 +303,9 @@ and {self.score_range[1]} means identical in meaning.
 
             if trace:
                 for key, value in inputs.items():
-                    print(f"\n{key.capitalize()}: {value}")
+                    self.logger.debug(
+                        f"\n{key.capitalize()}: {value}"
+                    )  # Replaced print with logger.debug
 
             # Get the signature class to use
             if self.signature_class:
@@ -328,14 +335,16 @@ and {self.score_range[1]} means identical in meaning.
                         scores.append(score)
                     except ValueError:
                         if trace:
-                            print(
+                            self.logger.debug(  # Replaced print with logger.debug
                                 f"Could not parse score from {field}: {getattr(result, field)}"
                             )
 
             # Calculate final score (average of all output fields)
             if not scores:
                 if trace:
-                    print("No valid scores found in result")
+                    self.logger.debug(
+                        "No valid scores found in result"
+                    )  # Replaced print with logger.debug
                 return self.normalize_to[0]
 
             raw_score = sum(scores) / len(scores)
@@ -344,8 +353,12 @@ and {self.score_range[1]} means identical in meaning.
             final_score = self.normalize_score(raw_score)
 
             if trace:
-                print(f"Raw score: {raw_score}")
-                print(f"Normalized score: {final_score}")
+                self.logger.debug(
+                    f"Raw score: {raw_score}"
+                )  # Replaced print with logger.debug
+                self.logger.debug(
+                    f"Normalized score: {final_score}"
+                )  # Replaced print with logger.debug
 
             return final_score
 
@@ -353,7 +366,9 @@ and {self.score_range[1]} means identical in meaning.
             # Expected errors when parsing LLM outputs or accessing attributes
             logging.warning(f"Expected error in DSPyMetricAdapter: {str(e)}")
             if trace:
-                print(f"\nExpected error in metric evaluation: {str(e)}")
+                self.logger.debug(
+                    f"\nExpected error in metric evaluation: {str(e)}"
+                )  # Replaced print with logger.debug
 
             # Return a default score for expected evaluation failures
             return self.normalize_to[0]
@@ -362,7 +377,9 @@ and {self.score_range[1]} means identical in meaning.
             # Unexpected errors that might indicate bugs in the code
             logging.error(f"Unexpected error in DSPyMetricAdapter: {str(e)}")
             if trace:
-                print(f"\nUnexpected error in metric: {str(e)}")
+                self.logger.debug(
+                    f"\nUnexpected error in metric: {str(e)}"
+                )  # Replaced print with logger.debug
                 import traceback
 
                 traceback.print_exc()
@@ -389,6 +406,7 @@ class ExactMatchMetric(MetricBase):
         """
         self.case_sensitive = case_sensitive
         self.strip_whitespace = strip_whitespace
+        self.logger = get_logger()  # Added logger initialization
 
     def __call__(
         self, gold: Any, pred: Any, trace: bool = False, **kwargs
@@ -418,9 +436,9 @@ class ExactMatchMetric(MetricBase):
         match = 1.0 if gold_str == pred_str else 0.0
 
         if trace:
-            print(f"Gold: {gold_str}")
-            print(f"Pred: {pred_str}")
-            print(f"Match: {match}")
+            self.logger.debug(f"Gold: {gold_str}")  # Replaced print with logger.debug
+            self.logger.debug(f"Pred: {pred_str}")  # Replaced print with logger.debug
+            self.logger.debug(f"Match: {match}")  # Replaced print with logger.debug
 
         return {"exact_match": match}
 
@@ -448,7 +466,9 @@ def json_evaluation_metric(
             gold = json.loads(gold)
         except json.JSONDecodeError:
             if trace:
-                print("Error parsing gold JSON")
+                get_logger().debug(
+                    "Error parsing gold JSON"
+                )  # Replaced print with logger.debug
             return {"precision": 0.0, "recall": 0.0, "f1": 0.0}
 
     if isinstance(pred, str):
@@ -456,7 +476,9 @@ def json_evaluation_metric(
             pred = json.loads(pred)
         except json.JSONDecodeError:
             if trace:
-                print("Error parsing pred JSON")
+                get_logger().debug(
+                    "Error parsing pred JSON"
+                )  # Replaced print with logger.debug
             return {"precision": 0.0, "recall": 0.0, "f1": 0.0}
 
     # Flatten both JSONs
@@ -485,11 +507,12 @@ def json_evaluation_metric(
     )
 
     if trace:
-        print(f"Gold keys: {gold_keys}")
-        print(f"Pred keys: {pred_keys}")
-        print(f"Precision: {precision:.2f}")
-        print(f"Recall: {recall:.2f}")
-        print(f"F1: {f1:.2f}")
+        logger = get_logger()
+        logger.debug(f"Gold keys: {gold_keys}")  # Replaced print with logger.debug
+        logger.debug(f"Pred keys: {pred_keys}")  # Replaced print with logger.debug
+        logger.debug(f"Precision: {precision:.2f}")  # Replaced print with logger.debug
+        logger.debug(f"Recall: {recall:.2f}")  # Replaced print with logger.debug
+        logger.debug(f"F1: {f1:.2f}")  # Replaced print with logger.debug
 
     return {"precision": precision, "recall": recall, "f1": f1}
 
@@ -549,6 +572,7 @@ class FacilityMetric(MetricBase):
         """
         self.output_field = output_field
         self.strict_json = strict_json
+        self.logger = get_logger()  # Added logger initialization
 
     def __call__(
         self, gold: Any, pred: Any, trace: bool = False, **kwargs
@@ -795,6 +819,8 @@ class StandardJSONMetric(MetricBase):
                 f"Invalid evaluation mode: {evaluation_mode}. Must be 'selected_fields_comparison' or 'full_json_comparison'."
             )
 
+        self.logger = get_logger()  # Added logger initialization
+
         # Set up fields to evaluate
         if isinstance(output_fields, dict):
             self.fields = list(output_fields.keys())
@@ -907,6 +933,8 @@ class StandardJSONMetric(MetricBase):
             error = err  # Proceed to try extracting a JSON snippet.
 
         # Define patterns to search for a JSON code block.
+        import re
+
         patterns = [
             re.compile(
                 r"```json\s*(.*?)\s*```", re.DOTALL | re.IGNORECASE

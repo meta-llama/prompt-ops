@@ -758,7 +758,22 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)
 
+    # Configure logging from file, if not overridden by CLI
+    if not log_level:
+        log_config = config_dict.get("logging", {})
+        level = log_config.get("level", "INFO")
+        logger.set_level(level)
+        export_path = log_config.get("export_path")
+        if export_path:
+            # Replace timestamp placeholder
+            if "${TIMESTAMP}" in export_path:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                export_path = export_path.replace("${TIMESTAMP}", timestamp)
+            atexit.register(logger.export_json, export_path)
+            logger.info(f"Will export logs to {export_path} on exit.")
+
     # Set up models from config
+
     task_model, prompt_model = get_models_from_config(config_dict, model, api_key)
 
     # Create metric based on config - use task_model for metric

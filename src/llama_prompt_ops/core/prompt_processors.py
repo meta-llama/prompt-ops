@@ -17,6 +17,7 @@ from .utils.llama_utils import (
     get_task_type_from_prompt,
     select_instruction_preference,
 )
+from .utils.logging import get_logger
 
 
 class PromptProcessor:
@@ -132,6 +133,7 @@ class InstructionPreference(PromptProcessor):
         """
         super().__init__(next_processor)
         self.verbose = verbose
+        self.logger = get_logger()
 
     def process(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -174,9 +176,11 @@ class InstructionPreference(PromptProcessor):
 
             # Log the task type and selected preferences if verbose
             if self.verbose:
-                print(f"Task type detected: {task_type}")
+                self.logger.progress(f"Task type detected: {task_type}")
                 for i, pref in enumerate(selected_preferences):
-                    print(f"Selected instruction preference {i+1}: {pref[:50]}...")
+                    self.logger.progress(
+                        f"Selected instruction preference {i+1}: {pref[:50]}..."
+                    )
 
         # Pass to the next processor
         return super().process(data)
