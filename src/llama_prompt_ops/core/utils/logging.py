@@ -62,8 +62,13 @@ class LoggingManager:
 
     # ---- export ----------------------------------------------------------
     def export_json(self, path: str):
-        with open(path, "w") as f:
-            json.dump({"timings": self.timings, "metrics": self.metrics}, f, indent=2)
+        try:
+            with open(path, "w") as f:
+                json.dump(
+                    {"timings": self.timings, "metrics": self.metrics}, f, indent=2
+                )
+        except Exception as e:
+            self.logger.error(f"Failed to export telemetry to {path}: {str(e)}")
 
     def _dump_timings(self):
         # Called at program exit for insight in CLI runs
