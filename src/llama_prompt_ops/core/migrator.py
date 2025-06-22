@@ -10,6 +10,7 @@ This module contains the main PromptMigrator class that orchestrates the
 optimization process using configurable strategies.
 """
 
+import atexit
 import json
 import logging
 import os
@@ -25,6 +26,7 @@ from .exceptions import EvaluationError, OptimizationError
 from .prompt_strategies import BaseStrategy
 from .utils import json_to_yaml_file
 from .utils.llama_utils import is_llama_model
+from .utils.logging import get_logger
 
 
 class PromptMigrator:
@@ -98,6 +100,7 @@ class PromptMigrator:
                 )
 
         self._optimized_program = None
+        self.logger = get_logger()
 
     def optimize(
         self,
@@ -157,26 +160,30 @@ class PromptMigrator:
         if hasattr(self.strategy, "valset") and valset:
             self.strategy.valset = valset
 
-        logging.info(f"Applying {self.strategy.__class__.__name__} to optimize prompt")
-        logging.info(f"Training set size: {len(trainset) if trainset else 0}")
-        logging.info(f"Validation set size: {len(valset) if valset else 0}")
+        self.logger.progress(
+            f"Applying {self.strategy.__class__.__name__} to optimize prompt"
+        )
+        self.logger.progress(f"Training set size: {len(trainset) if trainset else 0}")
+        self.logger.progress(f"Validation set size: {len(valset) if valset else 0}")
 
-        optimized_program = self.strategy.run(prompt_data)
+        with self.logger.phase("Running optimization strategy"):
+            optimized_program = self.strategy.run(prompt_data)
 
         self._optimized_program = optimized_program
 
-        logging.info("Optimized prompt:")
-        logging.info("-" * 40)
-        logging.info(optimized_program.signature.instructions)
-        logging.info("-" * 40)
+        self.logger.progress("Optimized prompt:")
+        self.logger.progress("-" * 40)
+        self.logger.progress(optimized_program.signature.instructions)
+        self.logger.progress("-" * 40)
 
         if "Examples:" in optimized_program.signature.instructions:
-            logging.info("Examples are included in the optimized prompt")
+            self.logger.progress("Examples are included in the optimized prompt")
 
         if save_to_file:
-            saved_path = self.save_optimized_prompt(
-                optimized_program, file_path, save_yaml, user_prompt
-            )
+            with self.logger.phase("Saving optimized prompt"):
+                saved_path = self.save_optimized_prompt(
+                    optimized_program, file_path, save_yaml, user_prompt
+                )
 
         return optimized_program
 
@@ -247,13 +254,16 @@ class PromptMigrator:
         if devset is None:
             devset = self.valset
 
-        evaluator = create_evaluator(
-            metric=metric, devset=devset, statistical=statistical, **kwargs
-        )
+        with self.logger.phase("Evaluating optimized program"):
+            evaluator = create_evaluator(
+                metric=metric, devset=devset, statistical=statistical, **kwargs
+            )
 
-        if statistical:
-            return evaluator.evaluate_with_statistics(program)
-        return evaluator.evaluate(program)
+            if statistical:
+                result = evaluator.evaluate_with_statistics(program)
+            else:
+                result = evaluator.evaluate(program)
+        return result
 
     def save_optimized_prompt(
         self, program=None, file_path=None, save_yaml=False, user_prompt=None
@@ -337,7 +347,7 @@ class PromptMigrator:
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(prompt_json, f, indent=2, ensure_ascii=False)
 
-        logging.info(f"Saved optimized prompt to {file_path}")
+        self.logger.progress(f"Saved optimized prompt to {file_path}")
 
         # If save_yaml is True, also save as YAML
         if save_yaml:
@@ -354,6 +364,6 @@ class PromptMigrator:
                 ),
                 strategy=self.strategy if hasattr(self, "strategy") else None,
             )
-            logging.info(f"Saved YAML prompt to {yaml_file_path}")
+            self.logger.progress(f"Saved YAML prompt to {yaml_file_path}")
 
         return file_path

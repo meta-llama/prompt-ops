@@ -15,6 +15,8 @@ import os
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Union
 
+from .utils.logging import get_logger
+
 try:
     import dspy
 
@@ -375,12 +377,13 @@ def setup_model(model_name=None, adapter_type="dspy", **kwargs):
         response = adapter.generate_with_chat_format(messages)
     """
     # Create adapter based on type
+    logger = get_logger()
     if adapter_type.lower() == "dspy":
         # For DSPy, rename model_name to match the expected parameter
         if model_name and "model_name" not in kwargs:
             kwargs["model_name"] = model_name
         adapter = DSPyModelAdapter(**kwargs)
-        print(
+        logger.progress(
             f" Using model with DSPy: {kwargs.get('model_name', 'custom configuration')}"
         )
     elif adapter_type.lower() == "textgrad":
@@ -388,7 +391,7 @@ def setup_model(model_name=None, adapter_type="dspy", **kwargs):
         if model_name and "model_name" not in kwargs:
             kwargs["model_name"] = model_name
         adapter = TextGradModelAdapter(**kwargs)
-        print(
+        logger.progress(
             f" Using model with TextGrad: {kwargs.get('model_name', 'custom configuration')}"
         )
     else:
