@@ -5,7 +5,7 @@ system_prompt:
 
 # Dataset configuration
 dataset:
-  path: "../use-cases/facility-support-analyzer/facility_v2_test.json"
+  path: "../use-cases/facility-support-analyzer/dataset.json"
   input_field: ["fields", "input"]
   golden_output_field: "answer"
 

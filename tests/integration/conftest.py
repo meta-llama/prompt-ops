@@ -8,9 +8,7 @@ import pytest
 def facility_dataset_path():
     """Fixture providing path to the facility dataset."""
     base_dir = Path(__file__).parent.parent.parent
-    return str(
-        base_dir / "use-cases" / "facility-support-analyzer" / "facility_v2_test.json"
-    )
+    return str(base_dir / "use-cases" / "facility-support-analyzer" / "dataset.json")
 
 
 @pytest.fixture
