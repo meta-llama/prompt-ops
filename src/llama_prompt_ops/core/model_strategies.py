@@ -145,6 +145,7 @@ class LlamaStrategy(BaseStrategy):
 
         # Ensure the base strategy has the latest models and datasets
         # This is important because these might be set after initialization
+        # and the pre-optimization summary needs them
         self.base_strategy.task_model = self.task_model
         self.base_strategy.prompt_model = self.prompt_model
         self.base_strategy.trainset = self.trainset

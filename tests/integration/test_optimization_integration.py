@@ -176,3 +176,84 @@ class TestOptimizationIntegration:
 
         # Clean up
         os.unlink(tmp_path)
+
+    def test_pre_optimization_summary_display(self, capsys):
+        """Test that pre-optimization summary is displayed during optimization."""
+        from llama_prompt_ops.core.prompt_strategies import BasicOptimizationStrategy
+        from llama_prompt_ops.core.utils.telemetry import PreOptimizationSummary
+
+        # Create a mock metric
+        mock_metric = MagicMock()
+        mock_metric.__name__ = "test_metric"
+
+        # Create mock models
+        mock_task_model = MagicMock()
+        mock_task_model.model_name = "test_task_model"
+        mock_prompt_model = MagicMock()
+        mock_prompt_model.model_name = "test_prompt_model"
+
+        # Create mock training and validation sets
+        mock_trainset = [MagicMock() for _ in range(10)]
+        mock_valset = [MagicMock() for _ in range(5)]
+
+        # Create strategy
+        strategy = BasicOptimizationStrategy(
+            model_name="test_model",
+            metric=mock_metric,
+            task_model=mock_task_model,
+            prompt_model=mock_prompt_model,
+            trainset=mock_trainset,
+            valset=mock_valset,
+            auto="basic",
+            max_labeled_demos=3,
+            max_bootstrapped_demos=2,
+            num_candidates=5,
+            num_threads=4,
+            init_temperature=0.7,
+            seed=42,
+        )
+
+        # Mock the DSPy components to avoid actual optimization
+        with (
+            patch("dspy.Predict") as mock_predict,
+            patch("dspy.MIPROv2") as mock_mipro,
+            patch("dspy.Evaluate") as mock_evaluate,
+        ):
+
+            # Mock the baseline evaluation
+            mock_evaluator = MagicMock()
+            mock_evaluator.return_value = 0.65
+            mock_evaluate.return_value = mock_evaluator
+
+            # Mock the optimizer
+            mock_optimizer = MagicMock()
+            mock_optimizer.compile.return_value = MagicMock()
+            mock_mipro.return_value = mock_optimizer
+
+            # Prepare prompt data
+            prompt_data = {
+                "text": "Test prompt for optimization",
+                "inputs": ["question"],
+                "outputs": ["answer"],
+            }
+
+            # Run the strategy (this should display the summary)
+            try:
+                result = strategy.run(prompt_data)
+            except Exception:
+                # We expect this to fail due to mocking, but we want to check the logs
+                pass
+
+            # Capture the output
+            captured = capsys.readouterr()
+
+            # Check that the pre-optimization summary was displayed (it goes to stderr via logging)
+            assert "=== Pre-Optimization Summary ===" in captured.err
+            assert "test_task_model" in captured.err
+            assert "test_prompt_model" in captured.err
+            assert "test_metric" in captured.err
+            assert "10 / 5" in captured.err  # train/val sizes
+            assert '"auto_user":"basic"' in captured.err
+            assert '"auto_dspy":"light"' in captured.err
+            # Note: baseline score computation is currently disabled for performance
+            # assert "0.6500" in captured.err  # baseline score
