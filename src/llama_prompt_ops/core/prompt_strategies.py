@@ -22,6 +22,7 @@ import dspy
 from typing_extensions import Literal
 
 from .utils import map_auto_mode_to_dspy
+from .utils.telemetry import PreOptimizationSummary
 
 
 class OptimizationError(Exception):
@@ -221,6 +222,88 @@ class BasicOptimizationStrategy(BaseStrategy):
         self.fewshot_aware_proposer = fewshot_aware_proposer
         self.requires_permission_to_run = requires_permission_to_run
 
+    def _get_model_name(self, model) -> str:
+        """
+        Extract a human-readable name from a model object.
+
+        Args:
+            model: The model object (could be a DSPy model, adapter, or string)
+
+        Returns:
+            A string representation of the model name
+        """
+        if model is None:
+            return "None"
+
+        # Try to get model_name attribute first
+        if hasattr(model, "model_name"):
+            return str(model.model_name)
+
+        # Try to get model attribute (for adapters)
+        if hasattr(model, "model"):
+            return str(model.model)
+
+        # For DSPyModelAdapter, try to get the underlying model name
+        if hasattr(model, "_model") and hasattr(model._model, "model"):
+            return str(model._model.model)
+
+        # Fall back to string representation
+        return str(model)
+
+    def _compute_baseline_score(self, prompt_data: Dict[str, Any]) -> Optional[float]:
+        """
+        Compute baseline score using the original prompt before optimization.
+
+        Args:
+            prompt_data: Dictionary containing the prompt text and metadata
+
+        Returns:
+            Baseline score as float, or None if computation fails or is not possible
+        """
+        if not self.metric or not self.valset:
+            return None
+
+        try:
+            # Create input and output fields based on prompt_data
+            input_fields = {}
+            output_fields = {}
+
+            for field in prompt_data.get("inputs", ["question"]):
+                input_fields[field] = dspy.InputField(desc="${" + field + "}")
+            for field in prompt_data.get("outputs", ["answer"]):
+                output_fields[field] = dspy.OutputField(desc="${" + field + "}")
+
+            # Create the signature class with the original prompt
+            BaselineSignature = type(
+                "BaselineSignature",
+                (dspy.Signature,),
+                {
+                    **input_fields,
+                    **output_fields,
+                    "__doc__": prompt_data["text"],  # Original prompt text
+                },
+            )
+
+            # Create baseline program
+            baseline_program = dspy.Predict(BaselineSignature)
+
+            # Create evaluator with minimal settings for baseline
+            evaluator = dspy.Evaluate(
+                metric=self.metric,
+                devset=self.valset,
+                num_threads=1,  # Single thread for baseline
+                display_progress=False,
+                display_table=False,
+            )
+
+            # Compute and return baseline score
+            baseline_score = evaluator(baseline_program)
+            return float(baseline_score)
+
+        except Exception as e:
+            logging.warning(f"Failed to compute baseline score: {str(e)}")
+            return None
+
     def run(self, prompt_data: Dict[str, Any]) -> Any:
         """
         Apply basic optimization to the prompt using DSPy's MIPROv2.
@@ -236,6 +319,54 @@ class BasicOptimizationStrategy(BaseStrategy):
 
         if "dspy" not in globals() or not self.trainset:
             return f"[Optimized for {self.model_name}] {text}"
+
+        # Display pre-optimization summary
+        try:
+            # Collect guidance information
+            guidance = None
+            if (
+                hasattr(self, "proposer_kwargs")
+                and self.proposer_kwargs
+                and "tip" in self.proposer_kwargs
+            ):
+                guidance = self.proposer_kwargs["tip"]
+
+            # Compute baseline score separately to catch any issues
+            # Note: Temporarily disabled to ensure summary displays immediately
+            baseline_score = None
+            # try:
+            #     baseline_score = self._compute_baseline_score(prompt_data)
+            # except Exception as baseline_e:
+            #     logging.warning(f"Failed to compute baseline score: {baseline_e}")
+            #     baseline_score = None
+            
+            # Create and display the pre-optimization summary
+            summary = PreOptimizationSummary(
+                task_model=self._get_model_name(self.task_model),
+                proposer_model=self._get_model_name(self.prompt_model),
+                metric_name=(
+                    getattr(self.metric, "__name__", str(self.metric))
+                    if self.metric
+                    else "None"
+                ),
+                train_size=len(self.trainset or []),
+                val_size=len(self.valset or []),
+                mipro_params={
+                    "auto_user": self.auto,
+                    "auto_dspy": map_auto_mode_to_dspy(self.auto),
+                    "max_labeled_demos": self.max_labeled_demos,
+                    "max_bootstrapped_demos": self.max_bootstrapped_demos,
+                    "num_candidates": self.num_candidates,
+                    "num_threads": self.num_threads,
+                    "init_temperature": self.init_temperature,
+                    "seed": self.seed,
+                },
+                guidance=guidance,
+                baseline_score=baseline_score,
+            )
+            summary.log()
+        except Exception as e:
+            logging.warning(f"Failed to display pre-optimization summary: {str(e)}")
 
         try:
             # Add model-specific tips to the prompt if enabled
