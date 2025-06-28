@@ -430,6 +430,14 @@ def get_dataset_adapter_from_config(config_dict, config_path):
     return get_dataset_adapter(config_dict)
 
 
+def validate_min_records_in_dataset(dataset_adapter: DatasetAdapter):
+    # The dataset must contain at least 4 records to avoid runtime errors during optimization.
+    # This is because the data is split into 25% training, 25% validation, and 50% testing.
+    data = dataset_adapter.load_raw_data()
+    if len(data) < 4:
+        raise ValueError("Dataset must contain at least 4 records")
+
+
 def get_models_from_config(config_dict, override_model_name=None, api_key=None):
     """
     Create model adapter instances from configuration.
@@ -788,6 +796,13 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
     try:
         dataset_adapter = get_dataset_adapter_from_config(config_dict, config)
         click.echo(f"Using dataset adapter: {dataset_adapter.__class__.__name__}")
+    except ValueError as e:
+        click.echo(f"Error: {str(e)}", err=True)
+        sys.exit(1)
+    
+    # Validate the minimum number of records in dataset
+    try:
+        validate_min_records_in_dataset(dataset_adapter)
     except ValueError as e:
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)
