@@ -799,7 +799,7 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
     except ValueError as e:
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)
-    
+
     # Validate the minimum number of records in dataset
     try:
         validate_min_records_in_dataset(dataset_adapter)
