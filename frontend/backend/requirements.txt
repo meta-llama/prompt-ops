@@ -1,0 +1,11 @@
+# Core API dependencies
+fastapi==0.104.0
+uvicorn==0.23.2
+python-dotenv==1.0.0
+httpx==0.25.0
+
+# llama-prompt-ops dependencies
+llama-prompt-ops==0.0.7
+scipy>=1.11.0
+importlib-metadata>=6.0.0
+pyyaml>=6.0
