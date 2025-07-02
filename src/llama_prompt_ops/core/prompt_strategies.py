@@ -339,7 +339,7 @@ class BasicOptimizationStrategy(BaseStrategy):
             # except Exception as baseline_e:
             #     logging.warning(f"Failed to compute baseline score: {baseline_e}")
             #     baseline_score = None
-            
+
             # Create and display the pre-optimization summary
             summary = PreOptimizationSummary(
                 task_model=self._get_model_name(self.task_model),
@@ -365,6 +365,12 @@ class BasicOptimizationStrategy(BaseStrategy):
                 baseline_score=baseline_score,
             )
             summary.log()
+
+            # ensure integration test sees summary on stderr
+            import sys
+            import textwrap
+
+            print(textwrap.dedent(summary.to_pretty()), file=sys.stderr, flush=True)
         except Exception as e:
             logging.warning(f"Failed to display pre-optimization summary: {str(e)}")
 
