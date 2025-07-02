@@ -131,6 +131,10 @@ class TestCLIIntegration:
                 "llama_prompt_ops.interfaces.cli.get_strategy", return_value=MagicMock()
             ),
             patch("llama_prompt_ops.interfaces.cli.load_config", return_value={}),
+            patch(
+                "llama_prompt_ops.interfaces.cli.validate_min_records_in_dataset",
+                return_value=None,
+            ),
         ):
 
             # Run the migrate command
@@ -194,6 +198,10 @@ class TestCLIIntegration:
                 "llama_prompt_ops.interfaces.cli.get_strategy", return_value=MagicMock()
             ),
             patch("llama_prompt_ops.interfaces.cli.load_config", return_value={}),
+            patch(
+                "llama_prompt_ops.interfaces.cli.validate_min_records_in_dataset",
+                return_value=None,
+            ),
         ):
 
             # Run the migrate command with the real config
@@ -268,6 +276,10 @@ class TestCLIIntegration:
                     return_value=MagicMock(),
                 ),
                 patch("llama_prompt_ops.interfaces.cli.load_config", return_value={}),
+                patch(
+                    "llama_prompt_ops.interfaces.cli.validate_min_records_in_dataset",
+                    return_value=None,
+                ),
             ):
 
                 # Run the migrate command with the actual file output

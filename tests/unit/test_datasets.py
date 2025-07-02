@@ -163,3 +163,22 @@ def test_custom_split_ratios(mock_dataset_adapter):
     assert len(train) == 70
     assert len(val) == 20
     assert len(test) == 10
+
+
+def test_minimum_records_in_dataset(simple_data_file):
+    try:
+        from llama_prompt_ops.interfaces.cli import validate_min_records_in_dataset
+    except ImportError as e:
+        pytest.skip(f"Skipping test because module import failed: {str(e)}")
+
+    # Sample data file has just 2 records
+    temp_file, _ = simple_data_file
+
+    dataset_adapter = ConfigurableJSONAdapter(
+        dataset_path=temp_file.name,
+        input_field="question",
+        golden_output_field="answer",
+    )
+
+    with pytest.raises(ValueError, match="Dataset must contain at least 4 records"):
+        validate_min_records_in_dataset(dataset_adapter)
