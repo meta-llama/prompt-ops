@@ -177,8 +177,10 @@ class TestOptimizationIntegration:
         # Clean up
         os.unlink(tmp_path)
 
-    def test_pre_optimization_summary_display(self, capsys):
+    def test_pre_optimization_summary_display(self, caplog):
         """Test that pre-optimization summary is displayed during optimization."""
+        import logging
+
         from llama_prompt_ops.core.prompt_strategies import BasicOptimizationStrategy
         from llama_prompt_ops.core.utils.telemetry import PreOptimizationSummary
 
@@ -192,11 +194,12 @@ class TestOptimizationIntegration:
         mock_prompt_model = MagicMock()
         mock_prompt_model.model_name = "test_prompt_model"
 
-        # Create mock training and validation sets
+        # Create mock training, validation, and test sets
         mock_trainset = [MagicMock() for _ in range(10)]
         mock_valset = [MagicMock() for _ in range(5)]
+        mock_testset = [MagicMock() for _ in range(3)]
 
-        # Create strategy
+        # Create strategy with baseline computation enabled for testing
         strategy = BasicOptimizationStrategy(
             model_name="test_model",
             metric=mock_metric,
@@ -204,6 +207,7 @@ class TestOptimizationIntegration:
             prompt_model=mock_prompt_model,
             trainset=mock_trainset,
             valset=mock_valset,
+            testset=mock_testset,
             auto="basic",
             max_labeled_demos=3,
             max_bootstrapped_demos=2,
@@ -211,19 +215,27 @@ class TestOptimizationIntegration:
             num_threads=4,
             init_temperature=0.7,
             seed=42,
+            compute_baseline=True,
         )
 
         # Mock the DSPy components to avoid actual optimization
         with (
             patch("dspy.Predict") as mock_predict,
             patch("dspy.MIPROv2") as mock_mipro,
-            patch("dspy.Evaluate") as mock_evaluate,
+            patch.object(strategy, "_create_signature") as mock_create_signature,
+            patch(
+                "llama_prompt_ops.core.prompt_strategies.create_evaluator"
+            ) as mock_create_evaluator,
         ):
 
-            # Mock the baseline evaluation
+            # Mock the baseline evaluation using new evaluation infrastructure
             mock_evaluator = MagicMock()
-            mock_evaluator.return_value = 0.65
-            mock_evaluate.return_value = mock_evaluator
+            mock_evaluator.evaluate.return_value = 0.65
+            mock_create_evaluator.return_value = mock_evaluator
+
+            # Mock signature creation
+            mock_signature = MagicMock()
+            mock_create_signature.return_value = mock_signature
 
             # Mock the optimizer
             mock_optimizer = MagicMock()
@@ -237,23 +249,27 @@ class TestOptimizationIntegration:
                 "outputs": ["answer"],
             }
 
-            # Run the strategy (this should display the summary)
-            try:
-                result = strategy.run(prompt_data)
-            except Exception:
-                # We expect this to fail due to mocking, but we want to check the logs
-                pass
+            # Capture logging output at INFO level to catch the summary
+            with caplog.at_level(logging.INFO, logger="prompt_ops"):
+                # Run the strategy (this should display the summary)
+                try:
+                    result = strategy.run(prompt_data)
+                except Exception:
+                    # We expect this to fail due to mocking, but we want to check the logs
+                    pass
 
-            # Capture the output
-            captured = capsys.readouterr()
-
-            # Check that the pre-optimization summary was displayed (it goes to stderr via logging)
-            assert "=== Pre-Optimization Summary ===" in captured.err
-            assert "test_task_model" in captured.err
-            assert "test_prompt_model" in captured.err
-            assert "test_metric" in captured.err
-            assert "10 / 5" in captured.err  # train/val sizes
-            assert '"auto_user":"basic"' in captured.err
-            assert '"auto_dspy":"light"' in captured.err
-            # Note: baseline score computation is currently disabled for performance
-            # assert "0.6500" in captured.err  # baseline score
+            # Check that the pre-optimization summary was logged
+            assert "=== Pre-Optimization Summary ===" in caplog.text
+            assert "test_task_model" in caplog.text
+            assert "test_prompt_model" in caplog.text
+            assert "test_metric" in caplog.text
+            assert "10 / 5" in caplog.text  # train/val sizes in summary
+            assert '"auto_user":"basic"' in caplog.text
+            assert '"auto_dspy":"light"' in caplog.text
+            # Check that baseline score computation succeeded and is displayed in summary
+            assert (
+                "Baseline score   : 0.6500" in caplog.text
+            )  # baseline score in summary
+            # Verify that baseline computation using new evaluation infrastructure was called
+            mock_create_evaluator.assert_called_once()
+            mock_evaluator.evaluate.assert_called_once()
