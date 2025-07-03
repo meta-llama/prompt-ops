@@ -147,7 +147,7 @@ class BasicOptimizationStrategy(BaseStrategy):
         use_llama_tips: bool = True,
         requires_permission_to_run: bool = False,
         # Baseline computation settings
-        compute_baseline: bool = False,
+        compute_baseline: bool = True,
         # Model name parameters for display
         task_model_name: Optional[str] = None,
         prompt_model_name: Optional[str] = None,
@@ -327,7 +327,6 @@ class BasicOptimizationStrategy(BaseStrategy):
 
         try:
             start_time = time.time()
-            logging.info("Computing baseline score using testset...")
 
             # Use consistent signature creation with original prompt
             baseline_signature = self._create_signature(
@@ -335,20 +334,22 @@ class BasicOptimizationStrategy(BaseStrategy):
             )
             baseline_program = dspy.Predict(baseline_signature)
 
-            # Leverage existing evaluation infrastructure
+            print(
+                f"\n🔍 Computing baseline score on {len(self.testset)} test examples using {self.num_threads} threads..."
+            )
+
             evaluator = create_evaluator(
                 metric=self.metric,
                 devset=self.testset,
-                display_progress=False,
+                num_threads=self.num_threads,  # Use the strategy's num_threads setting
+                display_progress=True,
                 display_table=False,
             )
 
             score = evaluator.evaluate(baseline_program)
             duration = time.time() - start_time
 
-            logging.info(
-                f"Baseline evaluation completed in {duration:.2f}s: {score:.3f}"
-            )
+            print(f"✅ Baseline Score: {score:.3f} in {duration:.2f}s\n")
             return float(score)
 
         except Exception as e:

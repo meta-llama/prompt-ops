@@ -588,6 +588,13 @@ def get_strategy(
             return strategy
 
         elif strategy_type.lower() == "basic":
+            # Extract additional strategy parameters from config
+            strategy_params = {
+                k: v
+                for k, v in strategy_config.items()
+                if k not in ["type", "strategy"]  # Exclude non-parameter keys
+            }
+
             strategy = BasicOptimizationStrategy(
                 model_name=model_name,
                 metric=metric,
@@ -595,6 +602,7 @@ def get_strategy(
                 prompt_model=prompt_model,
                 task_model_name=task_model_name,
                 prompt_model_name=prompt_model_name,
+                **strategy_params,  # Pass all additional config parameters
             )
             click.echo(
                 f"Using BasicOptimizationStrategy from config for model: {model_name}"
@@ -621,6 +629,13 @@ def get_strategy(
         )
         click.echo(f"Auto-detected LlamaStrategy for model: {model_name}")
     else:
+        # Extract additional strategy parameters from config for auto-detected strategy
+        strategy_params = {
+            k: v
+            for k, v in strategy_config.items()
+            if k not in ["type", "strategy"]  # Exclude non-parameter keys
+        }
+
         strategy = BasicOptimizationStrategy(
             model_name=model_name,
             metric=metric,
@@ -628,6 +643,7 @@ def get_strategy(
             prompt_model=prompt_model,
             task_model_name=task_model_name,
             prompt_model_name=prompt_model_name,
+            **strategy_params,  # Pass all additional config parameters
         )
         click.echo(f"Auto-detected BasicOptimizationStrategy for model: {model_name}")
 
@@ -772,6 +788,11 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
         level=numeric_level,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
+
+    # Suppress verbose LiteLLM and httpx logging
+    logging.getLogger("LiteLLM").setLevel(logging.WARNING)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("litellm").setLevel(logging.WARNING)
 
     # Get API key using the extracted function
     api_key = check_api_key(api_key_env, dotenv_path)
