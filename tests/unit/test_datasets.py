@@ -177,7 +177,7 @@ def test_minimum_records_in_dataset(simple_data_file):
     temp_file, _ = simple_data_file
 
     dataset_adapter = ConfigurableJSONAdapter(
-        dataset_path=temp_file.name,
+        dataset_path=temp_file,
         input_field="question",
         golden_output_field="answer",
     )
