@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import sys
+import time
 import traceback
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -21,6 +22,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 import dspy
 from typing_extensions import Literal
 
+from .evaluation import create_evaluator
 from .utils import map_auto_mode_to_dspy
 from .utils.telemetry import PreOptimizationSummary
 
@@ -145,6 +147,8 @@ class BasicOptimizationStrategy(BaseStrategy):
         fewshot_aware_proposer: bool = True,
         use_llama_tips: bool = True,
         requires_permission_to_run: bool = False,
+        # Baseline computation settings
+        compute_baseline: bool = False,
         **kwargs,
     ):
         """
@@ -180,7 +184,9 @@ class BasicOptimizationStrategy(BaseStrategy):
             tip_aware_proposer: Whether to use tip-aware instruction proposals
             fewshot_aware_proposer: Whether to use few-shot aware instruction proposals
             requires_permission_to_run: Whether to require user permission to run
-            provide_traceback: Whether to provide tracebacks for errors
+
+            # Baseline computation parameters
+            compute_baseline: Whether to compute baseline score before optimization
 
             **kwargs: Additional configuration parameters
         """
@@ -193,6 +199,7 @@ class BasicOptimizationStrategy(BaseStrategy):
         # Training and validation data
         self.trainset = kwargs.get("trainset", [])
         self.valset = kwargs.get("valset", [])
+        self.testset = kwargs.get("testset", [])
 
         # Model-specific optimization settings
         self.use_llama_tips = use_llama_tips
@@ -222,6 +229,9 @@ class BasicOptimizationStrategy(BaseStrategy):
         self.fewshot_aware_proposer = fewshot_aware_proposer
         self.requires_permission_to_run = requires_permission_to_run
 
+        # Baseline computation settings
+        self.compute_baseline = compute_baseline
+
     def _get_model_name(self, model) -> str:
         """
         Extract a human-readable name from a model object.
@@ -250,9 +260,44 @@ class BasicOptimizationStrategy(BaseStrategy):
         # Fall back to string representation
         return str(model)
 
+    def _create_signature(self, prompt_data: Dict[str, Any], instructions: str):
+        """
+        Create a DSPy signature with explicit field definitions.
+
+        Args:
+            prompt_data: Dictionary containing inputs and outputs field definitions
+            instructions: The instruction text for the signature
+
+        Returns:
+            DSPy signature class
+        """
+        # Create a signature class dynamically with proper field definitions
+        input_fields = {}
+        output_fields = {}
+
+        # Define input and output fields based on prompt_data
+        for field in prompt_data.get("inputs", ["question"]):
+            input_fields[field] = dspy.InputField(desc="${" + field + "}")
+        for field in prompt_data.get("outputs", ["answer"]):
+            output_fields[field] = dspy.OutputField(desc="${" + field + "}")
+
+        # Create the signature class with proper field definitions
+        DynamicSignature = type(
+            "DynamicSignature",
+            (dspy.Signature,),
+            {
+                **input_fields,
+                **output_fields,
+                "__doc__": instructions,  # Store the instructions as the docstring
+            },
+        )
+
+        return DynamicSignature
+
     def _compute_baseline_score(self, prompt_data: Dict[str, Any]) -> Optional[float]:
         """
         Compute baseline score using the original prompt before optimization.
+        Uses testset to avoid data leakage and evaluation.py for consistency.
 
         Args:
             prompt_data: Dictionary containing the prompt text and metadata
@@ -260,48 +305,42 @@ class BasicOptimizationStrategy(BaseStrategy):
         Returns:
             Baseline score as float, or None if computation fails or is not possible
         """
-        if not self.metric or not self.valset:
+        if not self.metric or not self.testset:
+            logging.debug("Skipping baseline computation: missing metric or test set")
+            return None
+
+        if not self.compute_baseline:
+            logging.debug("Baseline computation disabled")
             return None
 
         try:
-            # Create input and output fields based on prompt_data
-            input_fields = {}
-            output_fields = {}
+            start_time = time.time()
+            logging.info("Computing baseline score using testset...")
 
-            for field in prompt_data.get("inputs", ["question"]):
-                input_fields[field] = dspy.InputField(desc="${" + field + "}")
-            for field in prompt_data.get("outputs", ["answer"]):
-                output_fields[field] = dspy.OutputField(desc="${" + field + "}")
-
-            # Create the signature class with the original prompt
-            BaselineSignature = type(
-                "BaselineSignature",
-                (dspy.Signature,),
-                {
-                    **input_fields,
-                    **output_fields,
-                    "__doc__": prompt_data["text"],  # Original prompt text
-                },
+            # Use consistent signature creation with original prompt
+            baseline_signature = self._create_signature(
+                prompt_data, prompt_data["text"]
             )
+            baseline_program = dspy.Predict(baseline_signature)
 
-            # Create baseline program
-            baseline_program = dspy.Predict(BaselineSignature)
-
-            # Create evaluator with minimal settings for baseline
-            evaluator = dspy.Evaluate(
+            # Leverage existing evaluation infrastructure
+            evaluator = create_evaluator(
                 metric=self.metric,
-                devset=self.valset,
-                num_threads=1,  # Single thread for baseline
+                devset=self.testset,
                 display_progress=False,
                 display_table=False,
             )
 
-            # Compute and return baseline score
-            baseline_score = evaluator(baseline_program)
-            return float(baseline_score)
+            score = evaluator.evaluate(baseline_program)
+            duration = time.time() - start_time
+
+            logging.info(
+                f"Baseline evaluation completed in {duration:.2f}s: {score:.3f}"
+            )
+            return float(score)
 
         except Exception as e:
-            logging.warning(f"Failed to compute baseline score: {str(e)}")
+            logging.warning(f"Baseline evaluation failed: {e}")
             return None
 
     def run(self, prompt_data: Dict[str, Any]) -> Any:
@@ -331,14 +370,14 @@ class BasicOptimizationStrategy(BaseStrategy):
             ):
                 guidance = self.proposer_kwargs["tip"]
 
-            # Compute baseline score separately to catch any issues
-            # Note: Temporarily disabled to ensure summary displays immediately
+            # Compute baseline score if enabled
             baseline_score = None
-            # try:
-            #     baseline_score = self._compute_baseline_score(prompt_data)
-            # except Exception as baseline_e:
-            #     logging.warning(f"Failed to compute baseline score: {baseline_e}")
-            #     baseline_score = None
+            if self.compute_baseline:
+                try:
+                    baseline_score = self._compute_baseline_score(prompt_data)
+                except Exception as baseline_e:
+                    logging.warning(f"Failed to compute baseline score: {baseline_e}")
+                    baseline_score = None
 
             # Create and display the pre-optimization summary
             summary = PreOptimizationSummary(
@@ -365,12 +404,6 @@ class BasicOptimizationStrategy(BaseStrategy):
                 baseline_score=baseline_score,
             )
             summary.log()
-
-            # ensure integration test sees summary on stderr
-            import sys
-            import textwrap
-
-            print(textwrap.dedent(summary.to_pretty()), file=sys.stderr, flush=True)
         except Exception as e:
             logging.warning(f"Failed to display pre-optimization summary: {str(e)}")
 
@@ -406,29 +439,12 @@ class BasicOptimizationStrategy(BaseStrategy):
 
             # Update the prompt text in prompt_data
             prompt_data["text"] = text
-            # Create a signature class dynamically with proper field definitions
-            input_fields = {}
-            output_fields = {}
 
-            # Define input and output fields based on prompt_data
-            for field in prompt_data.get("inputs", ["question"]):
-                input_fields[field] = dspy.InputField(desc="${" + field + "}")
-            for field in prompt_data.get("outputs", ["answer"]):
-                output_fields[field] = dspy.OutputField(desc="${" + field + "}")
-
-            # Create the signature class with proper field definitions
-            DynamicSignature = type(
-                "DynamicSignature",
-                (dspy.Signature,),
-                {
-                    **input_fields,
-                    **output_fields,
-                    "__doc__": text,  # Store the instructions as the docstring
-                },
-            )
+            # Create signature using consistent helper method with enhanced prompt
+            signature = self._create_signature(prompt_data, text)
 
             # Create program instance with the signature
-            program = dspy.Predict(DynamicSignature)
+            program = dspy.Predict(signature)
 
             # Map our naming convention to DSPy's expected values
             dspy_auto_mode = map_auto_mode_to_dspy(self.auto)
@@ -475,7 +491,7 @@ class BasicOptimizationStrategy(BaseStrategy):
                 # Use our custom instruction tips with highest priority
                 optimizer.proposer_kwargs["tip"] = self.proposer_kwargs["tip"]
                 logging.info(
-                    f"Using custom instruction tips: {self.proposer_kwargs['tip']}..."
+                    f"Using custom instruction tips: {self.proposer_kwargs['tip'][:50] if self.proposer_kwargs['tip'] else 'None'}"
                 )
             # Otherwise, if we have model-specific tips, use those
             elif model_tips:
@@ -492,7 +508,7 @@ class BasicOptimizationStrategy(BaseStrategy):
             )
 
             logging.info(
-                f"Compiling program with {len(self.trainset)} training examples and {len(self.valset)} validation examples"
+                f"Compiling program with {len(self.trainset)} training examples, {len(self.valset)} validation examples, and {len(self.testset)} test examples"
             )
 
             # Create a custom compile method that injects our tip directly

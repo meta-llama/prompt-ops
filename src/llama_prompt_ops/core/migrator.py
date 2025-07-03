@@ -160,11 +160,15 @@ class PromptMigrator:
         if hasattr(self.strategy, "valset") and valset:
             self.strategy.valset = valset
 
+        if hasattr(self.strategy, "testset") and testset:
+            self.strategy.testset = testset
+
         self.logger.progress(
             f"Applying {self.strategy.__class__.__name__} to optimize prompt"
         )
         self.logger.progress(f"Training set size: {len(trainset) if trainset else 0}")
         self.logger.progress(f"Validation set size: {len(valset) if valset else 0}")
+        self.logger.progress(f"Test set size: {len(testset) if testset else 0}")
 
         with self.logger.phase("Running optimization strategy"):
             optimized_program = self.strategy.run(prompt_data)
@@ -214,6 +218,9 @@ class PromptMigrator:
 
         if hasattr(self.strategy, "valset") and self.valset:
             self.strategy.valset = self.valset
+
+        if hasattr(self.strategy, "testset") and self.testset:
+            self.strategy.testset = self.testset
 
         return self.trainset, self.valset, self.testset
 
