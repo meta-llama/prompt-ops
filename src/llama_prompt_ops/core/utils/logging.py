@@ -18,6 +18,11 @@ class LoggingManager:
             fmt = "%(asctime)s | %(levelname)-7s | %(message)s"
             handler.setFormatter(logging.Formatter(fmt))
             self.logger.addHandler(handler)
+
+        # Prevent propagation to root logger to avoid duplicate messages
+        # This logger is designed for progress/telemetry, not general app logging
+        self.logger.propagate = False
+
         self.set_level(level)
 
         self.timings: dict[str, float] = {}
