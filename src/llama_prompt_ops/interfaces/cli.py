@@ -789,10 +789,22 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    # Suppress verbose LiteLLM and httpx logging
-    logging.getLogger("LiteLLM").setLevel(logging.WARNING)
-    logging.getLogger("httpx").setLevel(logging.WARNING)
-    logging.getLogger("litellm").setLevel(logging.WARNING)
+    # Suppress verbose external library logging
+    external_loggers = [
+        "LiteLLM",
+        "httpx",
+        "litellm",
+        "openai",
+        "requests",
+        "urllib3",
+        "aiohttp",
+    ]
+
+    # Allow environment override for debugging external libraries
+    external_log_level = os.getenv("EXTERNAL_LOG_LEVEL", "WARNING").upper()
+
+    for logger_name in external_loggers:
+        logging.getLogger(logger_name).setLevel(getattr(logging, external_log_level))
 
     # Get API key using the extracted function
     api_key = check_api_key(api_key_env, dotenv_path)

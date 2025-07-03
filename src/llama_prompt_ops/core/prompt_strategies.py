@@ -335,7 +335,7 @@ class BasicOptimizationStrategy(BaseStrategy):
             baseline_program = dspy.Predict(baseline_signature)
 
             print(
-                f"\n🔍 Computing baseline score on {len(self.testset)} test examples using {self.num_threads} threads..."
+                f"\nComputing baseline score on {len(self.testset)} test examples using {self.num_threads} threads..."
             )
 
             evaluator = create_evaluator(
