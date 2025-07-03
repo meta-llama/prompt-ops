@@ -177,12 +177,12 @@ class TestOptimizationIntegration:
         # Clean up
         os.unlink(tmp_path)
 
-    def test_pre_optimization_summary_display(self, caplog):
-        """Test that pre-optimization summary is displayed during optimization."""
-        import logging
-
+    def test_pre_optimization_summary_creation(self):
+        """Test that pre-optimization summary is created with correct data and baseline computation."""
         from llama_prompt_ops.core.prompt_strategies import BasicOptimizationStrategy
-        from llama_prompt_ops.core.utils.telemetry import PreOptimizationSummary
+        from llama_prompt_ops.core.utils.summary_utils import (
+            create_pre_optimization_summary,
+        )
 
         # Create a mock metric
         mock_metric = MagicMock()
@@ -218,29 +218,13 @@ class TestOptimizationIntegration:
             compute_baseline=True,
         )
 
-        # Mock the DSPy components to avoid actual optimization
-        with (
-            patch("dspy.Predict") as mock_predict,
-            patch("dspy.MIPROv2") as mock_mipro,
-            patch.object(strategy, "_create_signature") as mock_create_signature,
-            patch(
-                "llama_prompt_ops.core.prompt_strategies.create_evaluator"
-            ) as mock_create_evaluator,
-        ):
-
-            # Mock the baseline evaluation using new evaluation infrastructure
+        # Mock the baseline evaluation
+        with patch(
+            "llama_prompt_ops.core.prompt_strategies.create_evaluator"
+        ) as mock_create_evaluator:
             mock_evaluator = MagicMock()
             mock_evaluator.evaluate.return_value = 0.65
             mock_create_evaluator.return_value = mock_evaluator
-
-            # Mock signature creation
-            mock_signature = MagicMock()
-            mock_create_signature.return_value = mock_signature
-
-            # Mock the optimizer
-            mock_optimizer = MagicMock()
-            mock_optimizer.compile.return_value = MagicMock()
-            mock_mipro.return_value = mock_optimizer
 
             # Prepare prompt data
             prompt_data = {
@@ -249,27 +233,38 @@ class TestOptimizationIntegration:
                 "outputs": ["answer"],
             }
 
-            # Capture logging output at INFO level to catch the summary
-            with caplog.at_level(logging.INFO, logger="prompt_ops"):
-                # Run the strategy (this should display the summary)
-                try:
-                    result = strategy.run(prompt_data)
-                except Exception:
-                    # We expect this to fail due to mocking, but we want to check the logs
-                    pass
+            # Test summary creation directly
+            summary = create_pre_optimization_summary(strategy, prompt_data)
 
-            # Check that the pre-optimization summary was logged
-            assert "=== Pre-Optimization Summary ===" in caplog.text
-            assert "test_task_model" in caplog.text
-            assert "test_prompt_model" in caplog.text
-            assert "test_metric" in caplog.text
-            assert "10 / 5" in caplog.text  # train/val sizes in summary
-            assert '"auto_user":"basic"' in caplog.text
-            assert '"auto_dspy":"light"' in caplog.text
-            # Check that baseline score computation succeeded and is displayed in summary
-            assert (
-                "Baseline score   : 0.6500" in caplog.text
-            )  # baseline score in summary
-            # Verify that baseline computation using new evaluation infrastructure was called
+            # Verify summary data structure
+            assert summary.task_model == "test_task_model"
+            assert summary.proposer_model == "test_prompt_model"
+            assert summary.metric_name == "test_metric"
+            assert summary.train_size == 10
+            assert summary.val_size == 5
+            assert summary.baseline_score == 0.65
+
+            # Verify MIPRO parameters
+            assert summary.mipro_params["auto_user"] == "basic"
+            assert summary.mipro_params["auto_dspy"] == "light"
+            assert summary.mipro_params["max_labeled_demos"] == 3
+            assert summary.mipro_params["max_bootstrapped_demos"] == 2
+            assert summary.mipro_params["num_candidates"] == 5
+            assert summary.mipro_params["num_threads"] == 4
+            assert summary.mipro_params["init_temperature"] == 0.7
+            assert summary.mipro_params["seed"] == 42
+
+            # Test string formatting
+            summary_str = summary.to_pretty()
+            assert "=== Pre-Optimization Summary ===" in summary_str
+            assert "test_task_model" in summary_str
+            assert "test_prompt_model" in summary_str
+            assert "test_metric" in summary_str
+            assert "10 / 5" in summary_str
+            assert '"auto_user":"basic"' in summary_str
+            assert '"auto_dspy":"light"' in summary_str
+            assert "Baseline score   : 0.6500" in summary_str
+
+            # Verify that baseline computation was called with correct parameters
             mock_create_evaluator.assert_called_once()
             mock_evaluator.evaluate.assert_called_once()

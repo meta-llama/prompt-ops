@@ -79,9 +79,13 @@ class LoggingManager:
         # Called at program exit for insight in CLI runs
         if not self.timings:
             return
-        self.logger.info("=== Timings summary ===")
-        for k, v in self.timings.items():
-            self.logger.info(f"{k:<25} {v:6.2f}s")
+        try:
+            self.logger.info("=== Timings summary ===")
+            for k, v in self.timings.items():
+                self.logger.info(f"{k:<25} {v:6.2f}s")
+        except (ValueError, AttributeError):
+            # Stream might be closed during shutdown, ignore gracefully
+            pass
 
 
 def get_logger() -> LoggingManager:
