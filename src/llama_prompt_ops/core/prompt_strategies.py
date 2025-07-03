@@ -24,7 +24,6 @@ from typing_extensions import Literal
 
 from .evaluation import create_evaluator
 from .utils import map_auto_mode_to_dspy
-from .utils.telemetry import PreOptimizationSummary
 
 
 class OptimizationError(Exception):
@@ -372,53 +371,10 @@ class BasicOptimizationStrategy(BaseStrategy):
         if "dspy" not in globals() or not self.trainset:
             return f"[Optimized for {self.model_name}] {text}"
 
-        # Display pre-optimization summary
-        try:
-            # Collect guidance information
-            guidance = None
-            if (
-                hasattr(self, "proposer_kwargs")
-                and self.proposer_kwargs
-                and "tip" in self.proposer_kwargs
-            ):
-                guidance = self.proposer_kwargs["tip"]
+        # Display pre-optimization summary using utility function
+        from .utils.summary_utils import create_and_display_summary
 
-            # Compute baseline score if enabled
-            baseline_score = None
-            if self.compute_baseline:
-                try:
-                    baseline_score = self._compute_baseline_score(prompt_data)
-                except Exception as baseline_e:
-                    logging.warning(f"Failed to compute baseline score: {baseline_e}")
-                    baseline_score = None
-
-            # Create and display the pre-optimization summary
-            summary = PreOptimizationSummary(
-                task_model=self._get_model_name(self.task_model),
-                proposer_model=self._get_model_name(self.prompt_model),
-                metric_name=(
-                    getattr(self.metric, "__name__", str(self.metric))
-                    if self.metric
-                    else "None"
-                ),
-                train_size=len(self.trainset or []),
-                val_size=len(self.valset or []),
-                mipro_params={
-                    "auto_user": self.auto,
-                    "auto_dspy": map_auto_mode_to_dspy(self.auto),
-                    "max_labeled_demos": self.max_labeled_demos,
-                    "max_bootstrapped_demos": self.max_bootstrapped_demos,
-                    "num_candidates": self.num_candidates,
-                    "num_threads": self.num_threads,
-                    "init_temperature": self.init_temperature,
-                    "seed": self.seed,
-                },
-                guidance=guidance,
-                baseline_score=baseline_score,
-            )
-            summary.log()
-        except Exception as e:
-            logging.warning(f"Failed to display pre-optimization summary: {str(e)}")
+        create_and_display_summary(self, prompt_data)
 
         try:
             # Add model-specific tips to the prompt if enabled
