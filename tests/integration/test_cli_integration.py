@@ -122,7 +122,7 @@ class TestCLIIntegration:
             ),
             patch(
                 "llama_prompt_ops.interfaces.cli.get_models_from_config",
-                return_value=(None, None),
+                return_value=(None, None, "test_task_model", "test_prompt_model"),
             ),
             patch(
                 "llama_prompt_ops.interfaces.cli.get_metric", return_value=MagicMock()
@@ -189,7 +189,7 @@ class TestCLIIntegration:
             ),
             patch(
                 "llama_prompt_ops.interfaces.cli.get_models_from_config",
-                return_value=(None, None),
+                return_value=(None, None, "test_task_model", "test_prompt_model"),
             ),
             patch(
                 "llama_prompt_ops.interfaces.cli.get_metric", return_value=MagicMock()
@@ -265,7 +265,7 @@ class TestCLIIntegration:
                 ),
                 patch(
                     "llama_prompt_ops.interfaces.cli.get_models_from_config",
-                    return_value=(None, None),
+                    return_value=(None, None, "test_task_model", "test_prompt_model"),
                 ),
                 patch(
                     "llama_prompt_ops.interfaces.cli.get_metric",

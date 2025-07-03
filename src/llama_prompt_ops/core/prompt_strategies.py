@@ -149,6 +149,9 @@ class BasicOptimizationStrategy(BaseStrategy):
         requires_permission_to_run: bool = False,
         # Baseline computation settings
         compute_baseline: bool = False,
+        # Model name parameters for display
+        task_model_name: Optional[str] = None,
+        prompt_model_name: Optional[str] = None,
         **kwargs,
     ):
         """
@@ -187,6 +190,10 @@ class BasicOptimizationStrategy(BaseStrategy):
 
             # Baseline computation parameters
             compute_baseline: Whether to compute baseline score before optimization
+
+            # Model name parameters for display
+            task_model_name: Name of the task model
+            prompt_model_name: Name of the prompt model
 
             **kwargs: Additional configuration parameters
         """
@@ -232,12 +239,16 @@ class BasicOptimizationStrategy(BaseStrategy):
         # Baseline computation settings
         self.compute_baseline = compute_baseline
 
+        # Model name parameters for display
+        self.task_model_name = task_model_name
+        self.prompt_model_name = prompt_model_name
+
     def _get_model_name(self, model) -> str:
         """
-        Extract a human-readable name from a model object.
+        Get a human-readable name for a model using stored names.
 
         Args:
-            model: The model object (could be a DSPy model, adapter, or string)
+            model: The model object to get the name for
 
         Returns:
             A string representation of the model name
@@ -245,19 +256,21 @@ class BasicOptimizationStrategy(BaseStrategy):
         if model is None:
             return "None"
 
-        # Try to get model_name attribute first
+        # Use stored model names if available
+        if model is self.task_model and self.task_model_name:
+            return self.task_model_name
+        if model is self.prompt_model and self.prompt_model_name:
+            return self.prompt_model_name
+
+        # Fallback to legacy introspection for backward compatibility
         if hasattr(model, "model_name"):
             return str(model.model_name)
-
-        # Try to get model attribute (for adapters)
         if hasattr(model, "model"):
             return str(model.model)
-
-        # For DSPyModelAdapter, try to get the underlying model name
         if hasattr(model, "_model") and hasattr(model._model, "model"):
             return str(model._model.model)
 
-        # Fall back to string representation
+        # Final fallback
         return str(model)
 
     def _create_signature(self, prompt_data: Dict[str, Any], instructions: str):

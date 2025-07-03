@@ -440,18 +440,20 @@ def validate_min_records_in_dataset(dataset_adapter: DatasetAdapter):
 
 def get_models_from_config(config_dict, override_model_name=None, api_key=None):
     """
-    Create model adapter instances from configuration.
+    Create task and proposer model adapter instances from configuration.
 
     Args:
         config_dict: The full configuration dictionary
-        override_model_name: Optional model name to override the ones in config
+        override_model_name: Optional model name to override the one in config
         api_key: API key to use for the models
 
     Returns:
-        A tuple of (task_model, proposer_model) adapter instances
+        tuple: (task_model, proposer_model, task_model_name, proposer_model_name)
     """
     model_config = config_dict.get("model", {})
     adapter_type = model_config.get("adapter_type", "dspy")
+
+    # Get API configuration
     api_base = model_config.get("api_base", "https://openrouter.ai/api/v1")
     max_tokens = model_config.get("max_tokens", 2048)
     temperature = model_config.get("temperature", 0.0)
@@ -498,7 +500,7 @@ def get_models_from_config(config_dict, override_model_name=None, api_key=None):
             cache=cache,
         )
 
-    return task_model, proposer_model
+    return task_model, proposer_model, task_model_name, proposer_model_name
 
 
 def get_model_from_config(config_dict, override_model_name=None, api_key=None):
@@ -534,7 +536,13 @@ def get_model_from_config(config_dict, override_model_name=None, api_key=None):
 
 
 def get_strategy(
-    strategy_config, model_name_with_path, metric, task_model, prompt_model
+    strategy_config,
+    model_name_with_path,
+    metric,
+    task_model,
+    prompt_model,
+    task_model_name=None,
+    prompt_model_name=None,
 ):
     """
     Create a prompt optimization strategy based on configuration.
@@ -545,6 +553,8 @@ def get_strategy(
         metric: Metric instance to use for optimization
         task_model: Model adapter instance for task execution
         prompt_model: Model adapter instance for prompt optimization
+        task_model_name: Name of the task model (for display purposes)
+        prompt_model_name: Name of the prompt/proposer model (for display purposes)
 
     Returns:
         A strategy instance appropriate for the model and configuration
@@ -568,6 +578,8 @@ def get_strategy(
                 metric=metric,
                 task_model=task_model,
                 prompt_model=prompt_model,
+                task_model_name=task_model_name,
+                prompt_model_name=prompt_model_name,
                 apply_formatting=apply_formatting,
                 apply_templates=apply_templates,
                 template_type=template_type,
@@ -581,6 +593,8 @@ def get_strategy(
                 metric=metric,
                 task_model=task_model,
                 prompt_model=prompt_model,
+                task_model_name=task_model_name,
+                prompt_model_name=prompt_model_name,
             )
             click.echo(
                 f"Using BasicOptimizationStrategy from config for model: {model_name}"
@@ -600,6 +614,8 @@ def get_strategy(
             metric=metric,
             task_model=task_model,
             prompt_model=prompt_model,
+            task_model_name=task_model_name,
+            prompt_model_name=prompt_model_name,
             apply_formatting=True,
             apply_templates=True,
         )
@@ -610,6 +626,8 @@ def get_strategy(
             metric=metric,
             task_model=task_model,
             prompt_model=prompt_model,
+            task_model_name=task_model_name,
+            prompt_model_name=prompt_model_name,
         )
         click.echo(f"Auto-detected BasicOptimizationStrategy for model: {model_name}")
 
@@ -782,7 +800,9 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
 
     # Set up models from config
 
-    task_model, prompt_model = get_models_from_config(config_dict, model, api_key)
+    task_model, prompt_model, task_model_name, proposer_model_name = (
+        get_models_from_config(config_dict, model, api_key)
+    )
 
     # Create metric based on config - use task_model for metric
     try:
@@ -814,6 +834,8 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
         metric,
         task_model,
         prompt_model,
+        task_model_name=task_model_name,
+        prompt_model_name=proposer_model_name,
     )
 
     # Create migrator
