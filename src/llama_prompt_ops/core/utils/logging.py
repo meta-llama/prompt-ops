@@ -32,7 +32,11 @@ class LoggingManager:
 
     def __del__(self):
         # Unregister the atexit handler to prevent issues in testing
-        atexit.unregister(self._dump_timings)
+        try:
+            atexit.unregister(self._dump_timings)
+        except ValueError:
+            # Handler might not be registered
+            pass
 
     # ---- configuration --------------------------------------------------
     def set_level(self, level: str):
@@ -79,11 +83,18 @@ class LoggingManager:
         # Called at program exit for insight in CLI runs
         if not self.timings:
             return
+
+        # Check if any handlers have closed streams
+        for handler in self.logger.handlers:
+            if hasattr(handler, "stream") and hasattr(handler.stream, "closed"):
+                if handler.stream.closed:
+                    return  # Skip logging if stream is closed
+
         try:
             self.logger.info("=== Timings summary ===")
             for k, v in self.timings.items():
                 self.logger.info(f"{k:<25} {v:6.2f}s")
-        except (ValueError, AttributeError):
+        except (ValueError, AttributeError, OSError):
             # Stream might be closed during shutdown, ignore gracefully
             pass
 

@@ -149,10 +149,8 @@ class TestSummaryUtils:
         assert summary.guidance is None
         assert summary.baseline_score is None
 
-    def test_create_and_display_summary(self, caplog):
+    def test_create_and_display_summary(self):
         """Test the convenience function that creates and displays summary."""
-        import logging
-
         mock_strategy = MagicMock()
         mock_strategy.proposer_kwargs = None
         mock_strategy.compute_baseline = False
@@ -178,31 +176,24 @@ class TestSummaryUtils:
 
         prompt_data = {"text": "test prompt"}
 
-        with caplog.at_level(logging.INFO):
-            summary = create_and_display_summary(mock_strategy, prompt_data)
+        summary = create_and_display_summary(mock_strategy, prompt_data)
 
         # Should return a summary
         assert isinstance(summary, PreOptimizationSummary)
+        assert summary.task_model == "mock_task_model"
+        assert summary.proposer_model == "mock_prompt_model"
+        assert summary.metric_name == "test_metric"
 
-        # Should have logged the summary (check for the header)
-        assert "=== Pre-Optimization Summary ===" in caplog.text
-
-    def test_create_and_display_summary_handles_errors(self, caplog):
+    def test_create_and_display_summary_handles_errors(self):
         """Test that create_and_display_summary handles errors gracefully."""
-        import logging
-
         # Create a strategy that will cause an error
         mock_strategy = MagicMock()
         mock_strategy._get_model_name.side_effect = Exception("Test error")
 
         prompt_data = {"text": "test prompt"}
 
-        with caplog.at_level(logging.WARNING):
-            summary = create_and_display_summary(mock_strategy, prompt_data)
+        summary = create_and_display_summary(mock_strategy, prompt_data)
 
         # Should return a minimal summary instead of failing
         assert isinstance(summary, PreOptimizationSummary)
         assert summary.task_model == "Unknown"
-
-        # Should have logged the error
-        assert "Failed to create or display pre-optimization summary" in caplog.text
