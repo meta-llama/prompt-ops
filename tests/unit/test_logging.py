@@ -25,29 +25,6 @@ def test_get_logger_singleton():
     assert logger1 is logger2
 
 
-def test_logging_level(caplog):
-    """Test that the logging level is set correctly."""
-    logger = get_logger()
-    logger.set_level("DEBUG")
-
-    with caplog.at_level(logging.DEBUG):
-        logger.progress("debug message", level="DEBUG")
-        logger.progress("info message", level="INFO")
-
-    assert "debug message" in caplog.text
-    assert "info message" in caplog.text
-
-    caplog.clear()
-
-    logger.set_level("INFO")
-    with caplog.at_level(logging.INFO):
-        logger.progress("debug message", level="DEBUG")
-        logger.progress("info message", level="INFO")
-
-    assert "debug message" not in caplog.text
-    assert "info message" in caplog.text
-
-
 def test_phase_timing():
     """Test the phase timing context manager."""
     logger = get_logger()

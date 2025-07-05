@@ -24,3 +24,4 @@ metric:
 # Optimization settings
 optimization:
   strategy: "llama"
+  compute_baseline: true

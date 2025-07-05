@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import sys
+import time
 import traceback
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -21,6 +22,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 import dspy
 from typing_extensions import Literal
 
+from .evaluation import create_evaluator
 from .utils import map_auto_mode_to_dspy
 
 
@@ -144,6 +146,11 @@ class BasicOptimizationStrategy(BaseStrategy):
         fewshot_aware_proposer: bool = True,
         use_llama_tips: bool = True,
         requires_permission_to_run: bool = False,
+        # Baseline computation settings
+        compute_baseline: bool = True,
+        # Model name parameters for display
+        task_model_name: Optional[str] = None,
+        prompt_model_name: Optional[str] = None,
         **kwargs,
     ):
         """
@@ -179,7 +186,13 @@ class BasicOptimizationStrategy(BaseStrategy):
             tip_aware_proposer: Whether to use tip-aware instruction proposals
             fewshot_aware_proposer: Whether to use few-shot aware instruction proposals
             requires_permission_to_run: Whether to require user permission to run
-            provide_traceback: Whether to provide tracebacks for errors
+
+            # Baseline computation parameters
+            compute_baseline: Whether to compute baseline score before optimization
+
+            # Model name parameters for display
+            task_model_name: Name of the task model
+            prompt_model_name: Name of the prompt model
 
             **kwargs: Additional configuration parameters
         """
@@ -192,6 +205,7 @@ class BasicOptimizationStrategy(BaseStrategy):
         # Training and validation data
         self.trainset = kwargs.get("trainset", [])
         self.valset = kwargs.get("valset", [])
+        self.testset = kwargs.get("testset", [])
 
         # Model-specific optimization settings
         self.use_llama_tips = use_llama_tips
@@ -221,6 +235,127 @@ class BasicOptimizationStrategy(BaseStrategy):
         self.fewshot_aware_proposer = fewshot_aware_proposer
         self.requires_permission_to_run = requires_permission_to_run
 
+        # Baseline computation settings
+        self.compute_baseline = compute_baseline
+
+        # Model name parameters for display
+        self.task_model_name = task_model_name
+        self.prompt_model_name = prompt_model_name
+
+    def _get_model_name(self, model) -> str:
+        """
+        Get a human-readable name for a model using stored names.
+
+        Args:
+            model: The model object to get the name for
+
+        Returns:
+            A string representation of the model name
+        """
+        if model is None:
+            return "None"
+
+        # Use stored model names if available
+        if model is self.task_model and self.task_model_name:
+            return self.task_model_name
+        if model is self.prompt_model and self.prompt_model_name:
+            return self.prompt_model_name
+
+        # Fallback to legacy introspection for backward compatibility
+        if hasattr(model, "model_name"):
+            return str(model.model_name)
+        if hasattr(model, "model"):
+            return str(model.model)
+        if hasattr(model, "_model") and hasattr(model._model, "model"):
+            return str(model._model.model)
+
+        # Final fallback
+        return str(model)
+
+    def _create_signature(self, prompt_data: Dict[str, Any], instructions: str):
+        """
+        Create a DSPy signature with explicit field definitions.
+
+        Args:
+            prompt_data: Dictionary containing inputs and outputs field definitions
+            instructions: The instruction text for the signature
+
+        Returns:
+            DSPy signature class
+        """
+        # Create a signature class dynamically with proper field definitions
+        input_fields = {}
+        output_fields = {}
+
+        # Define input and output fields based on prompt_data
+        for field in prompt_data.get("inputs", ["question"]):
+            input_fields[field] = dspy.InputField(desc="${" + field + "}")
+        for field in prompt_data.get("outputs", ["answer"]):
+            output_fields[field] = dspy.OutputField(desc="${" + field + "}")
+
+        # Create the signature class with proper field definitions
+        DynamicSignature = type(
+            "DynamicSignature",
+            (dspy.Signature,),
+            {
+                **input_fields,
+                **output_fields,
+                "__doc__": instructions,  # Store the instructions as the docstring
+            },
+        )
+
+        return DynamicSignature
+
+    def _compute_baseline_score(self, prompt_data: Dict[str, Any]) -> Optional[float]:
+        """
+        Compute baseline score using the original prompt before optimization.
+        Uses testset to avoid data leakage and evaluation.py for consistency.
+
+        Args:
+            prompt_data: Dictionary containing the prompt text and metadata
+
+        Returns:
+            Baseline score as float, or None if computation fails or is not possible
+        """
+        if not self.metric or not self.testset:
+            logging.debug("Skipping baseline computation: missing metric or test set")
+            return None
+
+        if not self.compute_baseline:
+            logging.debug("Baseline computation disabled")
+            return None
+
+        try:
+            start_time = time.time()
+
+            # Use consistent signature creation with original prompt
+            baseline_signature = self._create_signature(
+                prompt_data, prompt_data["text"]
+            )
+            baseline_program = dspy.Predict(baseline_signature)
+
+            print(
+                f"\nComputing baseline score on {len(self.testset)} test examples using {self.num_threads} threads..."
+            )
+
+            evaluator = create_evaluator(
+                metric=self.metric,
+                devset=self.testset,
+                num_threads=self.num_threads,  # Use the strategy's num_threads setting
+                display_progress=True,
+                display_table=False,
+            )
+
+            score = evaluator.evaluate(baseline_program)
+            duration = time.time() - start_time
+
+            print(f"✅ Baseline Score: {score:.3f} in {duration:.2f}s\n")
+            return float(score)
+
+        except Exception as e:
+            logging.warning(f"Baseline evaluation failed: {e}")
+            return None
+
     def run(self, prompt_data: Dict[str, Any]) -> Any:
         """
         Apply basic optimization to the prompt using DSPy's MIPROv2.
@@ -236,6 +371,11 @@ class BasicOptimizationStrategy(BaseStrategy):
 
         if "dspy" not in globals() or not self.trainset:
             return f"[Optimized for {self.model_name}] {text}"
+
+        # Display pre-optimization summary using utility function
+        from .utils.summary_utils import create_and_display_summary
+
+        create_and_display_summary(self, prompt_data)
 
         try:
             # Add model-specific tips to the prompt if enabled
@@ -269,29 +409,12 @@ class BasicOptimizationStrategy(BaseStrategy):
 
             # Update the prompt text in prompt_data
             prompt_data["text"] = text
-            # Create a signature class dynamically with proper field definitions
-            input_fields = {}
-            output_fields = {}
 
-            # Define input and output fields based on prompt_data
-            for field in prompt_data.get("inputs", ["question"]):
-                input_fields[field] = dspy.InputField(desc="${" + field + "}")
-            for field in prompt_data.get("outputs", ["answer"]):
-                output_fields[field] = dspy.OutputField(desc="${" + field + "}")
-
-            # Create the signature class with proper field definitions
-            DynamicSignature = type(
-                "DynamicSignature",
-                (dspy.Signature,),
-                {
-                    **input_fields,
-                    **output_fields,
-                    "__doc__": text,  # Store the instructions as the docstring
-                },
-            )
+            # Create signature using consistent helper method with enhanced prompt
+            signature = self._create_signature(prompt_data, text)
 
             # Create program instance with the signature
-            program = dspy.Predict(DynamicSignature)
+            program = dspy.Predict(signature)
 
             # Map our naming convention to DSPy's expected values
             dspy_auto_mode = map_auto_mode_to_dspy(self.auto)
@@ -338,7 +461,7 @@ class BasicOptimizationStrategy(BaseStrategy):
                 # Use our custom instruction tips with highest priority
                 optimizer.proposer_kwargs["tip"] = self.proposer_kwargs["tip"]
                 logging.info(
-                    f"Using custom instruction tips: {self.proposer_kwargs['tip']}..."
+                    f"Using custom instruction tips: {self.proposer_kwargs['tip'][:50] if self.proposer_kwargs['tip'] else 'None'}"
                 )
             # Otherwise, if we have model-specific tips, use those
             elif model_tips:
@@ -355,7 +478,7 @@ class BasicOptimizationStrategy(BaseStrategy):
             )
 
             logging.info(
-                f"Compiling program with {len(self.trainset)} training examples and {len(self.valset)} validation examples"
+                f"Compiling program with {len(self.trainset)} training examples, {len(self.valset)} validation examples, and {len(self.testset)} test examples"
             )
 
             # Create a custom compile method that injects our tip directly

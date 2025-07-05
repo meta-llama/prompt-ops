@@ -45,6 +45,8 @@ class LlamaStrategy(BaseStrategy):
         max_bootstrapped_demos: int = 4,
         max_labeled_demos: int = 5,
         auto: Optional[Literal["basic", "intermediate", "advanced"]] = "basic",
+        task_model_name: Optional[str] = None,
+        prompt_model_name: Optional[str] = None,
         **kwargs,
     ):
         """
@@ -60,6 +62,8 @@ class LlamaStrategy(BaseStrategy):
             max_bootstrapped_demos: Maximum number of bootstrapped demos for MIPROv2
             max_labeled_demos: Maximum number of labeled demos for MIPROv2
             auto: Auto mode for MIPROv2 (basic, intermediate, advanced)
+            task_model_name: Name of the task model (for display purposes)
+            prompt_model_name: Name of the prompt/proposer model (for display purposes)
             **kwargs: Additional parameters for BasicOptimizationStrategy
         """
         # Verify that the model is a Llama model
@@ -77,6 +81,8 @@ class LlamaStrategy(BaseStrategy):
             max_bootstrapped_demos=max_bootstrapped_demos,
             max_labeled_demos=max_labeled_demos,
             auto=auto,
+            task_model_name=task_model_name,
+            prompt_model_name=prompt_model_name,
             **kwargs,
         )
 
@@ -145,6 +151,7 @@ class LlamaStrategy(BaseStrategy):
 
         # Ensure the base strategy has the latest models and datasets
         # This is important because these might be set after initialization
+        # and the pre-optimization summary needs them
         self.base_strategy.task_model = self.task_model
         self.base_strategy.prompt_model = self.prompt_model
         self.base_strategy.trainset = self.trainset
