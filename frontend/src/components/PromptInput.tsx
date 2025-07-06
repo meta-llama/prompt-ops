@@ -1,4 +1,4 @@
-import React, { useState, useContext, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ArrowUp, FileJson, Loader2, Plus, Trash2, Upload } from 'lucide-react';
+import { ArrowUp, FileJson, Loader2, Plus, Trash2, Upload, Zap, X } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import { AppContext } from '../context/AppContext';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +27,11 @@ export const PromptInput = () => {
   const [copySuccess, setCopySuccess] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const { activeMode, setIsModeLocked } = useContext(AppContext);
+
+  // Add state for quick start demo
+  const [isLoadingDemo, setIsLoadingDemo] = useState(false);
+  const [isDemoLoaded, setIsDemoLoaded] = useState(false);
+  const [isDemoDismissed, setIsDemoDismissed] = useState(false);
 
   // Dataset upload state
   const [showDatasetDialog, setShowDatasetDialog] = useState(false);
@@ -127,6 +132,55 @@ export const PromptInput = () => {
       await fetchUploadedDatasets();
     } catch (error) {
       console.error('Error deleting dataset:', error);
+    }
+  };
+
+  const handleQuickStartDemo = async () => {
+    setIsLoadingDemo(true);
+
+    try {
+      const response = await fetch('http://localhost:8000/api/quick-start-demo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load quick start demo');
+      }
+
+      const data = await response.json();
+
+      // Update the prompt with demo prompt
+      setPrompt(data.prompt);
+
+      // Refresh uploaded datasets to show the demo dataset first
+      await fetchUploadedDatasets();
+
+      // Add a small delay to ensure the datasets are loaded, then update configuration
+      setTimeout(() => {
+        setConfig(data.config);
+      }, 100);
+
+      // Mark demo as loaded
+      setIsDemoLoaded(true);
+
+      toast({
+        title: "Demo Loaded Successfully! 🚀",
+        description: data.message,
+        duration: 5000,
+      });
+
+    } catch (error) {
+      console.error('Error loading quick start demo:', error);
+      toast({
+        title: "Failed to Load Demo",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingDemo(false);
     }
   };
 
@@ -305,6 +359,102 @@ export const PromptInput = () => {
         </div>
       ) : (
         <>
+          {/* Quick Start Demo Section - Only show in migrate mode when no demo loaded */}
+          {activeMode === 'migrate' && !isDemoLoaded && !isDemoDismissed && uploadedDatasets.length === 0 && !prompt.trim() && (
+            <div className="bg-gradient-to-br from-facebook-blue/5 via-white to-facebook-blue/10 backdrop-blur-xl rounded-2xl p-8 shadow-xl border-2 border-facebook-blue/20 mb-8 relative overflow-hidden">
+              {/* Background decoration */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-facebook-blue/5 rounded-full -translate-y-16 translate-x-16"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-facebook-blue/5 rounded-full translate-y-12 -translate-x-12"></div>
+
+              {/* Dismiss button - top right */}
+              <button
+                onClick={() => setIsDemoDismissed(true)}
+                className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-facebook-text/10 hover:bg-facebook-text/20 flex items-center justify-center transition-all duration-200 group"
+                title="Dismiss demo"
+              >
+                <X className="w-4 h-4 text-facebook-text/60 group-hover:text-facebook-text" />
+              </button>
+
+              <div className="relative z-10 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-facebook-blue/10 rounded-full mb-6">
+                  <Zap className="w-8 h-8 text-facebook-blue" />
+                </div>
+
+                <h2 className="text-3xl font-black text-facebook-text mb-4">Ready to Get Started?</h2>
+                <p className="text-facebook-text/80 text-lg mb-6 max-w-2xl mx-auto">
+                  Try our <strong>Facility Support Analyzer</strong> demo - a complete example with real data,
+                  optimized configuration, and ready-to-run prompts. Perfect for testing the system!
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                  <Button
+                    onClick={handleQuickStartDemo}
+                    disabled={isLoadingDemo}
+                    className="bg-facebook-blue hover:bg-facebook-blue-dark text-white px-8 py-4 rounded-xl text-lg font-semibold shadow-lg hover:shadow-facebook-blue/25 transition-all duration-300 transform hover:scale-105 min-w-[200px]"
+                  >
+                    {isLoadingDemo ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Loading Demo...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-5 h-5 mr-2" />
+                        Quick Start Demo
+                      </>
+                    )}
+                  </Button>
+
+                  <button
+                    onClick={() => setIsDemoDismissed(true)}
+                    className="text-facebook-text/60 text-sm hover:text-facebook-text/80 transition-colors duration-200 underline decoration-dotted underline-offset-4"
+                  >
+                    Or manually upload your own dataset below
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 text-left">
+                  <div className="bg-white/50 rounded-lg p-4 border border-facebook-blue/10">
+                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mb-3">
+                      <FileJson className="w-4 h-4 text-green-600" />
+                    </div>
+                    <h3 className="font-semibold text-facebook-text mb-2">Sample Dataset</h3>
+                    <p className="text-sm text-facebook-text/70">1,203 facility support emails with categories and sentiment</p>
+                  </div>
+
+                  <div className="bg-white/50 rounded-lg p-4 border border-facebook-blue/10">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mb-3">
+                      <Zap className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <h3 className="font-semibold text-facebook-text mb-2">Optimized Config</h3>
+                    <p className="text-sm text-facebook-text/70">Llama 3.3 70B with facility-specific metrics</p>
+                  </div>
+
+                  <div className="bg-white/50 rounded-lg p-4 border border-facebook-blue/10">
+                    <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mb-3">
+                      <ArrowUp className="w-4 h-4 text-purple-600" />
+                    </div>
+                    <h3 className="font-semibold text-facebook-text mb-2">Ready to Run</h3>
+                    <p className="text-sm text-facebook-text/70">Just click "Run" and see optimization in action</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Demo loaded success message */}
+          {isDemoLoaded && (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-8 flex items-center">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                <Zap className="w-4 h-4 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-green-800">Demo Loaded Successfully!</h3>
+                <p className="text-sm text-green-700">Facility Support Analyzer is ready with sample data and optimal configuration.</p>
+              </div>
+            </div>
+          )}
+
           <div className="relative bg-white/90 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-facebook-border mb-8">
             <textarea
               value={prompt}
@@ -363,10 +513,10 @@ export const PromptInput = () => {
             </div>
           </div>
 
-          {/* Only show configuration panel when in migrate mode */}
-          {activeMode === 'migrate' && (
-            <ConfigurationPanel onConfigChange={setConfig} />
-          )}
+          {/* Configuration panel - always rendered but hidden when not in migrate mode */}
+          <div className={activeMode === 'migrate' ? 'block' : 'hidden'}>
+            <ConfigurationPanel onConfigChange={setConfig} config={config} />
+          </div>
         </>
       )}
 
