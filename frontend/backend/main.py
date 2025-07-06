@@ -204,6 +204,14 @@ class DatasetListResponse(BaseModel):
     datasets: List[Dict[str, Any]]
 
 
+class QuickStartResponse(BaseModel):
+    success: bool
+    dataset: DatasetUploadResponse
+    prompt: str
+    config: Dict[str, Any]
+    message: str
+
+
 # --- System Messages for OpenRouter Operations ---
 
 ENHANCE_SYSTEM_MESSAGE = """
@@ -360,6 +368,7 @@ def get_uploaded_datasets():
 @app.options("/api/datasets/upload")
 @app.options("/api/datasets")
 @app.options("/api/datasets/{filename}")
+@app.options("/api/quick-start-demo")
 async def options_route():
     return {"status": "OK"}
 
@@ -447,6 +456,99 @@ async def upload_dataset(file: UploadFile = File(...)):
 async def list_datasets():
     """List all uploaded datasets."""
     return {"datasets": get_uploaded_datasets()}
+
+
+@app.post("/api/quick-start-demo", response_model=QuickStartResponse)
+async def quick_start_demo():
+    """Load the facility support analyzer demo with dataset, prompt, and optimal configuration."""
+    try:
+        # Define paths to demo files
+        demo_dataset_path = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "use-cases",
+            "facility-support-analyzer",
+            "dataset.json",
+        )
+        demo_prompt_path = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "use-cases",
+            "facility-support-analyzer",
+            "facility_prompt_sys.txt",
+        )
+
+        # Check if demo files exist
+        if not os.path.exists(demo_dataset_path):
+            raise HTTPException(status_code=404, detail="Demo dataset file not found")
+        if not os.path.exists(demo_prompt_path):
+            raise HTTPException(status_code=404, detail="Demo prompt file not found")
+
+        # Ensure upload directory exists
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+        # Copy demo dataset to uploaded datasets directory
+        demo_filename = "facility_support_demo.json"
+        destination_path = os.path.join(UPLOAD_DIR, demo_filename)
+
+        # Remove existing demo file if it exists
+        if os.path.exists(destination_path):
+            os.remove(destination_path)
+
+        shutil.copy2(demo_dataset_path, destination_path)
+
+        # Load and validate the dataset
+        with open(destination_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        if not isinstance(data, list):
+            raise HTTPException(
+                status_code=400, detail="Demo dataset must be a JSON array"
+            )
+
+        # Create preview (first 3 records)
+        preview = data[:3] if len(data) > 3 else data
+
+        # Load the demo prompt
+        with open(demo_prompt_path, "r", encoding="utf-8") as f:
+            demo_prompt = f.read().strip()
+
+        # Define optimal configuration for facility support analyzer
+        optimal_config = {
+            "datasetAdapter": "facility",
+            "metrics": "Facility Support",
+            "model": "Llama 3.3 70B",
+            "proposer": "Llama 3.3 70B",
+            "strategy": "Basic",
+            "useLlamaTips": True,
+        }
+
+        # Create dataset response
+        dataset_response = DatasetUploadResponse(
+            filename=demo_filename,
+            path=destination_path,
+            preview=preview,
+            total_records=len(data),
+        )
+
+        logger.info(f"Quick start demo loaded successfully: {len(data)} records")
+
+        return QuickStartResponse(
+            success=True,
+            dataset=dataset_response,
+            prompt=demo_prompt,
+            config=optimal_config,
+            message=f"Demo loaded successfully! Facility Support Analyzer with {len(data)} sample records ready for optimization.",
+        )
+
+    except HTTPException:
+        # Re-raise HTTPExceptions to preserve status codes
+        raise
+    except Exception as e:
+        logger.error(f"Error loading quick start demo: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to load demo: {str(e)}")
 
 
 @app.delete("/api/datasets/{filename}")

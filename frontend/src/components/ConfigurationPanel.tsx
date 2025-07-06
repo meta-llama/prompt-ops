@@ -23,7 +23,7 @@ interface DatasetInfo {
   is_uploaded?: boolean;
 }
 
-export const ConfigurationPanel = ({ onConfigChange = null }) => {
+export const ConfigurationPanel = ({ onConfigChange = null, config = null }) => {
   const [datasetAdapter, setDatasetAdapter] = useState('');  // Changed from dataset to datasetAdapter
   const [metrics, setMetrics] = useState('Exact Match');
   const [optimizer, setOptimizer] = useState('MiPro');
@@ -40,6 +40,19 @@ export const ConfigurationPanel = ({ onConfigChange = null }) => {
   // Add state for dataset preview
   const [showDatasetPreview, setShowDatasetPreview] = useState(false);
   const [selectedDatasetInfo, setSelectedDatasetInfo] = useState<DatasetInfo | null>(null);
+
+  // Update internal state when external config changes (e.g., from demo loading)
+  useEffect(() => {
+    if (config) {
+      if (config.datasetAdapter !== undefined) setDatasetAdapter(config.datasetAdapter);
+      if (config.metrics !== undefined) setMetrics(config.metrics);
+      if (config.strategy !== undefined) setOptimizer(config.strategy);
+      if (config.model !== undefined) setTaskModel(config.model);
+      if (config.proposer !== undefined) setProposerModel(config.proposer);
+      if (config.openrouterApiKey !== undefined) setApiKey(config.openrouterApiKey || '');
+      if (config.useLlamaTips !== undefined) setUseLlamaTips(config.useLlamaTips);
+    }
+  }, [config]);
 
   // Notify parent component when configuration changes
   useEffect(() => {
