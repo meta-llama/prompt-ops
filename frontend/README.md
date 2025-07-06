@@ -7,6 +7,7 @@ A modern React frontend interface for [llama-prompt-ops](https://github.com/meta
 - **Prompt Enhancement**: Optimize prompts for better performance with Llama models
 - **Prompt Migration**: Migrate prompts between different model architectures
 - **Real-time Optimization**: Monitor optimization progress with live updates
+- **Dataset Management**: Upload and manage datasets for optimization
 - **Configuration Management**: Flexible configuration for different optimization strategies
 - **Clean UI**: Modern, accessible interface with Meta's design language
 
@@ -16,22 +17,123 @@ A modern React frontend interface for [llama-prompt-ops](https://github.com/meta
 - **UI Components**: Radix UI + shadcn/ui
 - **Styling**: Tailwind CSS with Meta/Facebook design system
 - **Build Tool**: Vite
-- **Backend Integration**: FastAPI (for development)
+- **Backend**: FastAPI with llama-prompt-ops integration
 
-## Development Setup
+## Quick Start
 
 ### Prerequisites
 
-- Node.js 18+ and npm
-- Python 3.8+ (for backend development)
+- **Node.js 18+** and npm
+- **Python 3.8+** (for backend)
+- **OpenRouter API Key** (get one at [OpenRouter](https://openrouter.ai/))
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/meta-llama/llama-prompt-ops.git
+   cd llama-prompt-ops/frontend
+   ```
+
+2. **Install frontend dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up backend environment**
+   ```bash
+   cd backend
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+4. **Configure environment variables**
+
+   Create a `.env` file in the `frontend/backend` directory:
+   ```bash
+   # In frontend/backend/.env
+   OPENROUTER_API_KEY=your_openrouter_api_key_here
+   OPENAI_API_KEY=your_openai_api_key_here  # Optional: for fallback enhance feature
+   ```
+
+### Running the Application
+
+#### Option 1: Use the Development Script (Recommended)
+```bash
+# From the frontend directory
+chmod +x start-dev.sh
+./start-dev.sh
+```
+
+#### Option 2: Manual Start
+```bash
+# Terminal 1: Start backend
+cd backend
+source venv/bin/activate
+python -m uvicorn main:app --reload --port 8000
+
+# Terminal 2: Start frontend
+cd ..
+npm run dev
+```
+
+The application will be available at:
+- **Frontend**: http://localhost:8080
+- **Backend API**: http://localhost:8000
+
+### First Run
+
+1. **Upload a dataset**: Click "Manage Dataset" and upload a JSON file with your training data
+2. **Configure optimization**: Select your preferred model, metrics, and optimization strategy
+3. **Enter your prompt**: Paste your existing prompt in the text area
+4. **Click "Optimize"**: Watch the real-time progress and get your optimized prompt!
+
+## Dataset Format
+
+Upload JSON files in this format:
+```json
+[
+  {
+    "question": "Your input query here",
+    "answer": "Expected response here"
+  },
+  {
+    "question": "Another input query",
+    "answer": "Another expected response"
+  }
+]
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Backend won't start:**
+- Ensure you've activated the virtual environment
+- Check that all requirements are installed: `pip install -r requirements.txt`
+- Verify your API keys are set in the `.env` file
+
+**Frontend can't connect to backend:**
+- Make sure the backend is running on port 8000
+- Check browser console for CORS errors
+- Verify the backend URL in the frontend code
+
+**Optimization fails:**
+- Check that you've uploaded a valid dataset
+- Verify your OpenRouter API key is correct
+- Ensure your dataset has the expected format
+
+**Port already in use:**
+- Kill existing processes: `pkill -f "uvicorn\|vite"`
+- Or use different ports in the configuration
+
+## Development
 
 ### Frontend Development
 
 ```bash
-# Install dependencies
-npm install
-
-# Start development server
+# Start with hot reload
 npm run dev
 
 # Build for production
@@ -39,67 +141,49 @@ npm run build
 
 # Preview production build
 npm run preview
+
+# Lint code
+npm run lint
 ```
 
-The frontend will be available at `http://localhost:8080`
-
-### Backend Development (Optional)
-
-If you need to run the development backend:
+### Backend Development
 
 ```bash
-# Navigate to backend directory
-cd backend
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Start backend server
+# Start with auto-reload
 uvicorn main:app --reload --port 8000
+
+# Run with debug logging
+uvicorn main:app --reload --port 8000 --log-level debug
 ```
-
-## Integration with llama-prompt-ops
-
-This frontend is designed to integrate with the main llama-prompt-ops library. It provides:
-
-- Web interface for prompt optimization workflows
-- Visual configuration for optimization parameters
-- Real-time progress tracking and results display
-- Easy export/import of optimization configurations
 
 ## Project Structure
 
 ```
-src/
-├── components/           # React components
-│   ├── ui/              # Reusable UI components (shadcn/ui)
-│   ├── Sidebar.tsx      # Navigation component
-│   ├── MainContent.tsx  # Main application content
-│   ├── PromptInput.tsx  # Prompt input and optimization
-│   └── ...
-├── context/             # React context providers
-├── hooks/               # Custom React hooks
-├── pages/               # Page components
-└── lib/                 # Utility functions
+frontend/
+├── backend/                 # FastAPI backend
+│   ├── main.py             # API server
+│   ├── requirements.txt    # Python dependencies
+│   └── uploaded_datasets/  # Dataset storage
+├── src/
+│   ├── components/         # React components
+│   │   ├── ui/            # Reusable UI components
+│   │   ├── ConfigurationPanel.tsx
+│   │   ├── PromptInput.tsx
+│   │   └── ...
+│   ├── context/           # React context
+│   ├── hooks/             # Custom hooks
+│   └── pages/             # Page components
+├── package.json
+└── start-dev.sh           # Development startup script
 ```
 
 ## Contributing
 
-This project follows the llama-prompt-ops contribution guidelines. Please see the main repository for details on:
-
-- Code style and formatting
-- Testing requirements
-- Pull request process
-- Issue reporting
+1. Follow the existing code style and patterns
+2. Add tests for new features
+3. Update documentation for any changes
+4. Ensure the application builds and runs successfully
 
 ## License
 
-This project is licensed under the same terms as llama-prompt-ops. See the main repository for license details.
-
-## Future Plans
-
-This frontend will eventually be integrated into the main llama-prompt-ops repository under `llama-prompt-ops/frontend/` to provide a unified development experience.
+This project is licensed under the same terms as llama-prompt-ops.

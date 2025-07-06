@@ -15,6 +15,7 @@ node_modules
 dist
 dist-ssr
 *.local
+.vite/
 
 # Backend - Python
 # Virtual environments
@@ -61,3 +62,6 @@ wheels/
 
 misc/
 docs/
+
+# Uploaded datasets
+backend/uploaded_datasets/

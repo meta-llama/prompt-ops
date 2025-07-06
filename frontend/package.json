@@ -9,7 +9,12 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check-deps": "node check-deps.js",
+    "setup": "npm install && cd backend && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt",
+    "start": "chmod +x start-dev.sh && ./start-dev.sh",
+    "backend": "cd backend && source venv/bin/activate && python -m uvicorn main:app --reload --port 8000",
+    "clean": "rm -rf node_modules backend/venv backend/uploaded_datasets/* && npm cache clean --force"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
