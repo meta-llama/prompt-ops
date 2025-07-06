@@ -14,7 +14,7 @@ interface AppProviderProps {
 }
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
-  const [activeMode, setActiveMode] = useState('enhance');
+  const [activeMode, setActiveMode] = useState('migrate');
   const [isModeLocked, setIsModeLocked] = useState(false);
 
   return (
