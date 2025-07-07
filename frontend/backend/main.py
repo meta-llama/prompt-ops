@@ -13,6 +13,7 @@ import openai
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 # Configure logging
@@ -369,6 +370,8 @@ def get_uploaded_datasets():
 @app.options("/api/datasets")
 @app.options("/api/datasets/{filename}")
 @app.options("/api/quick-start-demo")
+@app.options("/api/docs/structure")
+@app.options("/docs/{file_path:path}")
 async def options_route():
     return {"status": "OK"}
 
@@ -766,6 +769,92 @@ async def fallback_migrate_prompt(request: PromptRequest):
     return await enhance_prompt_with_openrouter(
         request, ENHANCE_SYSTEM_MESSAGE, "fallback_migrate"
     )
+
+
+@app.get("/docs/{file_path:path}")
+async def get_docs_file(file_path: str):
+    """Serve documentation files from the docs directory."""
+    try:
+        # Construct the path to the docs file
+        docs_base_path = os.path.join(os.path.dirname(__file__), "..", "..", "docs")
+        full_path = os.path.join(docs_base_path, file_path)
+
+        # Security check: ensure the path is within the docs directory
+        real_docs_path = os.path.realpath(docs_base_path)
+        real_file_path = os.path.realpath(full_path)
+        if not real_file_path.startswith(real_docs_path):
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        # Check if file exists
+        if not os.path.exists(full_path):
+            raise HTTPException(status_code=404, detail="Documentation file not found")
+
+        # Read and return the file content
+        with open(full_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Return appropriate content type based on file extension
+        if file_path.endswith(".md"):
+            return PlainTextResponse(content, media_type="text/markdown")
+        elif file_path.endswith(".json"):
+            return PlainTextResponse(content, media_type="application/json")
+        else:
+            return PlainTextResponse(content, media_type="text/plain")
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error reading documentation file: {str(e)}"
+        )
+
+
+@app.get("/api/docs/structure")
+async def get_docs_structure():
+    """Get the structure of the documentation directory."""
+    try:
+        docs_base_path = os.path.join(os.path.dirname(__file__), "..", "..", "docs")
+        structure = []
+
+        def scan_directory(path, relative_path=""):
+            items = []
+            if not os.path.exists(path):
+                return items
+
+            for item in os.listdir(path):
+                if item.startswith("."):  # Skip hidden files
+                    continue
+
+                item_path = os.path.join(path, item)
+                item_relative_path = (
+                    os.path.join(relative_path, item) if relative_path else item
+                )
+
+                if os.path.isdir(item_path):
+                    # Recursively scan subdirectories
+                    subitems = scan_directory(item_path, item_relative_path)
+                    items.extend(subitems)
+                elif item.endswith((".md", ".txt")):
+                    # Get file stats
+                    stat = os.stat(item_path)
+                    items.append(
+                        {
+                            "path": item_relative_path.replace(os.sep, "/"),
+                            "name": os.path.splitext(item)[0],
+                            "type": "file",
+                            "size": stat.st_size,
+                            "modified": stat.st_mtime,
+                        }
+                    )
+
+            return items
+
+        structure = scan_directory(docs_base_path)
+
+        return {"success": True, "structure": structure, "total_files": len(structure)}
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error scanning docs directory: {str(e)}"
+        )
 
 
 # --- Main ----------------------------------------------------------------

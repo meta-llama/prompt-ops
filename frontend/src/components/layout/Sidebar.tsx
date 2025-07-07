@@ -1,17 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Heart, Play, FileText, Book, Github } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { AppContext } from '../../context/AppContext';
 
 export const Sidebar = () => {
-  // Set 'playground' as default active tab since it's the homepage
-  const [activeTab, setActiveTab] = useState('playground');
+  const { activeMode, setActiveMode } = useContext(AppContext)!;
 
   const navItems = [
-    { id: 'playground', label: 'Playground', icon: Play, path: '/' },
-    // { id: 'logging', label: 'Logging', icon: FileText },
-    // { id: 'docs', label: 'Docs', icon: Book },
+    { id: 'playground', label: 'Playground', icon: Play, path: '/', mode: 'migrate' },
+    { id: 'docs', label: 'Docs', icon: Book, mode: 'docs' },
     { id: 'github', label: 'GitHub', icon: Github, path: 'https://github.com/meta-llama/llama-prompt-ops', external: true },
   ];
+
+  const handleNavClick = (item: any) => {
+    if (item.mode) {
+      setActiveMode(item.mode);
+    }
+  };
 
   return (
     <nav className="relative z-10 w-full px-8 py-6 bg-white/80 backdrop-blur-sm border-b border-facebook-border">
@@ -26,7 +31,8 @@ export const Sidebar = () => {
         <div className="flex items-center gap-6">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeTab === item.id;
+            const isActive = (item.mode === 'docs' && activeMode === 'docs') ||
+                           (item.mode === 'migrate' && activeMode !== 'docs');
 
             const navContent = (
               <>
@@ -49,11 +55,27 @@ export const Sidebar = () => {
               );
             }
 
+            if (item.path) {
+              return (
+                <Link
+                  key={item.id}
+                  to={item.path}
+                  onClick={() => handleNavClick(item)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium transition-all duration-200 ${
+                    isActive
+                      ? 'text-white bg-facebook-blue shadow-sm'
+                      : 'text-facebook-text/70 hover:text-facebook-blue hover:bg-facebook-gray/50'
+                  }`}
+                >
+                  {navContent}
+                </Link>
+              );
+            }
+
             return (
-              <Link
+              <button
                 key={item.id}
-                to={item.path}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => handleNavClick(item)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium transition-all duration-200 ${
                   isActive
                     ? 'text-white bg-facebook-blue shadow-sm'
@@ -61,7 +83,7 @@ export const Sidebar = () => {
                 }`}
               >
                 {navContent}
-              </Link>
+              </button>
             );
           })}
         </div>

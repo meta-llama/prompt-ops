@@ -1,12 +1,23 @@
 import React, { useContext } from 'react';
-import { AppContext } from '../context/AppContext';
-import { PromptInput } from './PromptInput';
+import { AppContext } from '../../context/AppContext';
+import { PromptInput } from '../optimization/PromptInput';
+import { DocsTab } from '../docs/DocsTab';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Lock } from 'lucide-react';
 
 export const MainContent = () => {
-  const { activeMode, setActiveMode, isModeLocked } = useContext(AppContext)!; // 'enhance' or 'migrate'
+  const { activeMode, setActiveMode, isModeLocked } = useContext(AppContext)!;
+
+  // If in docs mode, show only the docs content
+  if (activeMode === 'docs') {
+    return (
+      <div className="relative z-10 flex-1 px-8 py-8">
+        <DocsTab />
+      </div>
+    );
+  }
+
   return (
     <div className="relative z-10 flex-1 px-8">
       <div className="max-w-5xl mx-auto">
@@ -19,21 +30,20 @@ export const MainContent = () => {
               prompt
             </span>
           </h1>
-
-          {/* <p className="text-xl text-facebook-text/70 mb-12 max-w-2xl mx-auto leading-relaxed">
-            Create apps and websites by chatting with AI
-          </p> */}
-
-          {/* Action Buttons */}
-
         </div>
+
+        {/* Mode Toggle - Only Migrate and Enhance */}
         <div className="flex justify-center mb-8">
           <div className="bg-white p-1 rounded-xl shadow-lg border border-facebook-border relative">
             {/* Container using CSS Grid for equal button widths */}
             <div className="grid grid-cols-2 gap-1 relative">
-              {/* Sliding indicator with Facebook blue gradient - Fixed positioning */}
+              {/* Sliding indicator with Facebook blue gradient */}
               <div
-                className={`absolute top-0 bottom-0 rounded-lg transition-all duration-300 ease-in-out ${activeMode === 'migrate' ? 'left-0 right-1/2 mr-0.5' : 'left-1/2 right-0 ml-0.5'}`}
+                className={`absolute top-0 bottom-0 rounded-lg transition-all duration-300 ease-in-out ${
+                  activeMode === 'migrate'
+                    ? 'left-0 right-1/2 mr-0.5'
+                    : 'left-1/2 right-0 ml-0.5'
+                }`}
                 style={{
                   background: 'linear-gradient(135deg, hsl(var(--facebook-blue)), hsl(var(--facebook-blue-light)))'
                 }}
@@ -58,6 +68,7 @@ export const MainContent = () => {
               >
                 Migrate
               </Button>
+
               <Button
                 onClick={() => !isModeLocked && setActiveMode('enhance')}
                 variant="ghost"
