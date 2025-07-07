@@ -61,7 +61,7 @@ wheels/
 *.sw?
 
 misc/
-docs/
+/docs/
 
 # Uploaded datasets
 backend/uploaded_datasets/

@@ -10,8 +10,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ArrowUp, FileJson, Loader2, Plus, Trash2, Upload, Zap, X } from 'lucide-react';
-import { useToast } from '../hooks/use-toast';
-import { AppContext } from '../context/AppContext';
+import { useToast } from '../../hooks/use-toast';
+import { AppContext } from '../../context/AppContext';
 import { Badge } from '@/components/ui/badge';
 import { OptimizationProgress, OptimizationStep } from './OptimizationProgress';
 import { OptimizationResults } from './OptimizationResults';
