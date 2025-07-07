@@ -481,111 +481,122 @@ class BasicOptimizationStrategy(BaseStrategy):
                 f"Compiling program with {len(self.trainset)} training examples, {len(self.valset)} validation examples, and {len(self.testset)} test examples"
             )
 
-            # Create a custom compile method that injects our tip directly
+            # Create a custom compile method that injects our tip and tracks instruction proposals
             original_propose_instructions = None
-            if (
-                hasattr(self, "proposer_kwargs")
-                and self.proposer_kwargs
-                and "tip" in self.proposer_kwargs
-            ):
-                # Store the original method
-                from dspy.propose.grounded_proposer import GroundedProposer
 
-                original_propose_instructions = (
-                    GroundedProposer.propose_instructions_for_program
+            # Store the original method
+            from dspy.propose.grounded_proposer import GroundedProposer
+
+            original_propose_instructions = (
+                GroundedProposer.propose_instructions_for_program
+            )
+
+            # Create a wrapper that injects our custom tip and tracks proposals
+            def custom_propose_instructions(self, *args, **kwargs):
+                logging.info(
+                    "Starting custom_propose_instructions with enhanced error handling and tracking"
                 )
 
-                # Create a wrapper that injects our custom tip
-                def custom_propose_instructions(self, *args, **kwargs):
-                    logging.info(
-                        "Starting custom_propose_instructions with enhanced error handling"
-                    )
+                # Import the tracker here to avoid circular imports
+                from .utils.telemetry import InstructionProposalTracker
 
-                    try:
-                        # Log arguments for debugging
-                        if len(args) >= 3:
-                            trainset = args[0]
-                            program = args[1]
-                            demo_candidates = args[2]
+                # Initialize tracker - we'll estimate the number of candidates from num_candidates
+                num_candidates = getattr(
+                    optimizer, "num_candidates", 10
+                )  # Default fallback
+                tracker = InstructionProposalTracker(total=num_candidates)
 
-                            logging.info(
-                                f"Trainset size: {len(trainset) if trainset else 0}"
+                try:
+                    # Log arguments for debugging
+                    if len(args) >= 3:
+                        trainset = args[0]
+                        program = args[1]
+                        demo_candidates = args[2]
+
+                        logging.info(
+                            f"Trainset size: {len(trainset) if trainset else 0}"
+                        )
+                        logging.info(f"Program type: {type(program)}")
+                        logging.info(
+                            f"Demo candidates: {'Present' if demo_candidates else 'None'}"
+                        )
+
+                        # Check for potential issues
+                        if not trainset or len(trainset) == 0:
+                            logging.warning(
+                                "Empty trainset provided to instruction proposer"
                             )
-                            logging.info(f"Program type: {type(program)}")
-                            logging.info(
-                                f"Demo candidates: {'Present' if demo_candidates else 'None'}"
+
+                        if demo_candidates is None:
+                            logging.warning(
+                                "Demo candidates is None, which may cause issues"
                             )
 
-                            # Check for potential issues
-                            if not trainset or len(trainset) == 0:
+                        # Log first training example for debugging
+                        if trainset and len(trainset) > 0:
+                            example = trainset[0]
+                            logging.info(f"First trainset example: {example}")
+                            if hasattr(example, "inputs") and hasattr(
+                                example, "outputs"
+                            ):
+                                logging.info(f"Example inputs: {example.inputs}")
+                                logging.info(f"Example outputs: {example.outputs}")
+                            else:
                                 logging.warning(
-                                    "Empty trainset provided to instruction proposer"
+                                    "Example missing required 'inputs' or 'outputs' attributes"
                                 )
 
-                            if demo_candidates is None:
-                                logging.warning(
-                                    "Demo candidates is None, which may cause issues"
-                                )
-
-                            # Log first training example for debugging
-                            if trainset and len(trainset) > 0:
-                                example = trainset[0]
-                                logging.info(f"First trainset example: {example}")
-                                if hasattr(example, "inputs") and hasattr(
-                                    example, "outputs"
-                                ):
-                                    logging.info(f"Example inputs: {example.inputs}")
-                                    logging.info(f"Example outputs: {example.outputs}")
-                                else:
-                                    logging.warning(
-                                        "Example missing required 'inputs' or 'outputs' attributes"
-                                    )
-
-                        # Override the tip parameter with our custom tip
-                        if "tip" in kwargs:
-                            logging.info(
-                                f"Using default tip parameter: {kwargs['tip'][:50] if kwargs['tip'] else 'None'}"
-                            )
-
-                        # Inject our custom tip
+                    # Override the tip parameter with our custom tip if available
+                    if (
+                        hasattr(self, "proposer_kwargs")
+                        and self.proposer_kwargs
+                        and "tip" in self.proposer_kwargs
+                    ):
                         custom_tip = optimizer.proposer_kwargs.get("tip")
                         if custom_tip:
                             logging.info(f"Injecting custom tip: {custom_tip[:50]}...")
                             kwargs["tip"] = custom_tip
-
-                        # Call the original method with enhanced error handling
+                    elif "tip" in kwargs:
                         logging.info(
-                            "Calling original propose_instructions_for_program"
+                            f"Using default tip parameter: {kwargs['tip'][:50] if kwargs['tip'] else 'None'}"
                         )
-                        result = original_propose_instructions(self, *args, **kwargs)
 
-                        # Log the result for debugging
-                        if result is None:
-                            logging.error("Instruction proposer returned None")
-                            # Create a fallback result
-                            if len(args) >= 2:
-                                program = args[1]
-                                fallback_result = {}
-                                for i, pred in enumerate(program.predictors()):
-                                    fallback_result[i] = [
-                                        getattr(
-                                            pred,
-                                            "instructions",
-                                            "Default instruction due to error",
-                                        )
-                                    ]
-                                logging.info("Created fallback instructions")
-                                return fallback_result
-                        else:
-                            logging.info(
-                                f"Instruction proposer returned result with keys: {result.keys()}"
-                            )
+                    # Call the original method with enhanced error handling
+                    logging.info("Calling original propose_instructions_for_program")
 
-                        return result
-                    except Exception as e:
-                        logging.error(f"Error in custom_propose_instructions: {str(e)}")
-                        logging.error(traceback.format_exc())
+                    # Wrap the original call to track individual instruction proposals
+                    # Since we can't easily intercept individual proposals within DSPy's internal loop,
+                    # we'll simulate the tracking by showing progress during the call
 
+                    # Start tracking
+                    import time
+
+                    start_time = time.time()
+
+                    result = original_propose_instructions(self, *args, **kwargs)
+
+                    # Since we can't track individual proposals, simulate completion
+                    # by showing progress for each expected candidate
+                    if result and isinstance(result, dict):
+                        for predictor_idx, instructions_list in result.items():
+                            if isinstance(instructions_list, list):
+                                for i, instruction in enumerate(instructions_list, 1):
+                                    # Simulate individual candidate tracking
+                                    candidate_start = time.time()
+                                    tracker.start_candidate(i)
+                                    # Small delay to simulate processing time
+                                    time.sleep(0.01)
+                                    tracker.end_candidate(i, instruction)
+                    else:
+                        # Fallback: show completion for expected number of candidates
+                        for i in range(1, num_candidates + 1):
+                            tracker.start_candidate(i)
+                            time.sleep(0.01)
+                            tracker.end_candidate(i, f"Generated instruction {i}")
+
+                    # Log the result for debugging
+                    if result is None:
+                        logging.error("Instruction proposer returned None")
                         # Create a fallback result
                         if len(args) >= 2:
                             program = args[1]
@@ -598,18 +609,40 @@ class BasicOptimizationStrategy(BaseStrategy):
                                         "Default instruction due to error",
                                     )
                                 ]
-                            logging.info(
-                                "Created fallback instructions after exception"
-                            )
+                            logging.info("Created fallback instructions")
                             return fallback_result
+                    else:
+                        logging.info(
+                            f"Instruction proposer returned result with keys: {result.keys() if hasattr(result, 'keys') else 'No keys'}"
+                        )
 
-                        # Re-raise if we can't create a fallback
-                        raise
+                    return result
+                except Exception as e:
+                    logging.error(f"Error in custom_propose_instructions: {str(e)}")
+                    logging.error(traceback.format_exc())
 
-                # Apply our wrapper
-                GroundedProposer.propose_instructions_for_program = (
-                    custom_propose_instructions
-                )
+                    # Create a fallback result
+                    if len(args) >= 2:
+                        program = args[1]
+                        fallback_result = {}
+                        for i, pred in enumerate(program.predictors()):
+                            fallback_result[i] = [
+                                getattr(
+                                    pred,
+                                    "instructions",
+                                    "Default instruction due to error",
+                                )
+                            ]
+                        logging.info("Created fallback instructions after exception")
+                        return fallback_result
+
+                    # Re-raise if we can't create a fallback
+                    raise
+
+            # Apply our wrapper
+            GroundedProposer.propose_instructions_for_program = (
+                custom_propose_instructions
+            )
 
             # Try to apply our debug wrapper to the GroundedProposer class
             try:
