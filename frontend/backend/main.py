@@ -10,6 +10,9 @@ import traceback
 from typing import Any, Dict, List, Optional
 
 import openai
+
+# Import dataset analyzer
+from dataset_analyzer import DatasetAnalyzer
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,6 +26,9 @@ logging.basicConfig(
     handlers=[logging.FileHandler("backend.log"), logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
+
+# Initialize dataset analyzer
+dataset_analyzer = DatasetAnalyzer()
 
 # --- Environment and Path Setup ---
 
@@ -213,6 +219,35 @@ class QuickStartResponse(BaseModel):
     message: str
 
 
+# Dataset analysis models
+class DatasetAnalysisResponse(BaseModel):
+    total_records: int
+    sample_size: int
+    fields: List[Dict[str, Any]]
+    suggestions: Dict[str, Any]
+    sample_data: List[Dict[str, Any]]
+    error: Optional[str] = None
+
+
+class FieldMappingRequest(BaseModel):
+    filename: str
+    mappings: Dict[str, str]
+    use_case: str
+
+
+class PreviewTransformationRequest(BaseModel):
+    filename: str
+    mappings: Dict[str, str]
+    use_case: str
+
+
+class PreviewTransformationResponse(BaseModel):
+    original_data: List[Dict[str, Any]]
+    transformed_data: List[Dict[str, Any]]
+    adapter_config: Dict[str, Any]
+    error: Optional[str] = None
+
+
 # --- System Messages for OpenRouter Operations ---
 
 ENHANCE_SYSTEM_MESSAGE = """
@@ -369,6 +404,9 @@ def get_uploaded_datasets():
 @app.options("/api/datasets/upload")
 @app.options("/api/datasets")
 @app.options("/api/datasets/{filename}")
+@app.options("/api/datasets/analyze/{filename}")
+@app.options("/api/datasets/preview-transformation")
+@app.options("/api/datasets/save-mapping")
 @app.options("/api/quick-start-demo")
 @app.options("/api/docs/structure")
 @app.options("/docs/{file_path:path}")
@@ -567,6 +605,102 @@ async def delete_dataset(filename: str):
         return {"message": f"Dataset {filename} deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/datasets/analyze/{filename}", response_model=DatasetAnalysisResponse)
+async def analyze_dataset(filename: str):
+    """Analyze a dataset file and return field information with suggested mappings."""
+    file_path = os.path.join(UPLOAD_DIR, filename)
+
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    try:
+        analysis_result = dataset_analyzer.analyze_file(file_path)
+
+        if "error" in analysis_result:
+            return DatasetAnalysisResponse(
+                total_records=0,
+                sample_size=0,
+                fields=[],
+                suggestions={},
+                sample_data=[],
+                error=analysis_result["error"],
+            )
+
+        return DatasetAnalysisResponse(**analysis_result)
+
+    except Exception as e:
+        logger.error(f"Error analyzing dataset {filename}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
+@app.post(
+    "/api/datasets/preview-transformation", response_model=PreviewTransformationResponse
+)
+async def preview_transformation(request: PreviewTransformationRequest):
+    """Preview how dataset will be transformed with given field mappings."""
+    file_path = os.path.join(UPLOAD_DIR, request.filename)
+
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    try:
+        preview_result = dataset_analyzer.preview_transformation(
+            file_path, request.mappings, request.use_case
+        )
+
+        if "error" in preview_result:
+            return PreviewTransformationResponse(
+                original_data=[],
+                transformed_data=[],
+                adapter_config={},
+                error=preview_result["error"],
+            )
+
+        return PreviewTransformationResponse(**preview_result)
+
+    except Exception as e:
+        logger.error(f"Error previewing transformation: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Preview failed: {str(e)}")
+
+
+@app.post("/api/datasets/save-mapping")
+async def save_field_mapping(request: FieldMappingRequest):
+    """Save field mapping configuration for a dataset."""
+    file_path = os.path.join(UPLOAD_DIR, request.filename)
+
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    try:
+        # Generate adapter configuration
+        adapter_config = dataset_analyzer.generate_adapter_config(
+            request.mappings, request.use_case
+        )
+
+        # Save mapping configuration alongside the dataset
+        mapping_file = os.path.join(UPLOAD_DIR, f"{request.filename}.mapping.json")
+        with open(mapping_file, "w") as f:
+            json.dump(
+                {
+                    "filename": request.filename,
+                    "use_case": request.use_case,
+                    "mappings": request.mappings,
+                    "adapter_config": adapter_config,
+                },
+                f,
+                indent=2,
+            )
+
+        return {
+            "message": "Field mapping saved successfully",
+            "adapter_config": adapter_config,
+        }
+
+    except Exception as e:
+        logger.error(f"Error saving field mapping: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to save mapping: {str(e)}")
 
 
 @app.post("/api/enhance-prompt", response_model=PromptResponse)
