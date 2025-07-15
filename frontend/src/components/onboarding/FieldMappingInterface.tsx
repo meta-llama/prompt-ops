@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { cn } from '@/lib/utils';
+import React, { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import {
   ArrowRight,
   CheckCircle,
@@ -10,8 +10,8 @@ import {
   Database,
   Hash,
   List,
-  Settings
-} from 'lucide-react';
+  Settings,
+} from "lucide-react";
 
 interface FieldInfo {
   name: string;
@@ -27,6 +27,7 @@ interface FieldMappingInterfaceProps {
   onMappingComplete: (mappings: Record<string, string>) => void;
   onCancel: () => void;
   className?: string;
+  existingMappings?: Record<string, string>;
 }
 
 interface DatasetAnalysis {
@@ -47,36 +48,112 @@ interface PreviewData {
 
 const USE_CASE_REQUIREMENTS = {
   qa: {
-    required: ['question', 'answer'],
-    optional: ['id', 'metadata'],
-    description: 'Question-Answer format'
+    required: ["question", "answer"],
+    optional: ["id", "metadata"],
+    description: "Question-Answer format",
   },
   rag: {
-    required: ['question', 'documents', 'answer'],
-    optional: ['id', 'metadata'],
-    description: 'RAG (Retrieval-Augmented Generation) format'
+    required: ["question", "documents", "answer"],
+    optional: ["id", "metadata"],
+    description: "RAG (Retrieval-Augmented Generation) format",
   },
   custom: {
     required: [],
     optional: [],
-    description: 'Custom configuration'
-  }
+    description: "Custom configuration",
+  },
 };
 
 const getFieldIcon = (fieldType: string) => {
   switch (fieldType) {
-    case 'string': return <FileText className="w-4 h-4" />;
-    case 'array': return <List className="w-4 h-4" />;
-    case 'object': return <Database className="w-4 h-4" />;
-    case 'number': return <Hash className="w-4 h-4" />;
-    default: return <Settings className="w-4 h-4" />;
+    case "string":
+      return <FileText className="w-4 h-4" />;
+    case "array":
+      return <List className="w-4 h-4" />;
+    case "object":
+      return <Database className="w-4 h-4" />;
+    case "number":
+      return <Hash className="w-4 h-4" />;
+    default:
+      return <Settings className="w-4 h-4" />;
   }
 };
 
 const getConfidenceColor = (confidence: number) => {
-  if (confidence >= 0.8) return 'text-green-600';
-  if (confidence >= 0.6) return 'text-yellow-600';
-  return 'text-red-600';
+  if (confidence >= 0.8) return "text-green-600";
+  if (confidence >= 0.6) return "text-yellow-600";
+  return "text-red-600";
+};
+
+// Individual custom field mapping component to prevent input focus loss
+const CustomFieldMapping: React.FC<{
+  targetField: string;
+  sourceField: string;
+  availableFields: FieldInfo[];
+  onTargetFieldChange: (oldField: string, newField: string) => void;
+  onSourceFieldChange: (field: string, value: string) => void;
+  onRemove: () => void;
+}> = ({
+  targetField,
+  sourceField,
+  availableFields,
+  onTargetFieldChange,
+  onSourceFieldChange,
+  onRemove,
+}) => {
+  const [localTargetField, setLocalTargetField] = useState(targetField);
+
+  // Update local state when prop changes
+  useEffect(() => {
+    setLocalTargetField(targetField);
+  }, [targetField]);
+
+  const handleTargetFieldBlur = () => {
+    if (localTargetField !== targetField) {
+      onTargetFieldChange(targetField, localTargetField);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleTargetFieldBlur();
+    }
+  };
+
+  return (
+    <div className="p-4 border border-gray-300 rounded-lg">
+      <div className="flex items-center space-x-3 mb-2">
+        <input
+          type="text"
+          placeholder="Target field name (e.g., 'question', 'answer')"
+          value={localTargetField}
+          onChange={(e) => setLocalTargetField(e.target.value)}
+          onBlur={handleTargetFieldBlur}
+          onKeyPress={handleKeyPress}
+          className="flex-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+        />
+        <button
+          onClick={onRemove}
+          className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-md border border-red-300"
+        >
+          Remove
+        </button>
+      </div>
+
+      <select
+        value={sourceField || ""}
+        onChange={(e) => onSourceFieldChange(targetField, e.target.value)}
+        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+      >
+        <option value="">Select source field...</option>
+        {availableFields.map((field) => (
+          <option key={field.name} value={field.name}>
+            {field.name} ({field.type})
+          </option>
+        ))}
+      </select>
+    </div>
+  );
 };
 
 export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
@@ -84,36 +161,46 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
   useCase,
   onMappingComplete,
   onCancel,
-  className
+  className,
+  existingMappings = {},
 }) => {
   const [analysis, setAnalysis] = useState<DatasetAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [mappings, setMappings] = useState<Record<string, string>>({});
+  const [mappings, setMappings] =
+    useState<Record<string, string>>(existingMappings);
   const [showPreview, setShowPreview] = useState(false);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
-  const requirements = USE_CASE_REQUIREMENTS[useCase as keyof typeof USE_CASE_REQUIREMENTS];
+  const requirements =
+    USE_CASE_REQUIREMENTS[useCase as keyof typeof USE_CASE_REQUIREMENTS];
 
   useEffect(() => {
     analyzeDataset();
   }, [filename]);
+
+  useEffect(() => {
+    setMappings(existingMappings);
+  }, [existingMappings]);
 
   const analyzeDataset = async () => {
     try {
       setLoading(true);
       setError(null);
 
-          const response = await fetch(`http://localhost:8000/api/datasets/analyze/${filename}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+      const response = await fetch(
+        `http://localhost:8000/api/datasets/analyze/${filename}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (!response.ok) {
-        throw new Error('Failed to analyze dataset');
+        throw new Error("Failed to analyze dataset");
       }
 
       const data: DatasetAnalysis = await response.json();
@@ -125,33 +212,39 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
 
       setAnalysis(data);
 
-      // Apply suggested mappings if available
+      // Apply suggested mappings if available, but preserve existing mappings
       if (data.suggestions && data.suggestions[useCase]) {
-        const suggestedMappings: Record<string, string> = {};
+        const suggestedMappings: Record<string, string> = {
+          ...existingMappings,
+        };
         const useCaseSuggestions = data.suggestions[useCase];
 
         if (useCaseSuggestions.mappings) {
-          Object.entries(useCaseSuggestions.mappings).forEach(([targetField, mapping]: [string, any]) => {
-            if (mapping.source_field) {
-              suggestedMappings[targetField] = mapping.source_field;
+          Object.entries(useCaseSuggestions.mappings).forEach(
+            ([targetField, mapping]: [string, any]) => {
+              // Only apply suggestion if no existing mapping for this field
+              if (mapping.source_field && !existingMappings[targetField]) {
+                suggestedMappings[targetField] = mapping.source_field;
+              }
             }
-          });
+          );
         }
 
         setMappings(suggestedMappings);
       }
-
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to analyze dataset');
+      setError(
+        err instanceof Error ? err.message : "Failed to analyze dataset"
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleMappingChange = (targetField: string, sourceField: string) => {
-    setMappings(prev => ({
+    setMappings((prev) => ({
       ...prev,
-      [targetField]: sourceField
+      [targetField]: sourceField,
     }));
   };
 
@@ -161,35 +254,46 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
     try {
       setPreviewLoading(true);
 
-      const response = await fetch('http://localhost:8000/api/datasets/preview-transformation', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          filename,
-          mappings,
-          use_case: useCase
-        })
-      });
+      const response = await fetch(
+        "http://localhost:8000/api/datasets/preview-transformation",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            filename,
+            mappings,
+            use_case: useCase,
+          }),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error('Failed to preview transformation');
+        throw new Error("Failed to preview transformation");
       }
 
       const data: PreviewData = await response.json();
       setPreviewData(data);
       setShowPreview(true);
-
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to preview transformation');
+      setError(
+        err instanceof Error ? err.message : "Failed to preview transformation"
+      );
     } finally {
       setPreviewLoading(false);
     }
   };
 
   const canPreview = () => {
-    return requirements.required.every(field => mappings[field]);
+    if (useCase === "custom") {
+      // For custom use cases, allow preview if at least one mapping is defined
+      return (
+        Object.keys(mappings).length > 0 &&
+        Object.values(mappings).some((value) => value !== "")
+      );
+    }
+    return requirements.required.every((field) => mappings[field]);
   };
 
   const handleComplete = () => {
@@ -241,7 +345,8 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
       <div className="bg-white/90 backdrop-blur-xl rounded-xl p-6 shadow-xl">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Field Mapping</h2>
         <p className="text-gray-600 mb-4">
-          Map your dataset fields to the required format for {requirements.description}
+          Map your dataset fields to the required format for{" "}
+          {requirements.description}
         </p>
 
         <div className="flex items-center space-x-4 text-sm text-gray-500">
@@ -257,7 +362,9 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Detected Fields */}
         <div className="bg-white/90 backdrop-blur-xl rounded-xl p-6 shadow-xl">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Detected Fields</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Detected Fields
+          </h3>
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {analysis.fields.map((field, index) => (
               <div
@@ -267,7 +374,9 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-2">
                     {getFieldIcon(field.type)}
-                    <span className="font-medium text-gray-900">{field.name}</span>
+                    <span className="font-medium text-gray-900">
+                      {field.name}
+                    </span>
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                       {field.type}
                     </span>
@@ -278,7 +387,12 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
                       <span className="text-xs font-medium text-blue-600">
                         {field.suggested_mapping}
                       </span>
-                      <span className={cn("text-xs", getConfidenceColor(field.confidence))}>
+                      <span
+                        className={cn(
+                          "text-xs",
+                          getConfidenceColor(field.confidence)
+                        )}
+                      >
                         ({Math.round(field.confidence * 100)}%)
                       </span>
                     </div>
@@ -289,8 +403,13 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
                   <div className="text-xs text-gray-500 space-y-1">
                     <div>Sample values:</div>
                     {field.samples.slice(0, 2).map((sample, i) => (
-                      <div key={i} className="bg-gray-50 p-1 rounded text-xs font-mono">
-                        {typeof sample === 'string' ? `"${sample}"` : JSON.stringify(sample)}
+                      <div
+                        key={i}
+                        className="bg-gray-50 p-1 rounded text-xs font-mono"
+                      >
+                        {typeof sample === "string"
+                          ? `"${sample}"`
+                          : JSON.stringify(sample)}
                       </div>
                     ))}
                   </div>
@@ -300,56 +419,120 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
           </div>
         </div>
 
-        {/* Required Fields */}
+        {/* Required/Custom Fields */}
         <div className="bg-white/90 backdrop-blur-xl rounded-xl p-6 shadow-xl">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Required Fields</h3>
-          <div className="space-y-4">
-            {requirements.required.map((requiredField) => (
-              <div
-                key={requiredField}
-                className="p-4 border-2 border-dashed border-gray-300 rounded-lg"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-gray-900">{requiredField}</span>
-                  <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
-                    Required
-                  </span>
-                </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            {useCase === "custom" ? "Custom Field Mappings" : "Required Fields"}
+          </h3>
 
-                <select
-                  value={mappings[requiredField] || ''}
-                  onChange={(e) => handleMappingChange(requiredField, e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
-                >
-                  <option value="">Select field...</option>
-                  {analysis.fields.map((field) => (
-                    <option key={field.name} value={field.name}>
-                      {field.name} ({field.type})
-                      {field.suggested_mapping === requiredField && ' - Suggested'}
-                    </option>
-                  ))}
-                </select>
+          {useCase === "custom" ? (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 mb-4">
+                Create custom field mappings for your dataset. Add as many
+                mappings as needed for your use case.
+              </p>
 
-                {mappings[requiredField] && (
-                  <div className="mt-2 flex items-center text-sm text-green-600">
-                    <CheckCircle className="w-4 h-4 mr-1" />
-                    Mapped to: {mappings[requiredField]}
-                  </div>
+              {/* Custom field mapping inputs */}
+              <div className="space-y-3">
+                {Object.entries(mappings).map(
+                  ([targetField, sourceField], index) => (
+                    <CustomFieldMapping
+                      key={`mapping-${index}`}
+                      targetField={targetField}
+                      sourceField={sourceField}
+                      availableFields={analysis.fields}
+                      onTargetFieldChange={(oldField, newField) => {
+                        const newMappings = { ...mappings };
+                        delete newMappings[oldField];
+                        if (newField) {
+                          newMappings[newField] = sourceField;
+                        }
+                        setMappings(newMappings);
+                      }}
+                      onSourceFieldChange={(field, value) => {
+                        handleMappingChange(field, value);
+                      }}
+                      onRemove={() => {
+                        const newMappings = { ...mappings };
+                        delete newMappings[targetField];
+                        setMappings(newMappings);
+                      }}
+                    />
+                  )
                 )}
+
+                {/* Add new mapping button */}
+                <button
+                  onClick={() => {
+                    const newTargetField = `field_${
+                      Object.keys(mappings).length + 1
+                    }`;
+                    setMappings((prev) => ({ ...prev, [newTargetField]: "" }));
+                  }}
+                  className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-facebook-blue hover:text-facebook-blue transition-colors"
+                >
+                  + Add Field Mapping
+                </button>
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {requirements.required.map((requiredField) => (
+                <div
+                  key={requiredField}
+                  className="p-4 border-2 border-dashed border-gray-300 rounded-lg"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-gray-900">
+                      {requiredField}
+                    </span>
+                    <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
+                      Required
+                    </span>
+                  </div>
+
+                  <select
+                    value={mappings[requiredField] || ""}
+                    onChange={(e) =>
+                      handleMappingChange(requiredField, e.target.value)
+                    }
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                  >
+                    <option value="">Select field...</option>
+                    {analysis.fields.map((field) => (
+                      <option key={field.name} value={field.name}>
+                        {field.name} ({field.type})
+                        {field.suggested_mapping === requiredField &&
+                          " - Suggested"}
+                      </option>
+                    ))}
+                  </select>
+
+                  {mappings[requiredField] && (
+                    <div className="mt-2 flex items-center text-sm text-green-600">
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Mapped to: {mappings[requiredField]}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Preview Section */}
       {showPreview && previewData && (
         <div className="bg-white/90 backdrop-blur-xl rounded-xl p-6 shadow-xl">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Preview Transformation</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Preview Transformation
+          </h3>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Original Data</h4>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">
+                Original Data
+              </h4>
               <div className="bg-gray-50 p-3 rounded-lg max-h-64 overflow-y-auto">
                 <pre className="text-xs text-gray-600">
                   {JSON.stringify(previewData.original_data[0], null, 2)}
@@ -358,7 +541,9 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
             </div>
 
             <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Transformed Data</h4>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">
+                Transformed Data
+              </h4>
               <div className="bg-gray-50 p-3 rounded-lg max-h-64 overflow-y-auto">
                 <pre className="text-xs text-gray-600">
                   {JSON.stringify(previewData.transformed_data[0], null, 2)}

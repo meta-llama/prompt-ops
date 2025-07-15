@@ -129,6 +129,35 @@ MODEL_MAPPING = {
 
 # Available metrics from llama-prompt-ops
 METRIC_MAPPING = {
+    "exact_match": {
+        "class": "llama_prompt_ops.core.metrics.ExactMatchMetric",
+        "params": {"output_field": "answer"},
+    },
+    "semantic_similarity": {
+        "class": "llama_prompt_ops.core.metrics.DSPyMetricAdapter",
+        "params": {
+            "signature_name": "similarity",
+            "score_range": (1, 10),
+            "normalize_to": (0, 1),
+        },
+    },
+    "correctness": {
+        "class": "llama_prompt_ops.core.metrics.DSPyMetricAdapter",
+        "params": {
+            "signature_name": "correctness",
+            "score_range": (1, 10),
+            "normalize_to": (0, 1),
+        },
+    },
+    "json_structured": {
+        "class": "llama_prompt_ops.core.metrics.StandardJSONMetric",
+        "params": {
+            "output_field": "answer",
+            "evaluation_mode": "selected_fields_comparison",
+            "strict_json": False,
+        },
+    },
+    # Legacy mappings for backward compatibility
     "Facility Support": {
         "class": "llama_prompt_ops.core.metrics.FacilityMetric",
         "params": {"output_field": "answer"},
@@ -140,6 +169,10 @@ METRIC_MAPPING = {
     "Standard JSON": {
         "class": "llama_prompt_ops.core.metrics.StandardJSONMetric",
         "params": {"output_field": "answer"},
+    },
+    "Exact Match": {
+        "class": "llama_prompt_ops.core.metrics.ExactMatchMetric",
+        "params": {},
     },
 }
 
@@ -170,7 +203,8 @@ DATASET_ADAPTER_MAPPING = {
         "description": "Facility support and maintenance dataset with nested field structure",
         "example_fields": {"fields": "object", "answer": "string"},
         "params": {
-            "input_field": ["fields", "input"],  # Nested path for facility dataset
+            # Nested path for facility dataset
+            "input_field": ["fields", "input"],
             "golden_output_field": "answer",
         },
     },
@@ -196,7 +230,8 @@ class PromptResponse(BaseModel):
 class ConfigResponse(BaseModel):
     models: Dict[str, str]
     metrics: Dict[str, Dict]
-    dataset_adapters: Dict[str, Dict]  # Changed from datasets to dataset_adapters
+    # Changed from datasets to dataset_adapters
+    dataset_adapters: Dict[str, Dict]
     strategies: Dict[str, str]
 
 
@@ -767,16 +802,66 @@ async def migrate_prompt(request: PromptRequest):
         # Use the first (and only) uploaded dataset
         dataset_info = uploaded_datasets[0]
 
-        # Use selected metric from configuration
-        metric_name = config.get("metrics", "Exact Match")
-        metric_cfg = METRIC_MAPPING.get(metric_name)
+        # Use selected metric from configuration - handle both old and new format
+        metrics_config = config.get("metrics", "Exact Match")
+        metric_configurations = config.get("metricConfigurations", {})
+
+        # Handle new format (array of metrics) vs old format (single metric string)
+        if isinstance(metrics_config, list) and len(metrics_config) > 0:
+            # New format: use first metric for now (TODO: support multiple metrics)
+            metric_name = metrics_config[0]
+            metric_cfg = METRIC_MAPPING.get(metric_name)
+
+            # Merge user configurations with default parameters
+            if metric_cfg and metric_name in metric_configurations:
+                user_config = metric_configurations[metric_name]
+                # Update the metric parameters with user configurations
+                metric_cfg = metric_cfg.copy()
+                metric_cfg["params"] = {**metric_cfg["params"], **user_config}
+        else:
+            # Old format: single metric string
+            metric_name = metrics_config
+            metric_cfg = METRIC_MAPPING.get(metric_name)
 
         if not metric_cfg:
             # Fallback to Exact Match if metric not found
+            metric_name = "exact_match"
             metric_cfg = {
                 "class": "llama_prompt_ops.core.metrics.ExactMatchMetric",
                 "params": {},
             }
+
+            # Handle model configurations with new role naming
+        model_configurations = config.get("modelConfigurations", [])
+        target_model_config = None
+        optimizer_model_config = None
+
+        if model_configurations:
+            # Separate models by role (using new naming: target/optimizer)
+            for model_config in model_configurations:
+                role = model_config.get("role", "both")
+                if role in ["target", "both"]:
+                    target_model_config = model_config
+                if role in ["optimizer", "both"]:
+                    optimizer_model_config = model_config
+
+                # Set environment variables for API keys if provided
+                if model_config.get("api_key"):
+                    import os
+
+                    provider_id = model_config["provider_id"]
+                    if provider_id == "openrouter":
+                        os.environ["OPENROUTER_API_KEY"] = model_config["api_key"]
+                    elif provider_id == "together":
+                        os.environ["TOGETHER_API_KEY"] = model_config["api_key"]
+                    # Note: vLLM and NVIDIA NIM typically don't need API keys for local deployments
+
+            # Use target model for task_model and optimizer model for proposer_model
+            # This maintains compatibility with the existing YAML config format
+            if target_model_config:
+                target_model_name = f"{target_model_config['provider_id']}/{target_model_config['model_name']}"
+            if optimizer_model_config:
+                optimizer_model_name = f"{optimizer_model_config['provider_id']}/{optimizer_model_config['model_name']}"
 
         # Instantiate components --------------------------------------------------------
         try:
@@ -841,7 +926,8 @@ async def migrate_prompt(request: PromptRequest):
 
             # Query adapter for actual field names (don't assume)
             print("Querying adapter for field names...")
-            sample_data = adapter.adapt()[:1]  # Get first example to inspect structure
+            # Get first example to inspect structure
+            sample_data = adapter.adapt()[:1]
 
             if sample_data:
                 input_fields = list(sample_data[0]["inputs"].keys())
