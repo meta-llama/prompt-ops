@@ -17,8 +17,9 @@ interface FieldInfo {
   name: string;
   type: string;
   samples: any[];
-  confidence: number;
-  suggested_mapping: string | null;
+  coverage: number;
+  populated_count: number;
+  total_count: number;
 }
 
 interface FieldMappingInterfaceProps {
@@ -53,7 +54,7 @@ const USE_CASE_REQUIREMENTS = {
     description: "Question-Answer format",
   },
   rag: {
-    required: ["question", "documents", "answer"],
+    required: ["context", "query", "answer"],
     optional: ["id", "metadata"],
     description: "RAG (Retrieval-Augmented Generation) format",
   },
@@ -79,11 +80,7 @@ const getFieldIcon = (fieldType: string) => {
   }
 };
 
-const getConfidenceColor = (confidence: number) => {
-  if (confidence >= 0.8) return "text-green-600";
-  if (confidence >= 0.6) return "text-yellow-600";
-  return "text-red-600";
-};
+
 
 // Individual custom field mapping component to prevent input focus loss
 const CustomFieldMapping: React.FC<{
@@ -212,26 +209,9 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
 
       setAnalysis(data);
 
-      // Apply suggested mappings if available, but preserve existing mappings
-      if (data.suggestions && data.suggestions[useCase]) {
-        const suggestedMappings: Record<string, string> = {
-          ...existingMappings,
-        };
-        const useCaseSuggestions = data.suggestions[useCase];
-
-        if (useCaseSuggestions.mappings) {
-          Object.entries(useCaseSuggestions.mappings).forEach(
-            ([targetField, mapping]: [string, any]) => {
-              // Only apply suggestion if no existing mapping for this field
-              if (mapping.source_field && !existingMappings[targetField]) {
-                suggestedMappings[targetField] = mapping.source_field;
-              }
-            }
-          );
-        }
-
-        setMappings(suggestedMappings);
-      }
+      // No automatic mappings since we removed suggested mappings
+      // Just use existing mappings
+      setMappings(existingMappings);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to analyze dataset"
@@ -345,8 +325,8 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
       <div className="bg-white/90 backdrop-blur-xl rounded-xl p-6 shadow-xl">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Field Mapping</h2>
         <p className="text-gray-600 mb-4">
-          Map your dataset fields to the required format for{" "}
-          {requirements.description}
+          To evaluate your dataset correctly, map your dataset's fields to the required fields below.
+          Check the <span className="font-medium">Completeness</span> percentages to ensure your selected fields have sufficient data coverage.
         </p>
 
         <div className="flex items-center space-x-4 text-sm text-gray-500">
@@ -359,68 +339,9 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
       </div>
 
       {/* Field Mapping */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Detected Fields */}
-        <div className="bg-white/90 backdrop-blur-xl rounded-xl p-6 shadow-xl">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Detected Fields
-          </h3>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {analysis.fields.map((field, index) => (
-              <div
-                key={index}
-                className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    {getFieldIcon(field.type)}
-                    <span className="font-medium text-gray-900">
-                      {field.name}
-                    </span>
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      {field.type}
-                    </span>
-                  </div>
-                  {field.suggested_mapping && (
-                    <div className="flex items-center space-x-1">
-                      <span className="text-xs text-gray-500">Suggested:</span>
-                      <span className="text-xs font-medium text-blue-600">
-                        {field.suggested_mapping}
-                      </span>
-                      <span
-                        className={cn(
-                          "text-xs",
-                          getConfidenceColor(field.confidence)
-                        )}
-                      >
-                        ({Math.round(field.confidence * 100)}%)
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {field.samples.length > 0 && (
-                  <div className="text-xs text-gray-500 space-y-1">
-                    <div>Sample values:</div>
-                    {field.samples.slice(0, 2).map((sample, i) => (
-                      <div
-                        key={i}
-                        className="bg-gray-50 p-1 rounded text-xs font-mono"
-                      >
-                        {typeof sample === "string"
-                          ? `"${sample}"`
-                          : JSON.stringify(sample)}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Required/Custom Fields */}
-        <div className="bg-white/90 backdrop-blur-xl rounded-xl p-6 shadow-xl">
+        <div className="bg-white/90 backdrop-blur-xl rounded-xl p-6 shadow-xl max-h-[600px] overflow-y-auto">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             {useCase === "custom" ? "Custom Field Mappings" : "Required Fields"}
           </h3>
@@ -502,8 +423,6 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
                     {analysis.fields.map((field) => (
                       <option key={field.name} value={field.name}>
                         {field.name} ({field.type})
-                        {field.suggested_mapping === requiredField &&
-                          " - Suggested"}
                       </option>
                     ))}
                   </select>
@@ -518,6 +437,66 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
               ))}
             </div>
           )}
+        </div>
+
+        <div className="bg-white/90 backdrop-blur-xl rounded-xl p-6 shadow-xl max-h-[600px] flex flex-col">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Detected Fields
+          </h3>
+          <div className="space-y-3 overflow-y-auto flex-1">
+            {analysis.fields.map((field, index) => (
+              <div
+                key={index}
+                className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    {getFieldIcon(field.type)}
+                    <span className="font-medium text-gray-900">
+                      {field.name}
+                    </span>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      {field.type}
+                    </span>
+                  </div>
+                  {/* Field Completeness Information */}
+                  <div className="flex items-center justify-end">
+                    <div
+                      className="flex items-center space-x-1"
+                      title={`${field.populated_count} out of ${field.total_count} records have this field populated with data`}
+                    >
+                      <span className="text-xs text-gray-500">Completeness:</span>
+                      <span
+                        className={cn(
+                          "text-xs font-medium",
+                          field.coverage >= 0.9 ? "text-green-600" :
+                          field.coverage >= 0.7 ? "text-yellow-600" : "text-red-600"
+                        )}
+                      >
+                        {Math.round(field.coverage * 100)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {field.samples.length > 0 && (
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <div>Sample values:</div>
+                    {field.samples.slice(0, 2).map((sample, i) => (
+                      <div
+                        key={i}
+                        className="bg-gray-50 p-1 rounded text-xs font-mono"
+                      >
+                        {typeof sample === "string"
+                          ? `"${sample}"`
+                          : JSON.stringify(sample)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

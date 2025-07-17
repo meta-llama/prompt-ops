@@ -213,7 +213,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         const requirements =
           formData.useCase === "qa"
             ? ["question", "answer"]
-            : ["question", "documents", "answer"];
+            : ["query", "context", "answer"];
         return requirements.every((field) => formData.fieldMappings[field]);
       case 5:
         return formData.metrics.length > 0; // Metrics step - require at least one metric
@@ -339,7 +339,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               JSON file with examples
             </p>
             <p className="text-sm text-facebook-text/60 leading-relaxed">
-              Training examples to optimize your prompt against. Include
+              Evaluation examples to optimize your prompt against. Include
               input-output pairs that represent your real use cases. Quality
               matters more than quantity - 20-50 good examples often work better
               than hundreds of poor ones.
@@ -469,7 +469,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           </span>
         </h2>
         <p className="text-facebook-text/70 text-lg">
-          Upload a JSON file containing your training examples.
+          Upload a JSON file containing your evaluation examples.
         </p>
       </div>
 
@@ -573,7 +573,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   [
                     {
                       query: "What are the key terms in this contract?",
-                      documents: [
+                      context: [
                         "Document 1 content text...",
                         "Document 2 content text...",
                       ],
