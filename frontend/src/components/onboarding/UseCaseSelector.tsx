@@ -68,7 +68,7 @@ const useCases: UseCase[] = [
       structure: `[
   {
     "query": "What are the key terms in this contract?",
-    "documents": [
+    "context": [
       "Document 1 content text...",
       "Document 2 content text..."
     ],

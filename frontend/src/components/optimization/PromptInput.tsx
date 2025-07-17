@@ -611,7 +611,7 @@ export const PromptInput = () => {
               <p className="text-sm text-gray-500 mt-2">
                 {uploadedDatasets.length > 0
                   ? "Uploading a new dataset will replace the current one."
-                  : "Upload a JSON dataset file for custom training data."}
+                  : "Upload a JSON dataset file for evaluation examples."}
               </p>
             </div>
 
