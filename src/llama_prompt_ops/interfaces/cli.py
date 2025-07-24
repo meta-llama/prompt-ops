@@ -30,6 +30,9 @@ from dotenv import load_dotenv
 # Import template utilities
 from llama_prompt_ops.templates import get_template_content, get_template_path
 
+# Import Weave integration
+from llama_prompt_ops.integrations import WeaveTracker
+
 
 def check_api_key(api_key_env, dotenv_path=".env"):
     """Check if API key is set and return it.
@@ -739,6 +742,45 @@ def load_config(config_path):
         raise ValueError(f"Failed to load configuration from {config_path}: {str(e)}")
 
 
+def create_weave_tracker_from_config(
+    config_dict: Dict[str, Any], 
+    cli_override: Optional[bool] = None
+) -> Optional[WeaveTracker]:
+    """
+    Create WeaveTracker from configuration with CLI override support.
+    
+    Args:
+        config_dict: Configuration dictionary
+        cli_override: CLI override for enabling/disabling Weave (None = use config)
+        
+    Returns:
+        WeaveTracker instance or None if disabled
+    """
+    weave_config = config_dict.get("weave", {})
+    
+    # CLI override takes precedence over config
+    if cli_override is not None:
+        enabled = cli_override
+    else:
+        enabled = weave_config.get("enabled", False)
+    
+    if not enabled:
+        return None
+    
+    project_name = weave_config.get("project_name", "llama-prompt-ops")
+    entity = weave_config.get("entity")
+    
+    try:
+        return WeaveTracker(
+            project_name=project_name,
+            entity=entity,
+            enabled=True
+        )
+    except Exception as e:
+        click.echo(f"Warning: Failed to initialize Weave tracker: {e}")
+        return None
+
+
 @cli.command(name="migrate")
 @click.option(
     "--config",
@@ -772,7 +814,12 @@ def load_config(config_path):
     default="INFO",
     help="Set the logging level",
 )
-def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_level):
+@click.option(
+    "--weave/--no-weave",
+    default=None,
+    help="Enable/disable Weave tracking (overrides config file setting)",
+)
+def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_level, weave):
     """
     Migrate and optimize prompts using a YAML configuration file.
 
@@ -816,6 +863,13 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
     except ValueError as e:
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)
+    
+    # Initialize Weave tracking if configured (with CLI override support)
+    weave_tracker = create_weave_tracker_from_config(config_dict, cli_override=weave)
+    if weave_tracker and weave_tracker.is_enabled():
+        click.echo(f"Weave tracking enabled for project: {weave_tracker.project_name}")
+    else:
+        click.echo("Weave tracking disabled")
 
     # Configure logging from file, if not overridden by CLI
     if not log_level:
@@ -942,6 +996,15 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
         # Wrap the optimization in a try/except block to catch parallelizer errors
         try:
             click.echo("Starting prompt optimization...")
+            
+            # Track dataset with Weave if enabled
+            if weave_tracker and weave_tracker.is_enabled():
+                weave_tracker.track_dataset(trainset, split="train")
+                if valset:
+                    weave_tracker.track_dataset(valset, split="validation")
+                if testset:
+                    weave_tracker.track_dataset(testset, split="test")
+            
             optimized = migrator.optimize(
                 {
                     "text": prompt_text,
@@ -954,6 +1017,18 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
                 save_to_file=True,
                 file_path=json_file_path,
             )
+
+            # Track prompt evolution with Weave if enabled
+            if weave_tracker and weave_tracker.is_enabled():
+                try:
+                    optimized_prompt_text = str(optimized.signature.instructions)
+                    weave_tracker.track_prompt_evolution(
+                        original_prompt=prompt_text,
+                        optimized_prompt=optimized_prompt_text
+                    )
+                    click.echo("Prompt evolution tracked in Weave")
+                except Exception as e:
+                    click.echo(f"Warning: Failed to track prompt in Weave: {e}")
 
             click.echo("\n=== Optimization Complete ===")
             click.echo(f"Results saved to: {json_file_path}")
