@@ -311,7 +311,11 @@ class DatasetAnalyzer:
         self, mappings: Dict[str, str], use_case: str
     ) -> Dict[str, Any]:
         """Generate ConfigurableJSONAdapter configuration from field mappings."""
-        config = {"use_case": use_case, "mappings": mappings}
+        config = {
+            "use_case": use_case,
+            "mappings": mappings,
+            "field_mapping": self._get_use_case_field_mapping(use_case, mappings),
+        }
 
         if use_case == "qa":
             config["input_field"] = mappings.get("question", "question")
@@ -322,7 +326,67 @@ class DatasetAnalyzer:
             config["context_field"] = mappings.get("context", "context")
             config["golden_answer_field"] = mappings.get("answer", "answer")
 
+        elif use_case == "custom":
+            # For custom use case, create a flexible mapping
+            input_fields = {
+                k: v
+                for k, v in mappings.items()
+                if k not in ["id", "metadata", "answer"]
+            }
+            config["input_fields"] = input_fields
+            config["golden_output_field"] = mappings.get("answer", "answer")
+
         return config
+
+    def _get_use_case_field_mapping(
+        self, use_case: str, mappings: Dict[str, str]
+    ) -> Dict[str, Dict[str, str]]:
+        """Get field mapping structure for a use case."""
+        use_case_mapping = {
+            "qa": {
+                "inputs": ["question"],
+                "outputs": ["answer"],
+                "metadata": ["id", "metadata"],
+            },
+            "rag": {
+                "inputs": ["query", "context"],
+                "outputs": ["answer"],
+                "metadata": ["id", "metadata"],
+            },
+            "custom": {
+                "inputs": [],
+                "outputs": ["answer"],
+                "metadata": ["id", "metadata"],
+            },
+        }
+
+        field_mapping = use_case_mapping.get(use_case, use_case_mapping["custom"])
+
+        # Create actual field mapping based on user's mappings
+        result = {"inputs": {}, "outputs": {}, "metadata": {}}
+
+        for target_field, source_field in mappings.items():
+            if target_field in field_mapping["inputs"]:
+                result["inputs"][target_field] = source_field
+            elif target_field in field_mapping["outputs"]:
+                result["outputs"][target_field] = source_field
+            elif target_field in field_mapping["metadata"]:
+                result["metadata"][target_field] = source_field
+            else:
+                # For custom use case, use smart placement
+                if use_case == "custom" and target_field not in ["id", "metadata"]:
+                    # For custom, put answer-like fields in outputs, everything else in inputs
+                    if any(
+                        keyword in target_field.lower()
+                        for keyword in ["answer", "response", "output", "result"]
+                    ):
+                        result["outputs"][target_field] = source_field
+                    else:
+                        result["inputs"][target_field] = source_field
+                else:
+                    result["metadata"][target_field] = source_field
+
+        return result
 
     def preview_transformation(
         self,
@@ -362,19 +426,54 @@ class DatasetAnalyzer:
     def _transform_record(
         self, record: Dict[str, Any], mappings: Dict[str, str], use_case: str
     ) -> Dict[str, Any]:
-        """Transform a single record according to mappings."""
+        """Transform a single record according to mappings based on use case."""
         transformed = {"inputs": {}, "outputs": {}, "metadata": {}}
 
-        # Apply mappings
+        # Define use case field mappings
+        use_case_mapping = {
+            "qa": {
+                "inputs": ["question"],
+                "outputs": ["answer"],
+                "metadata": ["id", "metadata"],  # everything else goes to metadata
+            },
+            "rag": {
+                "inputs": ["query", "context"],
+                "outputs": ["answer"],
+                "metadata": ["id", "metadata"],
+            },
+            "custom": {
+                "inputs": [],  # For custom, we'll put non-standard fields in inputs
+                "outputs": ["answer"],  # Common output field
+                "metadata": ["id", "metadata"],
+            },
+        }
+
+        # Get the mapping for this use case
+        field_mapping = use_case_mapping.get(use_case, use_case_mapping["custom"])
+
+        # Apply mappings based on use case
         for target_field, source_field in mappings.items():
             value = self._get_nested_value(record, source_field)
 
-            if target_field in ["query", "context"]:
+            if target_field in field_mapping["inputs"]:
                 transformed["inputs"][target_field] = value
-            elif target_field == "answer":
+            elif target_field in field_mapping["outputs"]:
                 transformed["outputs"][target_field] = value
-            else:
+            elif target_field in field_mapping["metadata"]:
                 transformed["metadata"][target_field] = value
+            else:
+                # For custom use case or unmapped fields, use smart placement
+                if use_case == "custom" and target_field not in ["id", "metadata"]:
+                    # For custom, put answer-like fields in outputs, everything else in inputs
+                    if any(
+                        keyword in target_field.lower()
+                        for keyword in ["answer", "response", "output", "result"]
+                    ):
+                        transformed["outputs"][target_field] = value
+                    else:
+                        transformed["inputs"][target_field] = value
+                else:
+                    transformed["metadata"][target_field] = value
 
         return transformed
 

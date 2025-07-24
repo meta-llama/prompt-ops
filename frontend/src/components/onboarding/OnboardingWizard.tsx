@@ -14,6 +14,10 @@ import {
   Server,
   Brain,
   Key,
+  Settings,
+  BarChart3,
+  Cpu,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StepIndicator } from "./StepIndicator";
@@ -21,6 +25,8 @@ import { UseCaseSelector } from "./UseCaseSelector";
 import { FieldMappingInterface } from "./FieldMappingInterface";
 import { MetricsSelector } from "./MetricsSelector";
 import { ModelProviderSelector } from "./ModelProviderSelector";
+import { OptimizerSelector } from "./OptimizerSelector";
+import { ConfigurationPreview } from "./ConfigurationPreview";
 
 interface OnboardingWizardProps {
   activeMode: "enhance" | "migrate";
@@ -43,6 +49,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     metricConfigurations: {} as Record<string, any>,
     modelConfigurations: [] as any[],
     modelProvider: "Llama 3.1 8B", // Keep for backward compatibility
+    selectedOptimizer: "basic", // Default optimizer
+    optimizerConfig: null as any,
+    customOptimizerParams: null as any,
   });
 
   const [uploadLoading, setUploadLoading] = useState(false);
@@ -72,7 +81,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       title: "AI Models",
       description: "Select inference providers",
     },
+    {
+      id: "optimizer",
+      title: "Optimizer",
+      description: "Choose optimization strategy",
+    },
     { id: "review", title: "Review & Optimize", description: "Final review" },
+    { id: "configuration", title: "Configuration", description: "Download & setup" },
   ];
 
   // Provider icon mapping
@@ -190,6 +205,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       metricConfigurations: formData.metricConfigurations,
       modelConfigurations: formData.modelConfigurations,
       modelProvider: formData.modelProvider, // Keep for backward compatibility
+      selectedOptimizer: formData.selectedOptimizer,
+      optimizerConfig: formData.optimizerConfig,
+      customOptimizerParams: formData.customOptimizerParams,
     };
     onComplete(config);
   };
@@ -245,7 +263,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           })
         ); // Model configuration step
       case 7:
+        return formData.selectedOptimizer !== ""; // Optimizer step
+      case 8:
         return true; // Review step
+      case 9:
+        return true; // Configuration step - always valid
       default:
         return false;
     }
@@ -628,6 +650,24 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     />
   );
 
+  const handleOptimizerChange = (optimizer: string, config: any, customParams?: any) => {
+    updateFormData("selectedOptimizer", optimizer);
+    updateFormData("optimizerConfig", config);
+    if (customParams) {
+      // Store custom parameters separately if needed
+      updateFormData("customOptimizerParams", customParams);
+    }
+  };
+
+  const renderOptimizerStep = () => (
+    <OptimizerSelector
+      selectedOptimizer={formData.selectedOptimizer}
+      onOptimizerChange={handleOptimizerChange}
+      modelCount={formData.modelConfigurations.length}
+      useCase={formData.useCase}
+    />
+  );
+
   const renderReviewStep = () => (
     <div className="space-y-6">
       <div className="text-center mb-6">
@@ -799,19 +839,121 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 </div>
               </div>
             )}
+
+            {/* Optimizer Configuration */}
+            {formData.selectedOptimizer && (
+              <div>
+                <h3 className="font-bold text-facebook-text mb-3 text-lg">
+                  Optimization Strategy:
+                </h3>
+                <div className="bg-white p-4 rounded-xl border border-facebook-border shadow-sm">
+                  <div className="flex items-center space-x-3 mb-3">
+                    {formData.optimizerConfig?.icon}
+                    <div>
+                      <h4 className="font-semibold text-facebook-text">
+                        {formData.optimizerConfig?.name || formData.selectedOptimizer}
+                      </h4>
+                      <p className="text-sm text-facebook-text/60 capitalize">
+                        {formData.optimizerConfig?.category} • {formData.optimizerConfig?.execution_time} execution • {formData.optimizerConfig?.optimization_quality} quality
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-facebook-text/70 mb-3">
+                    {formData.optimizerConfig?.description}
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="flex items-center space-x-2">
+                      <BarChart3 className="w-4 h-4 text-facebook-text/50" />
+                      <div>
+                        <p className="text-xs text-facebook-text/70 uppercase tracking-wide font-medium">
+                          Candidates
+                        </p>
+                        <p className="font-medium text-facebook-text">
+                          {formData.optimizerConfig?.parameters?.num_candidates}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Cpu className="w-4 h-4 text-facebook-text/50" />
+                      <div>
+                        <p className="text-xs text-facebook-text/70 uppercase tracking-wide font-medium">
+                          Threads
+                        </p>
+                        <p className="font-medium text-facebook-text">
+                          {formData.optimizerConfig?.parameters?.num_threads}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Target className="w-4 h-4 text-facebook-text/50" />
+                      <div>
+                        <p className="text-xs text-facebook-text/70 uppercase tracking-wide font-medium">
+                          Max Demos
+                        </p>
+                        <p className="font-medium text-facebook-text">
+                          {formData.optimizerConfig?.parameters?.max_labeled_demos}
+                        </p>
+                      </div>
+                    </div>
+                    {formData.customOptimizerParams && (
+                      <>
+                        {formData.customOptimizerParams?.verbose && (
+                          <div className="flex items-center space-x-2">
+                            <Eye className="w-4 h-4 text-facebook-text/50" />
+                            <div>
+                              <p className="text-xs text-facebook-text/70 uppercase tracking-wide font-medium">
+                                Verbose Mode
+                              </p>
+                              <p className="font-medium text-facebook-text text-green-600">
+                                Enabled
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
 
       <div className="text-center">
         <Button
-          onClick={handleComplete}
+          onClick={handleNext}
           className="bg-gradient-to-r from-facebook-blue via-facebook-blue-light to-facebook-blue-dark hover:opacity-90 text-white px-8 py-4 rounded-2xl text-lg font-bold shadow-lg shadow-facebook-blue/25 transform hover:scale-105 transition-all duration-300"
         >
-          Start Optimization
+          Continue to Configuration
         </Button>
       </div>
     </div>
+  );
+
+  const renderConfigurationStep = () => (
+    <ConfigurationPreview
+      wizardData={{
+        prompt: { text: formData.prompt, inputs: ["question"], outputs: ["answer"] },
+        useCase: formData.useCase,
+        dataset: {
+          path: formData.datasetPath,
+          inputField: formData.fieldMappings.input,
+          outputField: formData.fieldMappings.output,
+          trainSize: 60,
+          validationSize: 20
+        },
+        models: { selected: formData.modelConfigurations },
+        optimizer: {
+          selectedOptimizer: formData.optimizerConfig?.selectedOptimizer,
+          customParams: formData.customOptimizerParams
+        }
+      }}
+      onComplete={(configData) => {
+        console.log("Project created:", configData);
+        onComplete({ ...formData, configData });
+      }}
+    />
   );
 
   const renderStepContent = () => {
@@ -830,8 +972,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         return renderMetricsStep();
       case 6: // Models
         return renderModelProviderStep();
-      case 7: // Review
+      case 7: // Optimizer
+        return renderOptimizerStep();
+      case 8: // Review
         return renderReviewStep();
+      case 9: // Configuration
+        return renderConfigurationStep();
       default:
         return null;
     }
