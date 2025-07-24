@@ -11,12 +11,15 @@ from typing import Any, Dict, List, Optional
 
 import openai
 
+# Import config transformer
+from config_transformer import ConfigurationTransformer
+
 # Import dataset analyzer
 from dataset_analyzer import DatasetAnalyzer
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
 
 # Configure logging
@@ -989,6 +992,72 @@ async def fallback_migrate_prompt(request: PromptRequest):
     return await enhance_prompt_with_openrouter(
         request, ENHANCE_SYSTEM_MESSAGE, "fallback_migrate"
     )
+
+
+@app.post("/generate-config")
+async def generate_config(request: dict):
+    """
+    Generate YAML configuration from onboarding wizard data.
+    """
+    try:
+        wizard_data = request.get("wizardData", {})
+        project_name = request.get("projectName", "generated-project")
+
+        transformer = ConfigurationTransformer()
+        config_dict = transformer.transform(wizard_data, project_name)
+        config_yaml = transformer.generate_yaml_string(wizard_data, project_name)
+
+        return {"success": True, "config": config_dict, "yaml": config_yaml}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/create-project")
+async def create_project(request: dict):
+    """
+    Create a complete project structure with config, prompt, and dataset files.
+    """
+    try:
+        wizard_data = request.get("wizardData", {})
+        project_name = request.get("projectName", "generated-project")
+
+        # Create project in uploads directory
+        uploads_dir = os.path.join(os.path.dirname(__file__), "uploaded_datasets")
+
+        transformer = ConfigurationTransformer()
+        created_files = transformer.create_project_structure(
+            wizard_data, uploads_dir, project_name
+        )
+
+        return {
+            "success": True,
+            "projectPath": os.path.join(uploads_dir, project_name),
+            "createdFiles": created_files,
+            "message": f"Project '{project_name}' created successfully",
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/download-config/{project_name}")
+async def download_config(project_name: str):
+    """
+    Download the config.yaml file for a generated project.
+    """
+    try:
+        uploads_dir = os.path.join(os.path.dirname(__file__), "uploaded_datasets")
+        config_path = os.path.join(uploads_dir, project_name, "config.yaml")
+
+        if not os.path.exists(config_path):
+            raise HTTPException(status_code=404, detail="Config file not found")
+
+        return FileResponse(
+            config_path,
+            media_type="application/x-yaml",
+            filename=f"{project_name}-config.yaml",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/docs/{file_path:path}")
