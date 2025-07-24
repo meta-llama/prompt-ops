@@ -40,6 +40,33 @@ llama-prompt-ops supports various inference providers and endpoints to fit your 
 - vLLM (local deployment)
 - NVIDIA NIMs (optimized containers)
 
+## W&B Weave Integration
+
+Track and visualize your prompt optimization experiments with W&B Weave. When enabled, Weave automatically tracks:
+
+- **Prompt Evolution**: Original and optimized prompt versions
+- **Dataset Versions**: Training, validation, and test datasets  
+- **LLM Call Traces**: All model calls with inputs, outputs, tokens, and costs
+
+### Quick Start
+
+1. Add Weave configuration to your YAML file:
+```yaml
+weave:
+  enabled: true
+  project_name: "my-optimization-project"
+  entity: "my-team"  # Optional
+```
+
+2. Run optimization with tracking:
+```bash
+llama-prompt-ops migrate --config config.yaml --weave
+```
+
+3. View results at: `https://wandb.ai/[entity]/[project-name]`
+
+See the [full Weave integration details](#) for advanced configuration options.
+
 ## Supported Formats at a Glance
 
 ### Prompt Formats
