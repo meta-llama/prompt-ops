@@ -481,186 +481,40 @@ class BasicOptimizationStrategy(BaseStrategy):
                 f"Compiling program with {len(self.trainset)} training examples, {len(self.valset)} validation examples, and {len(self.testset)} test examples"
             )
 
-            # Create a custom compile method that injects our tip and tracks instruction proposals
-            original_propose_instructions = None
+            # Enable real-time tracking for instruction proposals
+            from .utils.realtime_tracker import enable_realtime_tracking
 
-            # Store the original method
-            from dspy.propose.grounded_proposer import GroundedProposer
-
-            original_propose_instructions = (
-                GroundedProposer.propose_instructions_for_program
+            # Enable real-time tracking with the optimizer
+            realtime_interceptor = enable_realtime_tracking(
+                optimizer, self.num_candidates
             )
 
-            # Create a wrapper that injects our custom tip and tracks proposals
-            def custom_propose_instructions(self, *args, **kwargs):
-                logging.info(
-                    "Starting custom_propose_instructions with enhanced error handling and tracking"
-                )
+            logging.info(
+                f"Enabled real-time instruction proposal tracking for {self.num_candidates} candidates"
+            )
 
-                # Import the tracker here to avoid circular imports
-                from .utils.telemetry import InstructionProposalTracker
+            # Store the interceptor for cleanup
+            original_propose_method = None
 
-                # Initialize tracker - we'll estimate the number of candidates from num_candidates
-                num_candidates = getattr(
-                    optimizer, "num_candidates", 10
-                )  # Default fallback
-                tracker = InstructionProposalTracker(total=num_candidates)
-
+            try:
+                # Try to apply our debug wrapper to the GroundedProposer class
                 try:
-                    # Log arguments for debugging
-                    if len(args) >= 3:
-                        trainset = args[0]
-                        program = args[1]
-                        demo_candidates = args[2]
+                    from llama_prompt_ops.debug import patch_dspy_proposer
 
+                    debug_patched = patch_dspy_proposer()
+                    if debug_patched:
                         logging.info(
-                            f"Trainset size: {len(trainset) if trainset else 0}"
+                            "Successfully applied debug wrapper to GroundedProposer"
                         )
-                        logging.info(f"Program type: {type(program)}")
-                        logging.info(
-                            f"Demo candidates: {'Present' if demo_candidates else 'None'}"
-                        )
-
-                        # Check for potential issues
-                        if not trainset or len(trainset) == 0:
-                            logging.warning(
-                                "Empty trainset provided to instruction proposer"
-                            )
-
-                        if demo_candidates is None:
-                            logging.warning(
-                                "Demo candidates is None, which may cause issues"
-                            )
-
-                        # Log first training example for debugging
-                        if trainset and len(trainset) > 0:
-                            example = trainset[0]
-                            logging.info(f"First trainset example: {example}")
-                            if hasattr(example, "inputs") and hasattr(
-                                example, "outputs"
-                            ):
-                                logging.info(f"Example inputs: {example.inputs}")
-                                logging.info(f"Example outputs: {example.outputs}")
-                            else:
-                                logging.warning(
-                                    "Example missing required 'inputs' or 'outputs' attributes"
-                                )
-
-                    # Override the tip parameter with our custom tip if available
-                    if (
-                        hasattr(self, "proposer_kwargs")
-                        and self.proposer_kwargs
-                        and "tip" in self.proposer_kwargs
-                    ):
-                        custom_tip = optimizer.proposer_kwargs.get("tip")
-                        if custom_tip:
-                            logging.info(f"Injecting custom tip: {custom_tip[:50]}...")
-                            kwargs["tip"] = custom_tip
-                    elif "tip" in kwargs:
-                        logging.info(
-                            f"Using default tip parameter: {kwargs['tip'][:50] if kwargs['tip'] else 'None'}"
-                        )
-
-                    # Call the original method with enhanced error handling
-                    logging.info("Calling original propose_instructions_for_program")
-
-                    # Wrap the original call to track individual instruction proposals
-                    # Since we can't easily intercept individual proposals within DSPy's internal loop,
-                    # we'll simulate the tracking by showing progress during the call
-
-                    # Start tracking
-                    import time
-
-                    start_time = time.time()
-
-                    result = original_propose_instructions(self, *args, **kwargs)
-
-                    # Since we can't track individual proposals, simulate completion
-                    # by showing progress for each expected candidate
-                    if result and isinstance(result, dict):
-                        for predictor_idx, instructions_list in result.items():
-                            if isinstance(instructions_list, list):
-                                for i, instruction in enumerate(instructions_list, 1):
-                                    # Simulate individual candidate tracking
-                                    candidate_start = time.time()
-                                    tracker.start_candidate(i)
-                                    # Small delay to simulate processing time
-                                    time.sleep(0.01)
-                                    tracker.end_candidate(i, instruction)
                     else:
-                        # Fallback: show completion for expected number of candidates
-                        for i in range(1, num_candidates + 1):
-                            tracker.start_candidate(i)
-                            time.sleep(0.01)
-                            tracker.end_candidate(i, f"Generated instruction {i}")
-
-                    # Log the result for debugging
-                    if result is None:
-                        logging.error("Instruction proposer returned None")
-                        # Create a fallback result
-                        if len(args) >= 2:
-                            program = args[1]
-                            fallback_result = {}
-                            for i, pred in enumerate(program.predictors()):
-                                fallback_result[i] = [
-                                    getattr(
-                                        pred,
-                                        "instructions",
-                                        "Default instruction due to error",
-                                    )
-                                ]
-                            logging.info("Created fallback instructions")
-                            return fallback_result
-                    else:
-                        logging.info(
-                            f"Instruction proposer returned result with keys: {result.keys() if hasattr(result, 'keys') else 'No keys'}"
+                        logging.warning(
+                            "Failed to apply debug wrapper to GroundedProposer"
                         )
-
-                    return result
-                except Exception as e:
-                    logging.error(f"Error in custom_propose_instructions: {str(e)}")
-                    logging.error(traceback.format_exc())
-
-                    # Create a fallback result
-                    if len(args) >= 2:
-                        program = args[1]
-                        fallback_result = {}
-                        for i, pred in enumerate(program.predictors()):
-                            fallback_result[i] = [
-                                getattr(
-                                    pred,
-                                    "instructions",
-                                    "Default instruction due to error",
-                                )
-                            ]
-                        logging.info("Created fallback instructions after exception")
-                        return fallback_result
-
-                    # Re-raise if we can't create a fallback
-                    raise
-
-            # Apply our wrapper
-            GroundedProposer.propose_instructions_for_program = (
-                custom_propose_instructions
-            )
-
-            # Try to apply our debug wrapper to the GroundedProposer class
-            try:
-                from llama_prompt_ops.debug import patch_dspy_proposer
-
-                debug_patched = patch_dspy_proposer()
-                if debug_patched:
-                    logging.info(
-                        "Successfully applied debug wrapper to GroundedProposer"
+                except ImportError:
+                    logging.warning(
+                        "Debug module not available, continuing without enhanced debugging"
                     )
-                else:
-                    logging.warning("Failed to apply debug wrapper to GroundedProposer")
-            except ImportError:
-                logging.warning(
-                    "Debug module not available, continuing without enhanced debugging"
-                )
 
-            try:
                 # Set up detailed logging for the instruction proposal phase
                 logging.info("Starting DSPy optimization with enhanced debugging")
                 logging.info(f"Program type: {type(program)}")
@@ -739,10 +593,18 @@ class BasicOptimizationStrategy(BaseStrategy):
                     logging.error(traceback.format_exc())
                     raise
             finally:
-                # Restore the original method if we modified it
-                if original_propose_instructions:
+                # Clean up the real-time interceptor
+                if (
+                    hasattr(optimizer, "_original_propose_method")
+                    and optimizer._original_propose_method
+                ):
+                    from dspy.propose.grounded_proposer import GroundedProposer
+
                     GroundedProposer.propose_instructions_for_program = (
-                        original_propose_instructions
+                        optimizer._original_propose_method
+                    )
+                    logging.info(
+                        "Restored original propose_instructions_for_program method"
                     )
 
             # Store model family information in the optimized program for reference

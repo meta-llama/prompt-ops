@@ -163,8 +163,10 @@ class InstructionProposalTracker:
         if self.total == 0:
             return
 
-        percentage = (completed / self.total) * 100
-        filled_length = int(self.bar_length * completed / self.total)
+        # Cap the display at 100% to avoid confusing output
+        display_completed = min(completed, self.total)
+        percentage = (display_completed / self.total) * 100
+        filled_length = int(self.bar_length * display_completed / self.total)
         bar = "█" * filled_length + "░" * (self.bar_length - filled_length)
 
         # Calculate average time per candidate if we have completed candidates
@@ -179,8 +181,15 @@ class InstructionProposalTracker:
                 avg_time = total_time / completed
                 avg_time_str = f" | avg: {avg_time:.2f}s"
 
+        # Show actual count if it exceeds expected
+        count_display = f"{display_completed}/{self.total}"
+        if completed > self.total:
+            count_display = (
+                f"{self.total}/{self.total} (+{completed - self.total} extra)"
+            )
+
         progress_msg = (
-            f"⏳ Proposing instructions: |{bar}| {completed}/{self.total} "
+            f"⏳ Proposing instructions: |{bar}| {count_display} "
             f"({percentage:4.1f}%){avg_time_str}"
         )
 
