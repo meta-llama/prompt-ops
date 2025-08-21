@@ -108,6 +108,26 @@ Then run the optimization:
 llama-prompt-ops migrate --api-key-env TOGETHER_API_KEY
 ```
 
+### 5. Groq
+
+
+```yaml
+model:
+  task_model: groq/meta-llama/llama-4-maverick-17b-128e-instruct
+  proposer_model: groq/meta-llama/llama-4-maverick-17b-128e-instruct
+  api_base: https://api.groq.com/openai/v1
+```
+
+```bash
+export GROQ_API_KEY=your_api_key_here
+```
+
+Then run the optimization:
+
+```bash
+llama-prompt-ops migrate --api-key-env GROQ_API_KEY
+```
+
 ## Advanced Configuration
 
 ### Using Different Models for Task and Proposer
