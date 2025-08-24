@@ -1,3 +1,4 @@
+import logging
 import os
 import tempfile
 from pathlib import Path
@@ -316,3 +317,66 @@ class TestCLIIntegration:
             # Clean up the temporary output file
             if os.path.exists(output_path):
                 os.unlink(output_path)
+
+    def test_migrate_log_level_from_config(self):
+        """Test the logging level which is set from config file."""
+        # Use Click's test runner instead of directly calling cli()
+        from click.testing import CliRunner
+
+        runner = CliRunner()
+
+        # Create mock objects for the migrator and its methods
+        mock_migrator = MagicMock()
+        mock_dataset_adapter = MagicMock()
+        mock_optimized = MagicMock()
+        mock_optimized.signature.instructions = "Optimized prompt"
+
+        # Set up return values for the mocked methods
+        mock_migrator.load_dataset_with_adapter.return_value = ([], [], [])
+        mock_migrator.optimize.return_value = mock_optimized
+
+        # Set up multiple patches
+        with (
+            patch(
+                "llama_prompt_ops.interfaces.cli.PromptMigrator",
+                return_value=mock_migrator,
+            ),
+            patch(
+                "llama_prompt_ops.interfaces.cli.get_dataset_adapter_from_config",
+                return_value=mock_dataset_adapter,
+            ),
+            patch(
+                "llama_prompt_ops.interfaces.cli.get_models_from_config",
+                return_value=(None, None, "test_task_model", "test_prompt_model"),
+            ),
+            patch(
+                "llama_prompt_ops.interfaces.cli.get_metric", return_value=MagicMock()
+            ),
+            patch(
+                "llama_prompt_ops.interfaces.cli.get_strategy", return_value=MagicMock()
+            ),
+            patch(
+                "llama_prompt_ops.interfaces.cli.load_config",
+                return_value={"logging": {"level": "DEBUG"}},
+            ),
+            patch(
+                "llama_prompt_ops.interfaces.cli.validate_min_records_in_dataset",
+                return_value=None,
+            ),
+            patch("logging.basicConfig") as mock_basic_config,
+        ):
+
+            # Run the migrate command
+            result = runner.invoke(cli, ["migrate"])
+
+            # Print the output for debugging
+            if result.exit_code != 0:
+                print(f"Command failed with exit code {result.exit_code}")
+                print(f"Output: {result.output}")
+                if result.exception:
+                    print(f"Exception: {result.exception}")
+
+            mock_basic_config.assert_called_once()
+            _, kwargs = mock_basic_config.call_args
+            # Assert the log level used in basic config
+            assert kwargs["level"] == logging.DEBUG

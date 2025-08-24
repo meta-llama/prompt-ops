@@ -11,6 +11,7 @@ including commands for optimizing individual prompts, batch processing,
 and optimization using YAML configuration files.
 """
 
+import atexit
 import importlib
 import importlib.util
 import json
@@ -28,6 +29,7 @@ import yaml
 from dotenv import load_dotenv
 
 # Import template utilities
+from llama_prompt_ops.core.utils.logging import LoggingManager, get_logger
 from llama_prompt_ops.templates import get_template_content, get_template_path
 
 
@@ -769,8 +771,7 @@ def load_config(config_path):
     type=click.Choice(
         ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], case_sensitive=False
     ),
-    default="INFO",
-    help="Set the logging level",
+    help="Set the logging level (overrides config file; defaults to config or INFO if unset)",
 )
 def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_level):
     """
@@ -782,6 +783,22 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
     Example:
         prompt-ops migrate --config configs/facility.yaml
     """
+    # Load configuration
+    try:
+        config_dict = load_config(config)
+        click.echo(f"Loaded configuration from {config}")
+    except ValueError as e:
+        click.echo(f"Error: {str(e)}", err=True)
+        sys.exit(1)
+
+    # Configure logging from file, if not overridden by CLI
+    export_path = None
+    if not log_level:
+        log_config = config_dict.get("logging", {})
+        # Fallback to INFO if not specified in config
+        log_level = log_config.get("level", "INFO")
+        export_path = log_config.get("export_path", None)
+
     # Set up logging
     numeric_level = getattr(logging, log_level.upper())
     logging.basicConfig(
@@ -809,27 +826,16 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
     # Get API key using the extracted function
     api_key = check_api_key(api_key_env, dotenv_path)
 
-    # Load configuration
-    try:
-        config_dict = load_config(config)
-        click.echo(f"Loaded configuration from {config}")
-    except ValueError as e:
-        click.echo(f"Error: {str(e)}", err=True)
-        sys.exit(1)
-
-    # Configure logging from file, if not overridden by CLI
-    if not log_level:
-        log_config = config_dict.get("logging", {})
-        level = log_config.get("level", "INFO")
-        logger.set_level(level)
-        export_path = log_config.get("export_path")
-        if export_path:
-            # Replace timestamp placeholder
-            if "${TIMESTAMP}" in export_path:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                export_path = export_path.replace("${TIMESTAMP}", timestamp)
-            atexit.register(logger.export_json, export_path)
-            logger.info(f"Will export logs to {export_path} on exit.")
+    # Export logs on exit if export_path is specified
+    if export_path:
+        logging_manager: LoggingManager = get_logger()
+        logging_manager.set_level(log_level)
+        # Replace timestamp placeholder
+        if "${TIMESTAMP}" in export_path:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            export_path = export_path.replace("${TIMESTAMP}", timestamp)
+        atexit.register(logging_manager.export_json, export_path)
+        logging.info(f"Will export logs to {export_path} on exit.")
 
     # Set up models from config
 
