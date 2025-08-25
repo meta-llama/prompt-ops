@@ -87,3 +87,48 @@ llama-prompt-ops migrate --config config.yaml
 ```
 
 The summary provides valuable context for understanding optimization results and can help identify configuration issues before the optimization process begins.
+
+## Instruction Proposal Tracking
+
+During the optimization process, `llama-prompt-ops` provides real-time progress tracking for the instruction proposal phase. This feature gives you visibility into how many candidate instructions have been generated and the time taken for each proposal.
+
+### Real-Time Progress Display
+
+When DSPy's MIPROv2 optimizer generates candidate instructions, you'll see progress updates like:
+
+```
+⏳ Proposing instructions: |██████░░░░░░░░░░░░░░░░░░░░░░░░| 1/5 (20.0%) | avg: 1.24s
+⏳ Proposing instructions: |████████████░░░░░░░░░░░░░░░░░░| 2/5 (40.0%) | avg: 1.18s
+⏳ Proposing instructions: |██████████████████░░░░░░░░░░░░| 3/5 (60.0%) | avg: 1.15s
+⏳ Proposing instructions: |████████████████████████░░░░░░| 4/5 (80.0%) | avg: 1.12s
+⏳ Proposing instructions: |██████████████████████████████| 5/5 (100.0%) | avg: 1.10s
+```
+
+### Progress Information
+
+Each progress line includes:
+
+- **Visual Progress Bar**: Shows completion percentage with filled (█) and unfilled (░) characters
+- **Completion Count**: Current number of completed proposals vs. total (e.g., "3/5")
+- **Percentage**: Numerical completion percentage
+- **Average Time**: Running average time per proposal in seconds
+
+### Technical Details
+
+The instruction proposal tracker is implemented using the `InstructionProposalTracker` class in the telemetry module. It:
+
+- Tracks timing for each individual instruction candidate
+- Displays progress only after each candidate is completed (avoiding duplicate lines)
+- Calculates running averages to help estimate remaining time
+- Integrates seamlessly with the existing logging framework
+
+### Controlling Visibility
+
+The instruction proposal progress is logged at `INFO` level. To see these updates:
+
+```bash
+# Ensure log level is INFO or lower
+llama-prompt-ops migrate --config config.yaml --log-level INFO
+```
+
+This feature improves the user experience by providing transparency into what can be a time-consuming phase of the optimization process, especially when generating many instruction candidates or using slower models.

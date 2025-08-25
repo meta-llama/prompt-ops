@@ -113,3 +113,6 @@ datasets/dropbox_qa/dropbox_data.json
 publish.sh
 
 scripts/
+
+# Project created files
+my-project/
