@@ -439,7 +439,7 @@ class BasicOptimizationStrategy(BaseStrategy):
                 max_labeled_demos=self.max_labeled_demos,
                 auto=dspy_auto_mode,  # Use the mapped value
                 num_candidates=self.num_candidates,
-                num_threads=self.num_threads,
+                # num_threads is passed via eval_kwargs in compile() call instead
                 max_errors=self.max_errors,
                 seed=self.seed,
                 init_temperature=self.init_temperature,
@@ -653,10 +653,18 @@ class BasicOptimizationStrategy(BaseStrategy):
                 try:
                     # Call compile with all parameters
                     logging.info("Calling optimizer.compile")
+
+                    # Configure eval_kwargs to pass arguments to dspy.evaluate.Evaluate,
+                    # which is used internally by the compile method. This is the correct
+                    # way to set num_threads for parallel evaluation in MIPROv2.
+                    # Note: num_threads should NOT be passed to the MIPROv2 constructor.
+                    eval_kwargs = {"num_threads": self.num_threads}
+
                     optimized_program = optimizer.compile(
                         program,
                         trainset=self.trainset,
                         valset=self.valset,
+                        eval_kwargs=eval_kwargs,  # Pass num_threads to internal evaluator
                         num_trials=self.num_trials,
                         minibatch=self.minibatch,
                         minibatch_size=self.minibatch_size,
