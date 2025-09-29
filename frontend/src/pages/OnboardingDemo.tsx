@@ -49,18 +49,6 @@ const OnboardingDemo = () => {
                 clear steps and validation.
               </p>
 
-              {/* Mode Selection */}
-              <div className="mb-6">
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => setActiveMode("migrate")}
-                    variant={activeMode === "migrate" ? "default" : "outline"}
-                    className="flex-1"
-                  >
-                    Migrate
-                  </Button>
-                </div>
-              </div>
 
               {/* Wizard or Completion Message */}
               {showWizard ? (

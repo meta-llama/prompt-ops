@@ -25,8 +25,7 @@ interface FieldInfo {
 interface FieldMappingInterfaceProps {
   filename: string;
   useCase: string;
-  onMappingComplete: (mappings: Record<string, string>) => void;
-  onCancel: () => void;
+  onMappingUpdate: (mappings: Record<string, string>) => void;
   className?: string;
   existingMappings?: Record<string, string>;
 }
@@ -156,8 +155,7 @@ const CustomFieldMapping: React.FC<{
 export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
   filename,
   useCase,
-  onMappingComplete,
-  onCancel,
+  onMappingUpdate,
   className,
   existingMappings = {},
 }) => {
@@ -222,10 +220,12 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
   };
 
   const handleMappingChange = (targetField: string, sourceField: string) => {
-    setMappings((prev) => ({
-      ...prev,
+    const newMappings = {
+      ...mappings,
       [targetField]: sourceField,
-    }));
+    };
+    setMappings(newMappings);
+    onMappingUpdate(newMappings);
   };
 
   const handlePreview = async () => {
@@ -276,11 +276,6 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
     return requirements.required.every((field) => mappings[field]);
   };
 
-  const handleComplete = () => {
-    if (canPreview()) {
-      onMappingComplete(mappings);
-    }
-  };
 
   if (loading) {
     return (
@@ -369,6 +364,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
                           newMappings[newField] = sourceField;
                         }
                         setMappings(newMappings);
+                        onMappingUpdate(newMappings);
                       }}
                       onSourceFieldChange={(field, value) => {
                         handleMappingChange(field, value);
@@ -377,6 +373,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
                         const newMappings = { ...mappings };
                         delete newMappings[targetField];
                         setMappings(newMappings);
+                        onMappingUpdate(newMappings);
                       }}
                     />
                   )
@@ -388,7 +385,9 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
                     const newTargetField = `field_${
                       Object.keys(mappings).length + 1
                     }`;
-                    setMappings((prev) => ({ ...prev, [newTargetField]: "" }));
+                    const newMappings = { ...mappings, [newTargetField]: "" };
+                    setMappings(newMappings);
+                    onMappingUpdate(newMappings);
                   }}
                   className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-facebook-blue hover:text-facebook-blue transition-colors"
                 >
@@ -401,7 +400,12 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
               {requirements.required.map((requiredField) => (
                 <div
                   key={requiredField}
-                  className="p-4 border-2 border-dashed border-gray-300 rounded-lg"
+                  className={cn(
+                    "p-4 border-2 border-dashed rounded-lg",
+                    mappings[requiredField] && mappings[requiredField] !== ""
+                      ? "border-green-500 bg-green-50/30"
+                      : "border-red-500 bg-red-50/30"
+                  )}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium text-gray-900">
@@ -533,19 +537,12 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={onCancel}
-          className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-        >
-          Cancel
-        </button>
-
-        <div className="flex space-x-3">
+      {/* Preview Section - Keep preview functionality but remove navigation buttons */}
+      {canPreview() && (
+        <div className="flex justify-end">
           <button
             onClick={handlePreview}
-            disabled={!canPreview() || previewLoading}
+            disabled={previewLoading}
             className={cn(
               "flex items-center space-x-2 px-6 py-2 border border-facebook-blue text-facebook-blue rounded-lg",
               "hover:bg-facebook-blue hover:text-white transition-colors",
@@ -557,23 +554,10 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
             ) : (
               <Eye className="w-4 h-4" />
             )}
-            <span>Preview</span>
-          </button>
-
-          <button
-            onClick={handleComplete}
-            disabled={!canPreview()}
-            className={cn(
-              "flex items-center space-x-2 px-6 py-2 bg-facebook-blue text-white rounded-lg",
-              "hover:bg-blue-700 transition-colors",
-              "disabled:opacity-50 disabled:cursor-not-allowed"
-            )}
-          >
-            <span>Complete Mapping</span>
-            <ArrowRight className="w-4 h-4" />
+            <span>Preview Mapping</span>
           </button>
         </div>
-      </div>
+      )}
     </div>
   );
 };

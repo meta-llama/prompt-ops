@@ -180,12 +180,11 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
   // Smart defaults based on use case
   useEffect(() => {
     if (useCase && selectedProviders.length === 0) {
-      // Auto-select OpenRouter for beginners, suggest multiple for power users
+      // Auto-select OpenRouter for all use cases
+      setSelectedProviders(["openrouter"]);
+      // Still show advanced options for custom use case
       if (useCase === "custom") {
-        setSelectedProviders(["openrouter", "vllm"]);
         setShowAdvanced(true);
-      } else {
-        setSelectedProviders(["openrouter"]);
       }
     }
   }, [useCase, selectedProviders.length]);
@@ -273,7 +272,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
   // Notify parent of configuration changes
   useEffect(() => {
     onConfigurationChange(configurations);
-  }, [configurations, onConfigurationChange]);
+  }, [configurations]); // Remove onConfigurationChange from dependencies to prevent infinite loop
 
   const handleProviderToggle = (providerId: string) => {
     setSelectedProviders((prev) => {

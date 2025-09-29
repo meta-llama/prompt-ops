@@ -15,48 +15,72 @@ class ConfigurationTransformer:
     Transforms onboarding wizard data into llama-prompt-ops compatible YAML configuration.
     """
 
-    # Mapping from wizard use cases to optimal metric configurations
-    METRIC_MAPPING = {
-        "qa": {
+    # Mapping from frontend metric IDs to backend metric classes
+    METRIC_ID_MAPPING = {
+        "exact_match": {
             "class": "llama_prompt_ops.core.metrics.ExactMatchMetric",
-            "output_field": "answer",
+            "default_params": {},
         },
-        "rag": {
-            "class": "llama_prompt_ops.core.metrics.FacilityMetric",
-            "strict_json": False,
-            "output_field": "answer",
+        "semantic_similarity": {
+            "class": "llama_prompt_ops.core.metrics.DSPyMetricAdapter",
+            "default_params": {"signature_name": "similarity"},
         },
-        "classification": {
-            "class": "llama_prompt_ops.core.metrics.ExactMatchMetric",
-            "output_field": "category",
+        "correctness": {
+            "class": "llama_prompt_ops.core.metrics.DSPyMetricAdapter",
+            "default_params": {"signature_name": "correctness"},
         },
-        "summarization": {
-            "class": "llama_prompt_ops.core.metrics.FacilityMetric",
-            "strict_json": False,
-            "output_field": "summary",
-        },
-        "extraction": {
+        "json_structured": {
             "class": "llama_prompt_ops.core.metrics.StandardJSONMetric",
-            "output_field": "extracted_data",
+            "default_params": {},
         },
-        "custom": {
+        "facility_metric": {
             "class": "llama_prompt_ops.core.metrics.FacilityMetric",
-            "strict_json": False,
-            "output_field": "answer",
+            "default_params": {"strict_json": False},
         },
     }
 
-    # Mapping from wizard dataset types to input/output field configurations
+    # Fallback mapping for legacy use case-based configuration
+    USE_CASE_FALLBACK_METRICS = {
+        "qa": "exact_match",
+        "rag": "semantic_similarity",
+        "classification": "exact_match",
+        "summarization": "semantic_similarity",
+        "extraction": "json_structured",
+        "custom": "exact_match",
+    }
+
+    # Mapping from wizard dataset types to adapter configurations
     DATASET_FIELD_MAPPING = {
-        "qa": {"input_field": "question", "golden_output_field": "answer"},
-        "rag": {
-            "input_field": ["question", "context"],
+        "qa": {
+            "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+            "input_field": "question",
             "golden_output_field": "answer",
         },
-        "classification": {"input_field": "text", "golden_output_field": "category"},
-        "summarization": {"input_field": "text", "golden_output_field": "summary"},
-        "extraction": {"input_field": "text", "golden_output_field": "extracted_data"},
-        "custom": {"input_field": ["fields", "input"], "golden_output_field": "answer"},
+        "rag": {
+            "adapter_class": "llama_prompt_ops.core.datasets.RAGJSONAdapter",
+            "question_field": "query",
+            "context_field": "context",
+            "golden_answer_field": "answer",
+        },
+        "classification": {
+            "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+            "input_field": "text",
+            "golden_output_field": "category",
+        },
+        "summarization": {
+            "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+            "input_field": "text",
+            "golden_output_field": "summary",
+        },
+        "extraction": {
+            "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+            "input_field": "text",
+            "golden_output_field": "extracted_data",
+        },
+        "custom": {
+            "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+            # No default fields - will be populated from user mappings
+        },
     }
 
     def transform(
@@ -88,9 +112,7 @@ class ConfigurationTransformer:
         config["model"] = self._transform_model(wizard_data.get("models", {}))
 
         # 4. Metric Configuration
-        config["metric"] = self._transform_metric(
-            wizard_data.get("useCase"), wizard_data.get("dataset", {})
-        )
+        config["metric"] = self._transform_metric(wizard_data)
 
         # 5. Optimization Configuration
         config["optimization"] = self._transform_optimization(
@@ -101,114 +123,317 @@ class ConfigurationTransformer:
 
     def _transform_system_prompt(self, prompt_data: Dict[str, Any]) -> Dict[str, Any]:
         """Transform prompt configuration."""
-        # Default to file-based prompt storage
-        return {
-            "file": "prompts/prompt.txt",
+        config = {
             "inputs": prompt_data.get("inputs", ["question"]),
             "outputs": prompt_data.get("outputs", ["answer"]),
         }
 
+        # Always use file reference for better project structure
+        config["file"] = "prompts/prompt.txt"
+
+        return config
+
     def _transform_dataset(
         self, dataset_data: Dict[str, Any], use_case: str
     ) -> Dict[str, Any]:
-        """Transform dataset configuration."""
-        dataset_config = {"path": "data/dataset.json"}
+        """Transform dataset configuration with support for custom field mappings."""
 
-        # Get field mapping based on use case
-        field_mapping = self.DATASET_FIELD_MAPPING.get(
+        # Get base configuration for the use case
+        base_config = self.DATASET_FIELD_MAPPING.get(
             use_case, self.DATASET_FIELD_MAPPING["custom"]
         )
-        dataset_config.update(field_mapping)
+        dataset_config = {"adapter_class": base_config["adapter_class"]}
 
-        # Add custom field mappings if provided
-        if "inputField" in dataset_data:
-            dataset_config["input_field"] = dataset_data["inputField"]
-        if "outputField" in dataset_data:
-            dataset_config["golden_output_field"] = dataset_data["outputField"]
+        # Always use standard relative path for project structure
+        dataset_config["path"] = "data/dataset.json"
 
-        # Add dataset splits if configured
-        if "trainSize" in dataset_data:
-            dataset_config["train_size"] = dataset_data["trainSize"] / 100.0
-        if "validationSize" in dataset_data:
-            dataset_config["validation_size"] = dataset_data["validationSize"] / 100.0
+        # Set default train/validation splits (0.5/0.2 as requested)
+        dataset_config["train_size"] = dataset_data.get("trainSize", 50) / 100.0
+        dataset_config["validation_size"] = (
+            dataset_data.get("validationSize", 20) / 100.0
+        )
+
+        # Handle field mappings based on use case
+        if use_case == "custom":
+            # For custom use case, handle flexible field mappings
+            field_mappings = dataset_data.get("fieldMappings", {})
+
+            if field_mappings:
+                # Find the most likely input and output fields for ConfigurableJSONAdapter
+                input_candidates = [
+                    "question",
+                    "input",
+                    "query",
+                    "prompt",
+                    "text",
+                    "user_input",
+                ]
+                output_candidates = [
+                    "answer",
+                    "output",
+                    "response",
+                    "label",
+                    "target",
+                    "expected_output",
+                ]
+
+                input_field = None
+                output_field = None
+
+                # Find input field by checking common field name patterns
+                for candidate in input_candidates:
+                    if candidate in field_mappings and field_mappings[candidate]:
+                        input_field = field_mappings[candidate]
+                        break
+
+                # Find output field by checking common field name patterns
+                for candidate in output_candidates:
+                    if candidate in field_mappings and field_mappings[candidate]:
+                        output_field = field_mappings[candidate]
+                        break
+
+                # Set the detected fields
+                if input_field:
+                    dataset_config["input_field"] = input_field
+                if output_field:
+                    dataset_config["golden_output_field"] = output_field
+
+                # Store all custom field mappings for advanced use cases
+                dataset_config["custom_field_mappings"] = field_mappings
+            else:
+                # Fallback to base config if no field mappings
+                dataset_config.update(
+                    {k: v for k, v in base_config.items() if k != "adapter_class"}
+                )
+
+        elif use_case == "rag":
+            # RAG-specific field mapping
+            field_mappings = dataset_data.get("fieldMappings", {})
+
+            if field_mappings:
+                # Map user's field mappings to RAG adapter expected fields
+                dataset_config["question_field"] = field_mappings.get(
+                    "query", field_mappings.get("question", "query")
+                )
+                dataset_config["context_field"] = field_mappings.get(
+                    "context", "context"
+                )
+                dataset_config["golden_answer_field"] = field_mappings.get(
+                    "answer", "answer"
+                )
+            else:
+                # Use base config defaults
+                dataset_config.update(
+                    {k: v for k, v in base_config.items() if k != "adapter_class"}
+                )
+
+        else:
+            # Standard use cases (qa, classification, etc.)
+            field_mappings = dataset_data.get("fieldMappings", {})
+
+            if field_mappings:
+                # For Q&A and other standard use cases
+                dataset_config["input_field"] = field_mappings.get(
+                    "question",
+                    field_mappings.get(
+                        "input", base_config.get("input_field", "question")
+                    ),
+                )
+                dataset_config["golden_output_field"] = field_mappings.get(
+                    "answer",
+                    field_mappings.get(
+                        "output", base_config.get("golden_output_field", "answer")
+                    ),
+                )
+            else:
+                # Use base config defaults
+                dataset_config.update(
+                    {k: v for k, v in base_config.items() if k != "adapter_class"}
+                )
 
         return dataset_config
 
     def _transform_model(self, model_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Transform model configuration."""
+        """Transform model configuration with full provider support."""
         models = model_data.get("selected", [])
 
         if not models:
-            # Default model
-            default_model = "openrouter/meta-llama/llama-3.3-70b-instruct"
-            return {"task_model": default_model, "proposer_model": default_model}
+            # Default model configuration (no name field, use task_model/proposer_model)
+            return {
+                "task_model": "openrouter/meta-llama/llama-3.3-70b-instruct",
+                "proposer_model": "openrouter/meta-llama/llama-3.3-70b-instruct",
+                "api_base": "https://openrouter.ai/api/v1",
+                "temperature": 0.0,
+            }
 
-        # Use first selected model for both task and proposer if only one selected
-        if len(models) == 1:
-            model_name = models[0]["name"]
-            return {"task_model": model_name, "proposer_model": model_name}
+        # Get the primary model configuration
+        primary_model = models[0]
 
-        # Use separate models if multiple selected
-        return {
-            "task_model": models[0]["name"],
-            "proposer_model": (
-                models[1]["name"] if len(models) > 1 else models[0]["name"]
-            ),
-        }
+        # Build full model name with prefix
+        model_prefix = primary_model.get("model_prefix", "")
+        model_name = primary_model.get("model_name", "")
+        full_model_name = f"{model_prefix}{model_name}" if model_prefix else model_name
 
-    def _transform_metric(
-        self, use_case: str, dataset_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Transform metric configuration."""
-        metric_config = self.METRIC_MAPPING.get(
-            use_case, self.METRIC_MAPPING["custom"]
-        ).copy()
+        # Start with base model configuration (no name field)
+        model_config = {}
 
-        # Override output field if custom field mapping provided
-        if "outputField" in dataset_data:
-            metric_config["output_field"] = dataset_data["outputField"]
+        # Add API base if provided
+        if primary_model.get("api_base"):
+            model_config["api_base"] = primary_model["api_base"]
+
+        # Add generation parameters
+        if "temperature" in primary_model:
+            model_config["temperature"] = primary_model["temperature"]
+        if "max_tokens" in primary_model:
+            model_config["max_tokens"] = primary_model["max_tokens"]
+
+        # Handle multiple models with different roles
+        target_models = [m for m in models if m.get("role") in ["target", "both"]]
+        optimizer_models = [m for m in models if m.get("role") in ["optimizer", "both"]]
+
+        if target_models and optimizer_models and len(models) > 1:
+            # Separate target and optimizer models
+            target_model = target_models[0]
+            optimizer_model = optimizer_models[0]
+
+            target_prefix = target_model.get("model_prefix", "")
+            target_name = target_model.get("model_name", "")
+            target_full_name = (
+                f"{target_prefix}{target_name}" if target_prefix else target_name
+            )
+
+            optimizer_prefix = optimizer_model.get("model_prefix", "")
+            optimizer_name = optimizer_model.get("model_name", "")
+            optimizer_full_name = (
+                f"{optimizer_prefix}{optimizer_name}"
+                if optimizer_prefix
+                else optimizer_name
+            )
+
+            # Only set task_model and proposer_model (no name field)
+            model_config.update(
+                {
+                    "task_model": target_full_name,
+                    "proposer_model": optimizer_full_name,
+                }
+            )
+        else:
+            # Single model for both tasks (no name field)
+            model_config.update(
+                {
+                    "task_model": full_model_name,
+                    "proposer_model": full_model_name,
+                }
+            )
+
+        return model_config
+
+    def _transform_metric(self, wizard_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Transform metric configuration using actual selected metrics."""
+
+        # Get selected metrics from wizard data
+        selected_metrics = wizard_data.get("metrics", [])
+        metric_configurations = wizard_data.get("metricConfigurations", {})
+
+        # If no metrics selected, fall back to use case default
+        if not selected_metrics:
+            use_case = wizard_data.get("useCase", "custom")
+            fallback_metric_id = self.USE_CASE_FALLBACK_METRICS.get(
+                use_case, "exact_match"
+            )
+            selected_metrics = [fallback_metric_id]
+
+        # Use the first selected metric (for now, could be enhanced for multiple metrics)
+        primary_metric_id = selected_metrics[0]
+
+        # Get metric configuration from mapping
+        metric_mapping = self.METRIC_ID_MAPPING.get(primary_metric_id)
+        if not metric_mapping:
+            # Fallback to exact match if unknown metric
+            metric_mapping = self.METRIC_ID_MAPPING["exact_match"]
+
+        # Start with base metric configuration
+        metric_config = {"class": metric_mapping["class"]}
+
+        # Add default parameters for this metric type
+        metric_config.update(metric_mapping["default_params"])
+
+        # Add user-configured parameters if available
+        if primary_metric_id in metric_configurations:
+            user_config = metric_configurations[primary_metric_id]
+            metric_config.update(user_config)
+
+        # Determine output field from field mappings
+        dataset_data = wizard_data.get("dataset", {})
+        field_mappings = dataset_data.get("fieldMappings", {})
+
+        if field_mappings:
+            # Find the actual output field from field mappings
+            output_candidates = [
+                "answer",
+                "output",
+                "response",
+                "label",
+                "target",
+                "expected_output",
+            ]
+
+            for candidate in output_candidates:
+                if candidate in field_mappings and field_mappings[candidate]:
+                    metric_config["output_field"] = (
+                        candidate  # Use the target field name
+                    )
+                    break
+
+        # Ensure output_field is set (fallback to "answer")
+        if "output_field" not in metric_config:
+            metric_config["output_field"] = "answer"
 
         return metric_config
 
     def _transform_optimization(self, optimizer_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Transform optimization configuration."""
+        """Transform optimization configuration using only frontend-controlled parameters."""
         strategy_id = optimizer_data.get("selectedOptimizer", "basic")
         custom_params = optimizer_data.get("customParams", {})
 
-        optimization_config = {}
+        optimization_config = {"strategy": strategy_id}
 
-        # Set strategy type
-        if strategy_id == "llama":
-            optimization_config["strategy"] = "llama"
-
-            # Add Llama-specific parameters
-            optimization_config.update(
-                {
-                    "apply_formatting": True,
-                    "apply_templates": True,
-                    "template_type": "basic",
-                }
-            )
-        else:
-            optimization_config["strategy"] = "basic"
-
-        # Add custom parameters if provided
+        # Add frontend-controlled parameters if provided
         if custom_params:
-            # Map frontend parameter names to backend names
-            param_mapping = {
+            # Only include parameters that are actually controlled by the frontend
+            frontend_controlled_params = {
                 "num_candidates": "num_candidates",
-                "max_bootstrapped_demos": "max_bootstrapped_demos",
+                "max_bootstrapped_demos": "bootstrap_examples",
                 "max_labeled_demos": "max_labeled_demos",
                 "num_threads": "num_threads",
                 "max_errors": "max_errors",
                 "seed": "seed",
             }
 
-            for frontend_key, backend_key in param_mapping.items():
+            for frontend_key, backend_key in frontend_controlled_params.items():
                 if frontend_key in custom_params:
                     optimization_config[backend_key] = custom_params[frontend_key]
 
         return optimization_config
+
+    def _extract_environment_variables(
+        self, wizard_data: Dict[str, Any]
+    ) -> Dict[str, str]:
+        """Extract API keys and other sensitive data for .env file."""
+        env_vars = {}
+
+        models = wizard_data.get("models", {}).get("selected", [])
+
+        for model in models:
+            api_key = model.get("api_key")
+            provider_id = model.get("provider_id")
+
+            if api_key and api_key.strip():
+                # Create environment variable name based on provider
+                env_var_name = f"{provider_id.upper()}_API_KEY"
+                env_vars[env_var_name] = api_key
+
+        return env_vars
 
     def generate_yaml_string(
         self, wizard_data: Dict[str, Any], project_name: str = "generated"
@@ -289,20 +514,42 @@ class ConfigurationTransformer:
             f.write(prompt_text)
         created_files["prompt"] = prompt_path
 
-        # 3. Create placeholder dataset file
+        # 3. Copy uploaded dataset file to standard location
         dataset_path = os.path.join(project_dir, "data", "dataset.json")
-        placeholder_data = self._create_placeholder_dataset(
-            wizard_data.get("useCase", "custom")
-        )
-        with open(dataset_path, "w") as f:
-            import json
 
-            json.dump(placeholder_data, f, indent=2)
+        # Get the uploaded dataset path from wizard data
+        uploaded_dataset_path = wizard_data.get("dataset", {}).get("path")
+
+        if uploaded_dataset_path and os.path.exists(uploaded_dataset_path):
+            # Copy the actual uploaded file
+            import shutil
+
+            shutil.copy2(uploaded_dataset_path, dataset_path)
+        else:
+            # Fallback to placeholder data if no uploaded file found
+            placeholder_data = self._create_placeholder_dataset(
+                wizard_data.get("useCase", "custom")
+            )
+            with open(dataset_path, "w") as f:
+                import json
+
+                json.dump(placeholder_data, f, indent=2)
+
         created_files["dataset"] = dataset_path
 
-        # 4. Create .env file
+        # 4. Create .env file with actual API keys
         env_path = os.path.join(project_dir, ".env")
-        env_content = "# API Keys\nOPENROUTER_API_KEY=your_api_key_here\n"
+        env_vars = self._extract_environment_variables(wizard_data)
+
+        env_content = "# API Keys\n"
+        if env_vars:
+            for var_name, var_value in env_vars.items():
+                env_content += f"{var_name}={var_value}\n"
+        else:
+            env_content += "# Add your API keys here\n"
+            env_content += "# OPENROUTER_API_KEY=your_api_key_here\n"
+            env_content += "# ANTHROPIC_API_KEY=your_api_key_here\n"
+
         with open(env_path, "w") as f:
             f.write(env_content)
         created_files["env"] = env_path

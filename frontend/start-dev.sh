@@ -41,7 +41,7 @@ cleanup() {
 # Set up trap to catch termination signal
 trap cleanup SIGINT SIGTERM
 
-print_color $GREEN "🚀 Starting llama-prompt-ops frontend development environment..."
+print_color $GREEN "Starting llama-prompt-ops frontend development environment..."
 
 # Check if we're in the right directory
 if [[ ! -f "package.json" ]]; then
@@ -51,7 +51,7 @@ fi
 
 # Check if node_modules exists
 if [[ ! -d "node_modules" ]]; then
-    print_color $YELLOW "📦 Installing frontend dependencies..."
+    print_color $YELLOW "Installing frontend dependencies..."
     npm install
 fi
 
@@ -63,20 +63,18 @@ fi
 
 cd backend
 
-# Check if virtual environment exists
-if [[ ! -d "venv" ]]; then
-    print_color $YELLOW "🐍 Creating Python virtual environment..."
-    python -m venv venv
+# Activate conda environment
+print_color $YELLOW "Activating prompt-ops-frontend conda environment..."
+source ~/anaconda3/etc/profile.d/conda.sh
+conda activate prompt-ops-frontend
+
+# Verify environment is activated
+if [[ "$CONDA_DEFAULT_ENV" != "prompt-ops-frontend" ]]; then
+    print_color $RED "❌ Failed to activate prompt-ops-frontend environment"
+    exit 1
 fi
 
-# Activate virtual environment
-source venv/bin/activate
-
-# Check if requirements are installed
-if [[ ! -f "venv/pyvenv.cfg" ]] || ! pip freeze | grep -q "fastapi"; then
-    print_color $YELLOW "📦 Installing backend dependencies..."
-    pip install -r requirements.txt
-fi
+print_color $GREEN "Using conda environment: $CONDA_DEFAULT_ENV"
 
 # Check for .env file
 if [[ ! -f ".env" ]]; then
@@ -108,7 +106,7 @@ if ! check_port 8080; then
 fi
 
 # Start the FastAPI backend
-print_color $GREEN "🔧 Starting backend (FastAPI)..."
+print_color $GREEN "Starting backend (FastAPI)..."
 python -m uvicorn main:app --reload --port 8000 &
 BACKEND_PID=$!
 
@@ -124,10 +122,10 @@ npm run dev &
 FRONTEND_PID=$!
 
 # Keep script running
-print_color $GREEN "✅ Development servers running:"
-print_color $GREEN "  👉 Frontend: http://localhost:8080"
-print_color $GREEN "  👉 Backend:  http://localhost:8000"
-print_color $GREEN "  👉 API Docs: http://localhost:8000/docs"
+print_color $GREEN "Development servers running:"
+print_color $GREEN "  Frontend: http://localhost:8080"
+print_color $GREEN "  Backend:  http://localhost:8000"
+print_color $GREEN "  API Docs: http://localhost:8000/docs"
 print_color $YELLOW "Press Ctrl+C to stop all servers."
 
 # Wait for processes

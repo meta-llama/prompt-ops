@@ -15,7 +15,7 @@ import { AppContext } from '../../context/AppContext';
 import { Badge } from '@/components/ui/badge';
 import { OptimizationProgress, OptimizationStep } from './OptimizationProgress';
 import { OptimizationResults } from './OptimizationResults';
-import { ConfigurationPanel } from './ConfigurationPanel';
+import { OnboardingWizard } from '../onboarding/OnboardingWizard';
 
 export const PromptInput = () => {
   const { toast } = useToast();
@@ -39,7 +39,7 @@ export const PromptInput = () => {
   const [uploadedDatasets, setUploadedDatasets] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Configuration state from ConfigurationPanel
+  // Configuration state from OnboardingWizard
   const [config, setConfig] = useState({
     model: 'Llama 3.3 70B',
     proposer: 'Llama 3.3 70B',
@@ -49,6 +49,8 @@ export const PromptInput = () => {
     useLlamaTips: true,
     openrouterApiKey: undefined
   });
+  const [showWizard, setShowWizard] = useState(true);
+  const [wizardCompleted, setWizardCompleted] = useState(false);
 
   // Fetch uploaded datasets on component mount
   useEffect(() => {
@@ -65,6 +67,29 @@ export const PromptInput = () => {
     } catch (error) {
       console.error('Error fetching datasets:', error);
     }
+  };
+
+  const handleWizardComplete = (wizardConfig: any) => {
+    console.log('Wizard completed with config:', wizardConfig);
+
+    // Extract configuration from wizard and update local config state
+    setConfig({
+      model: wizardConfig.models?.selected?.[0]?.taskModel || 'Llama 3.3 70B',
+      proposer: wizardConfig.models?.selected?.[0]?.proposerModel || 'Llama 3.3 70B',
+      strategy: wizardConfig.optimizer || 'MiPro',
+      datasetAdapter: wizardConfig.datasetType || '',
+      metrics: Array.isArray(wizardConfig.metrics) ? wizardConfig.metrics.join(', ') : wizardConfig.metrics || 'Exact Match',
+      useLlamaTips: wizardConfig.useLlamaTips !== false,
+      openrouterApiKey: wizardConfig.apiKey
+    });
+
+    setWizardCompleted(true);
+    setShowWizard(false);
+
+    toast({
+      title: "Configuration Complete",
+      description: "Your optimization settings have been configured successfully.",
+    });
   };
 
   const handleDatasetUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -276,7 +301,7 @@ export const PromptInput = () => {
         : {
             prompt,
             config: {
-              // Use config from ConfigurationPanel
+              // Use config from OnboardingWizard
               provider: "openrouter",
               ...config
             }
@@ -313,7 +338,7 @@ export const PromptInput = () => {
   };
 
   return (
-    <div className="relative max-w-4xl mx-auto">
+    <div className="relative max-w-6xl mx-auto">
       {showResults ? (
         <div className="mt-8">
           <OptimizationResults
@@ -359,164 +384,74 @@ export const PromptInput = () => {
         </div>
       ) : (
         <>
-          {/* Quick Start Demo Section - Only show in migrate mode when no demo loaded */}
-          {activeMode === 'migrate' && !isDemoLoaded && !isDemoDismissed && uploadedDatasets.length === 0 && !prompt.trim() && (
-            <div className="bg-gradient-to-br from-facebook-blue/5 via-white to-facebook-blue/10 backdrop-blur-xl rounded-2xl p-8 shadow-xl border-2 border-facebook-blue/20 mb-8 relative overflow-hidden">
-              {/* Background decoration */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-facebook-blue/5 rounded-full -translate-y-16 translate-x-16"></div>
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-facebook-blue/5 rounded-full translate-y-12 -translate-x-12"></div>
+          {/* Prompt input - only show in enhance mode */}
+          {activeMode === 'enhance' && (
+            <div className="relative bg-white/90 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-facebook-border mb-8">
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Your prompt..."
+                disabled={isOptimizing}
+                className={`w-full h-28 p-0 text-xl text-facebook-text bg-transparent placeholder:text-facebook-text/50 border-none outline-none resize-none leading-relaxed ${isOptimizing ? 'opacity-75' : ''}`}
+              />
 
-              {/* Dismiss button - top right */}
-              <button
-                onClick={() => setIsDemoDismissed(true)}
-                className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-facebook-text/10 hover:bg-facebook-text/20 flex items-center justify-center transition-all duration-200 group"
-                title="Dismiss demo"
-              >
-                <X className="w-4 h-4 text-facebook-text/60 group-hover:text-facebook-text" />
-              </button>
-
-              <div className="relative z-10 text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-facebook-blue/10 rounded-full mb-6">
-                  <Zap className="w-8 h-8 text-facebook-blue" />
-                </div>
-
-                <h2 className="text-3xl font-black text-facebook-text mb-4">Ready to Get Started?</h2>
-                <p className="text-facebook-text/80 text-lg mb-6 max-w-2xl mx-auto">
-                  Try our <strong>Facility Support Analyzer</strong> demo - a complete example with real data,
-                  optimized configuration, and ready-to-run prompts. Perfect for testing the system!
-                </p>
-
-                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                  <Button
-                    onClick={handleQuickStartDemo}
-                    disabled={isLoadingDemo}
-                    className="bg-facebook-blue hover:bg-facebook-blue-dark text-white px-8 py-4 rounded-xl text-lg font-semibold shadow-lg hover:shadow-facebook-blue/25 transition-all duration-300 transform hover:scale-105 min-w-[200px]"
-                  >
-                    {isLoadingDemo ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Loading Demo...
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="w-5 h-5 mr-2" />
-                        Quick Start Demo
-                      </>
-                    )}
-                  </Button>
-
+              <div className="flex items-center justify-end mt-6">
+                <div className="relative group">
                   <button
-                    onClick={() => setIsDemoDismissed(true)}
-                    className="text-facebook-text/60 text-sm hover:text-facebook-text/80 transition-colors duration-200 underline decoration-dotted underline-offset-4"
+                    onClick={handleOptimizePrompt}
+                    disabled={isOptimizing || !prompt.trim()}
+                    className={`bg-facebook-blue hover:bg-facebook-blue-dark text-white p-3 rounded-xl shadow-lg hover:shadow-facebook-blue/25 transition-all duration-300 transform ${!isOptimizing && prompt.trim() ? 'hover:scale-110 hover:-translate-y-1' : 'opacity-75 cursor-not-allowed'}`}
                   >
-                    Or manually upload your own dataset below
+                    {isOptimizing ? <Loader2 size={20} className="animate-spin" /> : <ArrowUp size={20} />}
                   </button>
                 </div>
+              </div>
+            </div>
+          )}
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 text-left">
-                  <div className="bg-white/50 rounded-lg p-4 border border-facebook-blue/10">
-                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mb-3">
-                      <FileJson className="w-4 h-4 text-green-600" />
-                    </div>
-                    <h3 className="font-semibold text-facebook-text mb-2">Sample Dataset</h3>
-                    <p className="text-sm text-facebook-text/70">1,203 facility support emails with categories and sentiment</p>
-                  </div>
+          {/* Onboarding wizard - always rendered but hidden when not in migrate mode or when completed */}
+          <div className={activeMode === 'migrate' && showWizard ? 'block' : 'hidden'}>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <OnboardingWizard
+                activeMode={activeMode as "migrate" | "enhance"}
+                onComplete={handleWizardComplete}
+              />
+            </div>
+          </div>
 
-                  <div className="bg-white/50 rounded-lg p-4 border border-facebook-blue/10">
-                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mb-3">
-                      <Zap className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <h3 className="font-semibold text-facebook-text mb-2">Optimized Config</h3>
-                    <p className="text-sm text-facebook-text/70">Llama 3.3 70B with facility-specific metrics</p>
-                  </div>
-
-                  <div className="bg-white/50 rounded-lg p-4 border border-facebook-blue/10">
-                    <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mb-3">
-                      <ArrowUp className="w-4 h-4 text-purple-600" />
-                    </div>
-                    <h3 className="font-semibold text-facebook-text mb-2">Ready to Run</h3>
-                    <p className="text-sm text-facebook-text/70">Just click "Run" and see optimization in action</p>
-                  </div>
+          {/* Configuration summary - shown after wizard completion */}
+          {activeMode === 'migrate' && wizardCompleted && !showWizard && (
+            <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-facebook-border p-6 max-w-4xl mx-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-2xl font-bold text-facebook-text">Configuration Summary</h3>
+                <Button
+                  onClick={() => setShowWizard(true)}
+                  variant="outline"
+                  className="text-facebook-blue border-facebook-blue hover:bg-facebook-blue hover:text-white"
+                >
+                  Reconfigure
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-facebook-text/70">Dataset Adapter:</span>
+                  <p className="text-facebook-text">{config.datasetAdapter || 'Not selected'}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-facebook-text/70">Metrics:</span>
+                  <p className="text-facebook-text">{config.metrics}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-facebook-text/70">Optimizer:</span>
+                  <p className="text-facebook-text">{config.strategy}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-facebook-text/70">Model:</span>
+                  <p className="text-facebook-text">{config.model}</p>
                 </div>
               </div>
             </div>
           )}
-
-          {/* Demo loaded success message */}
-          {isDemoLoaded && (
-            <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-8 flex items-center">
-              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                <Zap className="w-4 h-4 text-green-600" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-green-800">Demo Loaded Successfully!</h3>
-                <p className="text-sm text-green-700">Facility Support Analyzer is ready with sample data and optimal configuration.</p>
-              </div>
-            </div>
-          )}
-
-          <div className="relative bg-white/90 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-facebook-border mb-8">
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Your prompt..."
-              disabled={isOptimizing}
-              className={`w-full h-28 p-0 text-xl text-facebook-text bg-transparent placeholder:text-facebook-text/50 border-none outline-none resize-none leading-relaxed ${isOptimizing ? 'opacity-75' : ''}`}
-            />
-
-            <div className="flex items-center justify-between mt-6">
-              <div className="flex items-center gap-3">
-                <Button
-                  onClick={() => setShowDatasetDialog(true)}
-                  className={`flex items-center px-4 py-2 rounded-xl text-sm font-medium backdrop-blur-sm transition-all ${
-                    uploadedDatasets.length > 0
-                      ? 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-300'
-                      : activeMode === 'migrate' && !config.datasetAdapter
-                      ? 'bg-red-50 text-red-700 hover:bg-red-100 border-2 border-red-300 animate-pulse'
-                      : 'bg-facebook-gray/50 text-facebook-text hover:bg-facebook-gray border border-facebook-border'
-                  }`}
-                >
-                  {uploadedDatasets.length > 0 ? (
-                    <>
-                      <FileJson className="w-4 h-4 mr-2" />
-                      {uploadedDatasets[0].filename} ({uploadedDatasets[0].total_records} records)
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Dataset {activeMode === 'migrate' && <span className="text-red-600">* <span className="text-xs text-red-600 font-medium">Required</span></span>}
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              <div className="relative group">
-                <button
-                  onClick={handleOptimizePrompt}
-                  disabled={isOptimizing || !prompt.trim() || (activeMode === 'migrate' && (uploadedDatasets.length === 0 || !config.datasetAdapter))}
-                  className={`bg-facebook-blue hover:bg-facebook-blue-dark text-white p-3 rounded-xl shadow-lg hover:shadow-facebook-blue/25 transition-all duration-300 transform ${!isOptimizing && prompt.trim() && (activeMode !== 'migrate' || (uploadedDatasets.length > 0 && config.datasetAdapter)) ? 'hover:scale-110 hover:-translate-y-1' : 'opacity-75 cursor-not-allowed'}`}
-                >
-                  {isOptimizing ? <Loader2 size={20} className="animate-spin" /> : <ArrowUp size={20} />}
-                </button>
-
-                {/* Tooltip for disabled state */}
-                {activeMode === 'migrate' && prompt.trim() && (uploadedDatasets.length === 0 || !config.datasetAdapter) && (
-                  <div className="absolute bottom-full right-0 mb-2 px-3 py-1 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-                    {uploadedDatasets.length === 0
-                      ? 'Dataset required for migration'
-                      : 'Select dataset adapter type'
-                    }
-                    <div className="absolute top-full right-3 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Configuration panel - always rendered but hidden when not in migrate mode */}
-          <div className={activeMode === 'migrate' ? 'block' : 'hidden'}>
-            <ConfigurationPanel onConfigChange={setConfig} config={config} />
-          </div>
         </>
       )}
 

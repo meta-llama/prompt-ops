@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { Heart, Play, FileText, Book, Github } from 'lucide-react';
+import { Play, FileText, Book, Github } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AppContext } from '../../context/AppContext';
 
@@ -23,7 +23,6 @@ export const Sidebar = () => {
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo/Brand */}
         <div className="flex items-center gap-3">
-          <Heart className="text-facebook-blue fill-facebook-blue" size={32} />
           <span className="text-facebook-text font-bold text-2xl tracking-tight">llama-prompt-ops</span>
         </div>
 

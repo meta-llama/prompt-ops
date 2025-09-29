@@ -18,6 +18,7 @@ import {
   BarChart3,
   Cpu,
   Clock,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StepIndicator } from "./StepIndicator";
@@ -26,7 +27,6 @@ import { FieldMappingInterface } from "./FieldMappingInterface";
 import { MetricsSelector } from "./MetricsSelector";
 import { ModelProviderSelector } from "./ModelProviderSelector";
 import { OptimizerSelector } from "./OptimizerSelector";
-import { ConfigurationPreview } from "./ConfigurationPreview";
 
 interface OnboardingWizardProps {
   activeMode: "enhance" | "migrate";
@@ -56,6 +56,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [projectCreationResult, setProjectCreationResult] = useState<any>(null);
+
+  // Optimization streaming state
+  const [optimizing, setOptimizing] = useState(false);
+  const [optimizationLogs, setOptimizationLogs] = useState<any[]>([]);
+  const [optimizationProgress, setOptimizationProgress] = useState({ phase: "", progress: 0, message: "" });
+  const [optimizationResult, setOptimizationResult] = useState<any>(null);
+  const [websocket, setWebsocket] = useState<WebSocket | null>(null);
 
   const steps = [
     {
@@ -87,7 +96,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       description: "Choose optimization strategy",
     },
     { id: "review", title: "Review & Optimize", description: "Final review" },
-    { id: "configuration", title: "Configuration", description: "Download & setup" },
   ];
 
   // Provider icon mapping
@@ -182,9 +190,95 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     );
   };
 
-  const handleNext = () => {
-    if (currentStep < steps.length - 1) {
+  // Helper functions for dynamic button behavior
+  const getNextButtonText = () => {
+    if (currentStep === 7) { // Optimizer step
+      return "Create Configuration";
+    }
+    return "Next";
+  };
+
+  const getNextButtonIcon = () => {
+    if (currentStep === 7) { // Optimizer step
+      return <Settings className="w-4 h-4" />; // Configuration icon
+    }
+    return <ArrowRight className="w-4 h-4" />; // Arrow icon
+  };
+
+  // Generate dynamic project name
+  const generateProjectName = () => {
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const useCase = formData.useCase || 'custom';
+    return `${useCase}-project-${timestamp}`;
+  };
+
+  const handleNext = async () => {
+    // Special handling for optimizer step (step 7) -> review step (step 8)
+    if (currentStep === 7) {
+      await handleCreateProjectAndNext();
+    } else if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handleCreateProjectAndNext = async () => {
+    setCreatingProject(true);
+    setProjectCreationResult(null);
+
+    try {
+      // Create the project automatically
+      const wizardData = {
+        prompt: { text: formData.prompt, inputs: ["question"], outputs: ["answer"] },
+        useCase: formData.useCase,
+        dataset: {
+          path: formData.datasetPath,
+          fieldMappings: formData.fieldMappings,
+          trainSize: 50,
+          validationSize: 20
+        },
+        models: { selected: formData.modelConfigurations },
+        metrics: formData.metrics,
+        metricConfigurations: formData.metricConfigurations,
+        optimizer: {
+          selectedOptimizer: formData.selectedOptimizer,
+          customParams: formData.customOptimizerParams
+        }
+      };
+
+      const projectName = generateProjectName();
+      const response = await fetch("http://localhost:8000/create-project", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wizardData,
+          projectName
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        setProjectCreationResult(result);
+        // Move to review step to show results
+        setCurrentStep(currentStep + 1);
+      } else {
+        throw new Error(result.error || "Failed to create project");
+      }
+
+    } catch (error) {
+      console.error("Error creating project:", error);
+      // Still proceed to review step but show error
+      setProjectCreationResult({
+        success: false,
+        error: error.message || "Failed to create project"
+      });
+      setCurrentStep(currentStep + 1);
+    } finally {
+      setCreatingProject(false);
     }
   };
 
@@ -195,22 +289,101 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   };
 
   const handleComplete = () => {
-    const config = {
-      prompt: formData.prompt,
-      useCase: formData.useCase,
-      datasetPath: formData.datasetPath,
-      fieldMappings: formData.fieldMappings,
-      datasetType: formData.datasetType,
-      metrics: formData.metrics,
-      metricConfigurations: formData.metricConfigurations,
-      modelConfigurations: formData.modelConfigurations,
-      modelProvider: formData.modelProvider, // Keep for backward compatibility
-      selectedOptimizer: formData.selectedOptimizer,
-      optimizerConfig: formData.optimizerConfig,
-      customOptimizerParams: formData.customOptimizerParams,
-    };
-    onComplete(config);
+    // Start optimization via WebSocket
+    startOptimization();
   };
+
+  const startOptimization = () => {
+    if (!projectCreationResult || !projectCreationResult.actualProjectName) {
+      console.error("No project created to optimize");
+      return;
+    }
+
+    setOptimizing(true);
+    setOptimizationLogs([]);
+    setOptimizationProgress({ phase: "", progress: 0, message: "" });
+    setOptimizationResult(null);
+
+    // Create WebSocket connection
+    const ws = new WebSocket(`ws://localhost:8000/ws/optimize/${projectCreationResult.actualProjectName}`);
+    setWebsocket(ws);
+
+    ws.onopen = () => {
+      console.log("WebSocket connected for optimization");
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      switch (data.type) {
+        case "status":
+          setOptimizationProgress(prev => ({
+            ...prev,
+            phase: data.phase,
+            message: data.message
+          }));
+          break;
+
+        case "progress":
+          setOptimizationProgress({
+            phase: data.phase,
+            progress: data.progress,
+            message: data.message
+          });
+          break;
+
+        case "log":
+          setOptimizationLogs(prev => [...prev, {
+            id: Date.now() + Math.random(),
+            level: data.level,
+            logger: data.logger,
+            message: data.message,
+            timestamp: data.timestamp
+          }]);
+          break;
+
+        case "complete":
+          setOptimizationResult(data);
+          setOptimizing(false);
+          ws.close();
+          break;
+
+        case "error":
+          setOptimizationResult({
+            success: false,
+            error: data.message
+          });
+          setOptimizing(false);
+          ws.close();
+          break;
+      }
+    };
+
+    ws.onclose = () => {
+      console.log("WebSocket connection closed");
+      setWebsocket(null);
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      setOptimizationResult({
+        success: false,
+        error: "WebSocket connection failed"
+      });
+      setOptimizing(false);
+      setWebsocket(null);
+    };
+  };
+
+  // Cleanup WebSocket on component unmount
+  React.useEffect(() => {
+    return () => {
+      if (websocket) {
+        websocket.close();
+      }
+    };
+  }, [websocket]);
+
 
   const updateFormData = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -231,7 +404,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         const requirements =
           formData.useCase === "qa"
             ? ["question", "answer"]
-            : ["query", "context", "answer"];
+            : ["context", "query", "answer"];
         return requirements.every((field) => formData.fieldMappings[field]);
       case 5:
         return formData.metrics.length > 0; // Metrics step - require at least one metric
@@ -265,9 +438,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       case 7:
         return formData.selectedOptimizer !== ""; // Optimizer step
       case 8:
-        return true; // Review step
-      case 9:
-        return true; // Configuration step - always valid
+        return true; // Review step - final step
       default:
         return false;
     }
@@ -309,9 +480,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     }
   };
 
-  const handleFieldMappingComplete = (mappings: Record<string, string>) => {
+  const handleFieldMappingUpdate = (mappings: Record<string, string>) => {
     updateFormData("fieldMappings", mappings);
-    handleNext();
   };
 
   const renderRequirementsStep = () => (
@@ -428,7 +598,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             value={formData.prompt}
             onChange={(e) => updateFormData("prompt", e.target.value)}
             placeholder="Enter your prompt here..."
-            className="w-full h-32 p-4 border border-facebook-border rounded-xl focus:ring-2 focus:ring-facebook-blue focus:border-transparent resize-none bg-facebook-gray/50 text-facebook-text placeholder-facebook-text/50"
+            className="w-full h-32 p-4 border border-facebook-border rounded-xl focus:ring-2 focus:ring-facebook-blue focus:border-transparent resize-none bg-facebook-white/50 text-facebook-text placeholder-facebook-text/50"
           />
         </div>
 
@@ -616,8 +786,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       <FieldMappingInterface
         filename={formData.datasetPath}
         useCase={formData.useCase}
-        onMappingComplete={handleFieldMappingComplete}
-        onCancel={handleBack}
+        onMappingUpdate={handleFieldMappingUpdate}
         existingMappings={formData.fieldMappings}
       />
     );
@@ -659,6 +828,34 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     }
   };
 
+  // Helper function to get optimizer parameters with fallbacks
+  const getOptimizerParameters = () => {
+    // First try to get from saved config
+    if (formData.optimizerConfig?.parameters) {
+      return formData.optimizerConfig.parameters;
+    }
+
+    // Fallback to default parameters based on selected optimizer
+    const defaultParams = {
+      basic: {
+        num_candidates: 10,
+        num_threads: 18,
+        max_labeled_demos: 5,
+        auto_mode: "basic"
+      },
+      llama: {
+        num_candidates: 10,
+        num_threads: 18,
+        max_labeled_demos: 5,
+        auto_mode: "intermediate"
+      }
+    };
+
+    // Return parameters based on selected optimizer, fallback to basic if none selected
+    const selectedOptimizer = formData.selectedOptimizer || "basic";
+    return defaultParams[selectedOptimizer as keyof typeof defaultParams] || defaultParams.basic;
+  };
+
   const renderOptimizerStep = () => (
     <OptimizerSelector
       selectedOptimizer={formData.selectedOptimizer}
@@ -683,10 +880,67 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         </p>
       </div>
 
+      {/* Project Creation Results */}
+      {projectCreationResult && (
+        <div className={`p-4 rounded-xl border ${
+          projectCreationResult.success
+            ? 'bg-green-50 border-green-200'
+            : 'bg-red-50 border-red-200'
+        }`}>
+          <div className="flex items-center space-x-3 mb-3">
+            {projectCreationResult.success ? (
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            ) : (
+              <AlertCircle className="w-6 h-6 text-red-600" />
+            )}
+            <h3 className="font-bold text-lg">
+              {projectCreationResult.success ? 'Project Created Successfully!' : 'Project Creation Failed'}
+            </h3>
+          </div>
+
+          {projectCreationResult.success ? (
+            <div className="space-y-3">
+              <p className="text-green-700">{projectCreationResult.message}</p>
+
+              {/* Show name change notification if project name was modified */}
+              {projectCreationResult.actualProjectName !== projectCreationResult.requestedProjectName && (
+                <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                  <p className="text-sm font-medium text-blue-800 mb-1">Project Name Updated:</p>
+                  <p className="text-sm text-blue-700">
+                    A project with the name "{projectCreationResult.requestedProjectName}" already existed,
+                    so your project was created as "{projectCreationResult.actualProjectName}" instead.
+                  </p>
+                </div>
+              )}
+
+              <div className="bg-white p-3 rounded border">
+                <p className="text-sm font-medium text-gray-700 mb-1">Project Location:</p>
+                <p className="text-sm font-mono text-gray-600 bg-gray-50 p-2 rounded">
+                  {projectCreationResult.projectPath}
+                </p>
+              </div>
+              <div className="bg-white p-3 rounded border">
+                <p className="text-sm font-medium text-gray-700 mb-2">Files Created:</p>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  {Object.entries(projectCreationResult.createdFiles || {}).map(([type, path]) => (
+                    <li key={type} className="flex items-center space-x-2">
+                      <FileText className="w-3 h-3 text-gray-400" />
+                      <span className="font-mono">{String(path)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ) : (
+            <p className="text-red-700">{projectCreationResult.error}</p>
+          )}
+        </div>
+      )}
+
       <div className="bg-white/90 backdrop-blur-xl p-6 rounded-2xl border border-facebook-border shadow-xl space-y-4">
         <div>
           <h3 className="font-bold text-facebook-text mb-3 text-lg">Prompt:</h3>
-          <p className="text-facebook-text bg-facebook-gray p-4 rounded-xl border border-facebook-border font-medium">
+          <p className="text-facebook-text bg-facebook-white p-4 rounded-xl border border-facebook-border font-medium">
             {formData.prompt}
           </p>
         </div>
@@ -697,14 +951,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               <h3 className="font-bold text-facebook-text mb-3 text-lg">
                 Configuration:
               </h3>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="bg-facebook-gray p-3 rounded-xl border border-facebook-border">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div className="bg-facebook-white p-3 rounded-xl border border-facebook-border">
                   <span className="text-facebook-text/70">Use Case:</span>{" "}
                   <span className="font-medium text-facebook-text">
                     {formData.useCase}
                   </span>
                 </div>
-                <div className="bg-facebook-gray p-3 rounded-xl border border-facebook-border">
+                <div className="bg-facebook-white p-3 rounded-xl border border-facebook-border">
                   <span className="text-facebook-text/70">Dataset:</span>{" "}
                   <span className="font-medium text-facebook-text">
                     {formData.datasetPath}
@@ -718,10 +972,32 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <h3 className="font-bold text-facebook-text mb-3 text-lg">
                   Field Mappings:
                 </h3>
-                <div className="bg-facebook-gray p-3 rounded-xl border border-facebook-border">
-                  <pre className="text-xs text-facebook-text/80">
-                    {JSON.stringify(formData.fieldMappings, null, 2)}
-                  </pre>
+                <div className="bg-white p-4 rounded-xl border border-facebook-border shadow-sm">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {Object.entries(formData.fieldMappings).map(([standardField, datasetField]) => (
+                      <div key={standardField} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-facebook-white rounded-lg border border-facebook-border gap-2 sm:gap-0">
+                        <div className="flex flex-col">
+                          <span className="text-xs text-facebook-text/70 uppercase tracking-wide font-medium">
+                            Standard Field
+                          </span>
+                          <span className="font-medium text-facebook-text capitalize">
+                            {standardField}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-center sm:space-x-2">
+                          <ArrowRight className="w-4 h-4 text-facebook-text/50 rotate-90 sm:rotate-0" />
+                        </div>
+                        <div className="flex flex-col sm:text-right">
+                          <span className="text-xs text-facebook-text/70 uppercase tracking-wide font-medium">
+                            Dataset Field
+                          </span>
+                          <span className="font-medium text-facebook-text">
+                            {datasetField as string}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -731,23 +1007,42 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <h3 className="font-bold text-facebook-text mb-3 text-lg">
                   Selected Metrics:
                 </h3>
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {formData.metrics.map((metric, index) => (
                     <div
                       key={index}
-                      className="bg-facebook-gray p-3 rounded-xl border border-facebook-border"
+                      className="bg-white p-4 rounded-xl border border-facebook-border shadow-sm hover:shadow-md transition-shadow duration-200"
                     >
-                      <div className="font-medium text-facebook-text">
-                        {metric}
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="p-2 rounded-lg bg-gradient-to-r from-facebook-blue via-facebook-blue-light to-facebook-blue-dark">
+                          <Target className="w-4 h-4 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-facebook-text">
+                            {metric}
+                          </h4>
+                          <p className="text-xs text-facebook-text/60 capitalize">
+                            Evaluation Metric
+                          </p>
+                        </div>
                       </div>
                       {formData.metricConfigurations[metric] && (
-                        <div className="text-xs text-facebook-text/70 mt-1">
-                          Configuration:{" "}
-                          {JSON.stringify(
-                            formData.metricConfigurations[metric],
-                            null,
-                            2
-                          )}
+                        <div className="bg-facebook-white/50 p-3 rounded-lg border border-facebook-border">
+                          <p className="text-xs text-facebook-text/70 uppercase tracking-wide font-medium mb-2">
+                            Configuration:
+                          </p>
+                          <div className="space-y-1">
+                            {Object.entries(formData.metricConfigurations[metric] as Record<string, any>).map(([configKey, configValue]) => (
+                              <div key={configKey} className="flex justify-between items-center">
+                                <span className="text-xs text-facebook-text/70">
+                                  {configKey}:
+                                </span>
+                                <span className="text-xs font-medium text-facebook-text">
+                                  {typeof configValue === 'object' ? JSON.stringify(configValue) : String(configValue)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -789,7 +1084,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                       </div>
 
                       {/* Configuration details */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="flex items-center space-x-2">
                           <Brain className="w-4 h-4 text-facebook-text/50" />
                           <div>
@@ -821,7 +1116,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                         )}
 
                         {config.api_base && config.provider_id === "custom" && (
-                          <div className="flex items-center space-x-2 md:col-span-2">
+                          <div className="flex items-center space-x-2 sm:col-span-2">
                             <Globe className="w-4 h-4 text-facebook-text/50" />
                             <div>
                               <p className="text-xs text-facebook-text/70 uppercase tracking-wide font-medium">
@@ -861,7 +1156,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   <p className="text-sm text-facebook-text/70 mb-3">
                     {formData.optimizerConfig?.description}
                   </p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <div className="flex items-center space-x-2">
                       <BarChart3 className="w-4 h-4 text-facebook-text/50" />
                       <div>
@@ -869,7 +1164,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                           Candidates
                         </p>
                         <p className="font-medium text-facebook-text">
-                          {formData.optimizerConfig?.parameters?.num_candidates}
+                          {getOptimizerParameters().num_candidates}
                         </p>
                       </div>
                     </div>
@@ -880,7 +1175,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                           Threads
                         </p>
                         <p className="font-medium text-facebook-text">
-                          {formData.optimizerConfig?.parameters?.num_threads}
+                          {getOptimizerParameters().num_threads}
                         </p>
                       </div>
                     </div>
@@ -891,7 +1186,18 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                           Max Demos
                         </p>
                         <p className="font-medium text-facebook-text">
-                          {formData.optimizerConfig?.parameters?.max_labeled_demos}
+                          {getOptimizerParameters().max_labeled_demos}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Settings className="w-4 h-4 text-facebook-text/50" />
+                      <div>
+                        <p className="text-xs text-facebook-text/70 uppercase tracking-wide font-medium">
+                          Auto Mode
+                        </p>
+                        <p className="font-medium text-facebook-text capitalize">
+                          {getOptimizerParameters().auto_mode}
                         </p>
                       </div>
                     </div>
@@ -920,41 +1226,151 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         )}
       </div>
 
-      <div className="text-center">
-        <Button
-          onClick={handleNext}
-          className="bg-gradient-to-r from-facebook-blue via-facebook-blue-light to-facebook-blue-dark hover:opacity-90 text-white px-8 py-4 rounded-2xl text-lg font-bold shadow-lg shadow-facebook-blue/25 transform hover:scale-105 transition-all duration-300"
-        >
-          Continue to Configuration
-        </Button>
-      </div>
+      {/* Optimization Section */}
+      {!optimizing && !optimizationResult && (
+        <div className="text-center space-y-4">
+          <Button
+            onClick={handleComplete}
+            disabled={!projectCreationResult?.success}
+            className="bg-gradient-to-r from-facebook-blue via-facebook-blue-light to-facebook-blue-dark hover:opacity-90 text-white px-8 py-4 rounded-2xl text-lg font-bold shadow-lg shadow-facebook-blue/25 transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Zap className="w-5 h-5 mr-2" />
+            Optimize
+          </Button>
+          {!projectCreationResult?.success && (
+            <p className="text-sm text-red-600">Please create a project first by clicking "Create Configuration" on the optimizer step.</p>
+          )}
+        </div>
+      )}
+
+      {/* Optimization Progress */}
+      {optimizing && (
+        <div className="space-y-6">
+          <div className="text-center">
+            <h3 className="text-xl font-bold text-facebook-text mb-2">
+              🚀 Optimizing Your Prompt...
+            </h3>
+            <p className="text-facebook-text/70">
+              This may take a few minutes. Real-time progress is shown below.
+            </p>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="bg-white p-4 rounded-xl border border-facebook-border shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-facebook-text">
+                {optimizationProgress.phase || "Initializing..."}
+              </span>
+              <span className="text-sm text-facebook-text/70">
+                {Math.round(optimizationProgress.progress)}%
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-facebook-blue h-2 rounded-full transition-all duration-300"
+                style={{ width: `${optimizationProgress.progress}%` }}
+              ></div>
+            </div>
+            <p className="text-sm text-facebook-text/70 mt-2">
+              {optimizationProgress.message}
+            </p>
+          </div>
+
+          {/* Live Logs */}
+          <div className="bg-gray-900 rounded-xl p-4 max-h-96 overflow-y-auto">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-white font-medium">Live Optimization Logs</h4>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-green-400 text-sm">Live</span>
+              </div>
+            </div>
+            <div className="space-y-1 font-mono text-sm">
+              {optimizationLogs.map((log) => (
+                <div
+                  key={log.id}
+                  className={`${
+                    log.level === "ERROR"
+                      ? "text-red-400"
+                      : log.level === "WARNING"
+                      ? "text-yellow-400"
+                      : log.level === "INFO"
+                      ? "text-blue-400"
+                      : "text-gray-300"
+                  }`}
+                >
+                  {log.message}
+                </div>
+              ))}
+              {optimizationLogs.length === 0 && (
+                <div className="text-gray-500 italic">Waiting for logs...</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Optimization Results */}
+      {optimizationResult && (
+        <div className="space-y-6">
+          {optimizationResult.success ? (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <CheckCircle className="w-8 h-8 text-green-600" />
+                <h3 className="text-xl font-bold text-green-800">
+                  🎉 Optimization Complete!
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Original Prompt */}
+                <div className="bg-white rounded-lg p-4 border border-green-200">
+                  <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Original Prompt
+                  </h4>
+                  <div className="bg-gray-50 rounded p-3 max-h-48 overflow-y-auto">
+                    <pre className="text-sm text-gray-700 whitespace-pre-wrap">
+                      {optimizationResult.originalPrompt || "No original prompt"}
+                    </pre>
+                  </div>
+                </div>
+
+                {/* Optimized Prompt */}
+                <div className="bg-white rounded-lg p-4 border border-green-200">
+                  <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
+                    <Zap className="w-4 h-4 mr-2 text-green-600" />
+                    Optimized Prompt
+                  </h4>
+                  <div className="bg-green-50 rounded p-3 max-h-48 overflow-y-auto">
+                    <pre className="text-sm text-gray-700 whitespace-pre-wrap">
+                      {optimizationResult.optimizedPrompt}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-800">
+                  <strong>Next Steps:</strong> Your optimized prompt has been saved to the project directory.
+                  You can now use this improved prompt in your applications!
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+              <div className="flex items-center space-x-3 mb-3">
+                <AlertCircle className="w-6 h-6 text-red-600" />
+                <h3 className="font-bold text-red-800">Optimization Failed</h3>
+              </div>
+              <p className="text-red-700">{optimizationResult.error}</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 
-  const renderConfigurationStep = () => (
-    <ConfigurationPreview
-      wizardData={{
-        prompt: { text: formData.prompt, inputs: ["question"], outputs: ["answer"] },
-        useCase: formData.useCase,
-        dataset: {
-          path: formData.datasetPath,
-          inputField: formData.fieldMappings.input,
-          outputField: formData.fieldMappings.output,
-          trainSize: 60,
-          validationSize: 20
-        },
-        models: { selected: formData.modelConfigurations },
-        optimizer: {
-          selectedOptimizer: formData.optimizerConfig?.selectedOptimizer,
-          customParams: formData.customOptimizerParams
-        }
-      }}
-      onComplete={(configData) => {
-        console.log("Project created:", configData);
-        onComplete({ ...formData, configData });
-      }}
-    />
-  );
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -976,15 +1392,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         return renderOptimizerStep();
       case 8: // Review
         return renderReviewStep();
-      case 9: // Configuration
-        return renderConfigurationStep();
       default:
         return null;
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="w-full">
       {/* Progress Indicator */}
       <div className="mb-8">
         <StepIndicator
@@ -1005,7 +1419,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           onClick={handleBack}
           disabled={currentStep === 0}
           variant="outline"
-          className="flex items-center gap-2 border-facebook-border text-facebook-text hover:bg-facebook-gray rounded-xl px-6 py-3 font-semibold shadow-md transition-all duration-300"
+          className="flex items-center gap-2 border-facebook-border text-facebook-text hover:bg-facebook-white rounded-xl px-6 py-3 font-semibold shadow-md transition-all duration-300"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
@@ -1014,11 +1428,20 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         {currentStep < steps.length - 1 && (
           <Button
             onClick={handleNext}
-            disabled={!isStepValid()}
+            disabled={!isStepValid() || creatingProject}
             className="flex items-center gap-2 rounded-xl px-6 py-3 font-bold shadow-lg transition-all duration-300 transform hover:scale-105 bg-facebook-blue hover:bg-facebook-blue-dark text-white shadow-facebook-blue/25"
           >
-            Next
-            <ArrowRight className="w-4 h-4" />
+            {creatingProject ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Creating Project...
+              </>
+            ) : (
+              <>
+                {getNextButtonText()}
+                {getNextButtonIcon()}
+              </>
+            )}
           </Button>
         )}
       </div>
