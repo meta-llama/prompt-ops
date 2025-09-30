@@ -297,7 +297,7 @@ const OptimizationGrid = () => {
 
       {/* Content */}
       <div className="relative z-10 pt-6 pb-12">
-        <GridLayout maxWidth="max-w-md">
+        <GridLayout maxWidth="max-w-4xl">
           {/* Header */}
           <div className="text-center mb-6">
             <div className="flex items-center justify-center gap-4 mb-4">
