@@ -1,30 +1,30 @@
-<h1 align="center"> Llama Prompt Ops </h1>
+<h1 align="center"> Prompt Ops </h1>
 
-## What is llama-prompt-ops?
+## What is prompt-ops?
 <p align="center">
-  <a href="https://pypi.org/project/llama-prompt-ops/"><img src="https://img.shields.io/pypi/v/llama-prompt-ops.svg" /></a>
+  <a href="https://pypi.org/project/prompt-ops/"><img src="https://img.shields.io/pypi/v/prompt-ops.svg" /></a>
 </p>
 <p align="center">
-  <a href="https://llama.developer.meta.com/?utm_source=llama-prompt-ops&utm_medium=readme&utm_campaign=main"><img src="https://img.shields.io/badge/Llama_API-Join_Waitlist-brightgreen?logo=meta" /></a>
-  <a href="https://llama.developer.meta.com/docs?utm_source=llama-prompt-ops&utm_medium=readme&utm_campaign=main"><img src="https://img.shields.io/badge/Llama_API-Documentation-4BA9FE?logo=meta" /></a>
+  <a href="https://llama.developer.meta.com/?utm_source=prompt-ops&utm_medium=readme&utm_campaign=main"><img src="https://img.shields.io/badge/Llama_API-Join_Waitlist-brightgreen?logo=meta" /></a>
+  <a href="https://llama.developer.meta.com/docs?utm_source=prompt-ops&utm_medium=readme&utm_campaign=main"><img src="https://img.shields.io/badge/Llama_API-Documentation-4BA9FE?logo=meta" /></a>
 
 </p>
 
 <p align="center">
-  <a href="https://github.com/meta-llama/llama-models/blob/main/models/?utm_source=llama-prompt-ops&utm_medium=readme&utm_campaign=main"><img alt="Llama Model cards" src="https://img.shields.io/badge/Llama_OSS-Model_cards-green?logo=meta" /></a>
-  <a href="https://www.llama.com/docs/overview/?utm_source=llama-prompt-ops&utm_medium=readme&utm_campaign=main"><img alt="Llama Documentation" src="https://img.shields.io/badge/Llama_OSS-Documentation-4BA9FE?logo=meta" /></a>
+  <a href="https://github.com/meta-llama/llama-models/blob/main/models/?utm_source=prompt-ops&utm_medium=readme&utm_campaign=main"><img alt="Llama Model cards" src="https://img.shields.io/badge/Llama_OSS-Model_cards-green?logo=meta" /></a>
+  <a href="https://www.llama.com/docs/overview/?utm_source=prompt-ops&utm_medium=readme&utm_campaign=main"><img alt="Llama Documentation" src="https://img.shields.io/badge/Llama_OSS-Documentation-4BA9FE?logo=meta" /></a>
   <a href="https://huggingface.co/meta-llama"><img alt="Hugging Face meta-llama" src="https://img.shields.io/badge/Hugging_Face-meta--llama-yellow?logo=huggingface" /></a>
 
 </p>
 <p align="center">
   <a href="https://github.com/meta-llama/synthetic-data-kit"><img alt="Llama Tools Syntethic Data Kit" src="https://img.shields.io/badge/Llama_Tools-synthetic--data--kit-orange?logo=meta" /></a>
-  <a href="https://github.com/meta-llama/llama-prompt-ops"><img alt="Llama Tools Syntethic Data Kit" src="https://img.shields.io/badge/Llama_Tools-llama--prompt--ops-orange?logo=meta" /></a>
+  <a href="https://github.com/meta-llama/prompt-ops"><img alt="Llama Tools Syntethic Data Kit" src="https://img.shields.io/badge/Llama_Tools-llama--prompt--ops-orange?logo=meta" /></a>
     <a href="https://github.com/meta-llama/llama-cookbook"><img alt="Llama Cookbook" src="https://img.shields.io/badge/Llama_Cookbook-llama--cookbook-orange?logo=meta" /></a>
 </p>
 
 
 
-llama-prompt-ops is a Python package that **automatically optimizes prompts** for Llama models. It transforms prompts that work well with other LLMs into prompts that are optimized for Llama models, improving performance and reliability.
+prompt-ops is a Python package that **automatically optimizes prompts** for Llama models. It transforms prompts that work well with other LLMs into prompts that are optimized for Llama models, improving performance and reliability.
 
 **Key Benefits:**
 - **No More Trial and Error**: Stop manually tweaking prompts to get better results
@@ -34,7 +34,7 @@ llama-prompt-ops is a Python package that **automatically optimizes prompts** fo
 
 ## Requirements
 
-To get started with llama-prompt-ops, you'll need:
+To get started with prompt-ops, you'll need:
 
 - Existing System Prompt: Your existing system prompt that you want to optimize
 - Existing Query-Response Dataset: A JSON file containing query-response pairs (as few as 50 examples) for evaluation and optimization (see [prepare your dataset](#preparing-your-data) below)
@@ -50,7 +50,7 @@ To get started with llama-prompt-ops, you'll need:
              │                              │                           │
              ▼                              ▼                           ▼
          ┌────────────────────────────────────────────────────────────────────┐
-         │                     llama-prompt-ops migrate                       │
+         │                     prompt-ops migrate                       │
          └────────────────────────────────────────────────────────────────────┘
                                             │
                                             │
@@ -91,11 +91,11 @@ conda create -n prompt-ops python=3.10
 conda activate prompt-ops
 
 # Install from PyPI
-pip install llama-prompt-ops
+pip install prompt-ops
 
 # OR install from source
-git clone https://github.com/meta-llama/llama-prompt-ops.git
-cd llama-prompt-ops
+git clone https://github.com/meta-llama/prompt-ops.git
+cd prompt-ops
 pip install -e .
 
 ```
@@ -105,7 +105,7 @@ pip install -e .
 This will create a directory called my-project with a sample configuration and dataset in the current folder.
 
 ```bash
-llama-prompt-ops create my-project
+prompt-ops create my-project
 cd my-project
 ```
 
@@ -122,7 +122,7 @@ You can get an OpenRouter API key by creating an account at [OpenRouter](https:/
 The optimization will take about 5 minutes.
 
 ```bash
-llama-prompt-ops migrate # defaults to config.yaml if --config not specified
+prompt-ops migrate # defaults to config.yaml if --config not specified
 ```
 
 Done! The optimized prompt will be saved to the `results` directory with performance metrics comparing the original and optimized versions.
@@ -141,7 +141,7 @@ Below is an example of a transformed system prompt from proprietary LM to Llama:
 
 ## Preparing Your Data
 
-To use llama-prompt-ops for prompt optimization, you'll need to prepare a dataset with your prompts and expected responses. The standard format is a JSON file structured like this:
+To use prompt-ops for prompt optimization, you'll need to prepare a dataset with your prompts and expected responses. The standard format is a JSON file structured like this:
 
 ```json
 [
@@ -164,7 +164,7 @@ If your data is formatted differently, and there isn't a built-in dataset adapte
 
 ## Multiple Inference Provider Support
 
-llama-prompt-ops supports various inference providers and endpoints to fit your infrastructure needs. See our [detailed guide on inference providers](./docs/inference_providers.md) for configuration examples with:
+prompt-ops supports various inference providers and endpoints to fit your infrastructure needs. See our [detailed guide on inference providers](./docs/inference_providers.md) for configuration examples with:
 
 - OpenRouter (cloud-based API)
 - vLLM (local deployment)
@@ -174,7 +174,7 @@ llama-prompt-ops supports various inference providers and endpoints to fit your 
 
 For more detailed information, check out these resources:
 
-- [Quick Start Guide](docs/basic/readme.md): Get up and running with llama-prompt-ops in 5 minutes
+- [Quick Start Guide](docs/basic/readme.md): Get up and running with prompt-ops in 5 minutes
 - [Intermediate Configuration Guide](docs/intermediate/readme.md): Learn how to configure datasets, metrics, and optimization strategies
 - [Dataset Adapter Selection Guide](docs/dataset_adapter_selection_guide.md): Choose the right adapter for your dataset format
 - [Metric Selection Guide](docs/metric_selection_guide.md): Select appropriate evaluation metrics for your use case

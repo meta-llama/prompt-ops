@@ -5,7 +5,7 @@ model:
   max_tokens: 40960
 
 dataset:
-  adapter_class: "src/llama_prompt_ops/datasets/hotpotqa/adapter.py"
+  adapter_class: "src/prompt_ops/datasets/hotpotqa/adapter.py"
   path: "../use-cases/hotpotqa/hotpotqa_sample.json"
   train_size: 0.07
   validation_size: 0.07
@@ -28,7 +28,7 @@ system_prompt:
   outputs: ["answer"]
 
 metric:
-  class: "src/llama_prompt_ops/datasets/hotpotqa/metric.py"
+  class: "src/prompt_ops/datasets/hotpotqa/metric.py"
   output_field: "answer"
   passage_weight: 0.5
 
