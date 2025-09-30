@@ -112,4 +112,4 @@ metric:
 
 For more complex evaluation needs, you can implement specialized metrics. For example:
 
-- The [HotpotQA Metric](src/llama_prompt_ops/datasets/hotpotqa/metric.py) shows how to implement specialized evaluation for multi-hop question answering, handling answer correctness and supporting fact verification.
+- The [HotpotQA Metric](src/prompt_ops/datasets/hotpotqa/metric.py) shows how to implement specialized evaluation for multi-hop question answering, handling answer correctness and supporting fact verification.
