@@ -1,11 +1,11 @@
 name: 🐛 Bug Report
-description: Report a bug to help us improve llama-prompt-ops
+description: Report a bug to help us improve prompt-ops
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: >
-        Thanks for taking the time to report a bug! Please search [existing issues](https://github.com/justinai/llama-prompt-ops/issues) first to avoid duplicates.
+        Thanks for taking the time to report a bug! Please search [existing issues](https://github.com/meta-llama/prompt-ops/issues) first to avoid duplicates.
 
   - type: textarea
     id: bug-description
@@ -26,7 +26,7 @@ body:
       label: How to reproduce
       description: Steps to reproduce the issue, including any commands or code.
       placeholder: |
-        1. Run `llama-prompt-ops optimize --config configs/facility.yaml`
+        1. Run `prompt-ops optimize --config configs/facility.yaml`
         2. See error...
 
         ```bash
@@ -42,7 +42,7 @@ body:
       description: Your Python version and any relevant system info.
       placeholder: |
         - Python version: 3.9.0
-        - llama-prompt-ops version: 0.0.8
+        - prompt-ops version: 0.0.8
         - OS: macOS 14.0
     validations:
       required: false
