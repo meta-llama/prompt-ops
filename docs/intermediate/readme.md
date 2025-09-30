@@ -1,6 +1,6 @@
 # Intermediate Guide: Facility YAML Configuration
 
-> **Note:** If you're new to llama-prompt-ops, start with the [Quick Start Guide](../basic/README.md) before exploring these advanced options.
+> **Note:** If you're new to prompt-ops, start with the [Quick Start Guide](../basic/README.md) before exploring these advanced options.
 
 ## Overview
 

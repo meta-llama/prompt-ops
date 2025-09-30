@@ -18,7 +18,7 @@
 </p>
 <p align="center">
   <a href="https://github.com/meta-llama/synthetic-data-kit"><img alt="Llama Tools Syntethic Data Kit" src="https://img.shields.io/badge/Llama_Tools-synthetic--data--kit-orange?logo=meta" /></a>
-  <a href="https://github.com/meta-llama/prompt-ops"><img alt="Llama Tools Syntethic Data Kit" src="https://img.shields.io/badge/Llama_Tools-llama--prompt--ops-orange?logo=meta" /></a>
+  <a href="https://github.com/meta-llama/prompt-ops"><img alt="Llama Tools Syntethic Data Kit" src="https://img.shields.io/badge/Llama_Tools-prompt--ops-orange?logo=meta" /></a>
     <a href="https://github.com/meta-llama/llama-cookbook"><img alt="Llama Cookbook" src="https://img.shields.io/badge/Llama_Cookbook-llama--cookbook-orange?logo=meta" /></a>
 </p>
 
@@ -156,7 +156,7 @@ To use prompt-ops for prompt optimization, you'll need to prepare a dataset with
 ]
 ```
 
-If your data matches this format, you can use the built-in [`StandardJSONAdapter`](src/llama_prompt_ops/core/datasets.py) which will handle it automatically.
+If your data matches this format, you can use the built-in [`StandardJSONAdapter`](src/prompt_ops/core/datasets.py) which will handle it automatically.
 
 ### Custom Data Formats
 

@@ -1,6 +1,6 @@
 # Logging and Telemetry
 
-The `llama-prompt-ops` library includes a flexible logging framework to provide insights into the optimization process. You can control the verbosity of the output and export detailed telemetry for analysis.
+The `prompt-ops` library includes a flexible logging framework to provide insights into the optimization process. You can control the verbosity of the output and export detailed telemetry for analysis.
 
 ## Configuring Log Levels
 
@@ -11,7 +11,7 @@ You can configure the logging level in two ways:
     Use the `--log-level` option when running the `migrate` command:
 
     ```bash
-    llama-prompt-ops migrate --config your_config.yaml --log-level DEBUG
+    prompt-ops migrate --config your_config.yaml --log-level DEBUG
     ```
 
     Available log levels are `DEBUG`, `INFO`, `WARNING`, `ERROR`, and `CRITICAL`.
@@ -46,7 +46,7 @@ The exported JSON file will contain two main sections:
 
 ## Pre-Optimization Summary
 
-Before starting the optimization process, `llama-prompt-ops` displays a comprehensive summary of the optimization configuration. This summary provides transparency into what will happen during optimization and helps with debugging and reproducibility.
+Before starting the optimization process, `prompt-ops` displays a comprehensive summary of the optimization configuration. This summary provides transparency into what will happen during optimization and helps with debugging and reproducibility.
 
 ### Summary Contents
 
@@ -79,11 +79,11 @@ The pre-optimization summary is logged at `INFO` level. To see it, ensure your l
 
 ```bash
 # Via command line
-llama-prompt-ops migrate --config config.yaml --log-level INFO
+prompt-ops migrate --config config.yaml --log-level INFO
 
 # Via environment variable
 export PROMPT_OPS_LOG_LEVEL=INFO
-llama-prompt-ops migrate --config config.yaml
+prompt-ops migrate --config config.yaml
 ```
 
 The summary provides valuable context for understanding optimization results and can help identify configuration issues before the optimization process begins.

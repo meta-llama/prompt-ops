@@ -68,11 +68,11 @@ conda create -n prompt-ops python=3.10
 conda activate prompt-ops
 
 # Install from PyPI
-pip install llama-prompt-ops
+pip install prompt-ops
 
 # OR install from source
-git clone https://github.com/meta-llama/llama-prompt-ops.git
-cd llama-prompt-ops
+git clone https://github.com/meta-llama/prompt-ops.git
+cd prompt-ops
 pip install -e .
 
 ```
@@ -81,7 +81,7 @@ pip install -e .
 By default this will create the necessary sample files for Facility Support Analyzer in the current directory called my-project.
 
 ```bash
-llama-prompt-ops create my-project
+prompt-ops create my-project
 cd my-project
 ```
 
@@ -115,7 +115,7 @@ You can get an OpenRouter API key by creating an account at [OpenRouter](https:/
 ## Step 4: Run Optimization
 
 ```bash
-llama-prompt-ops migrate # defaults to config.yaml if --config not specified
+prompt-ops migrate # defaults to config.yaml if --config not specified
 ```
 
 Done! The optimized prompt will be saved to the `results` directory with performance metrics comparing the original and optimized versions.
