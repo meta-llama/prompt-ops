@@ -4,6 +4,7 @@ import tempfile
 from unittest.mock import MagicMock
 
 import pytest
+
 from prompt_ops.core.datasets import (
     ConfigurableJSONAdapter,
     DatasetAdapter,

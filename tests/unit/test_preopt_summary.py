@@ -11,6 +11,7 @@ import json
 from unittest.mock import Mock, patch
 
 import pytest
+
 from prompt_ops.core.utils.telemetry import PreOptimizationSummary
 
 

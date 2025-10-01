@@ -16,7 +16,6 @@ import yaml
 CLI_COMPONENTS_AVAILABLE = False
 try:
     from prompt_ops.core.migrator import PromptMigrator
-
     from prompt_ops.interfaces.cli import cli
 
     CLI_COMPONENTS_AVAILABLE = True

@@ -12,9 +12,8 @@ with patch("prompt_ops.core.prompt_strategies.BaseStrategy") as MockBaseStrategy
     # Import after patching
     from prompt_ops.core.migrator import PromptMigrator
 
-from prompt_ops.core.utils.format_utils import convert_json_to_yaml
-
 from prompt_ops.core.utils import json_to_yaml_file
+from prompt_ops.core.utils.format_utils import convert_json_to_yaml
 
 
 @pytest.fixture
