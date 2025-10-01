@@ -28,8 +28,8 @@ from typing import (
 
 import dspy
 
-from llama_prompt_ops.core.model import ModelAdapter
-from llama_prompt_ops.core.utils.logging import get_logger  # Added import
+from prompt_ops.core.model import ModelAdapter
+from prompt_ops.core.utils.logging import get_logger  # Added import
 
 T = TypeVar("T", bound=Any)
 U = TypeVar("U", bound=Any)

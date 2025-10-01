@@ -17,7 +17,7 @@ model:
 
 ## name the data adapter take in N params
 dataset:
-  adapter_class: "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter"
+  adapter_class: "prompt_ops.core.datasets.ConfigurableJSONAdapter"
   path: "../use-cases/facility-support-analyzer/dataset.json"
   train_size: 0.7
   validation_size: 0.15
@@ -33,7 +33,7 @@ system_prompt:
   outputs: ["answer"]
 
 metric:
-  class: "llama_prompt_ops.core.metrics.FacilityMetric"
+  class: "prompt_ops.core.metrics.FacilityMetric"
   strict_json: false
   output_field: "answer"
 
