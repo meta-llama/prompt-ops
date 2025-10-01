@@ -84,7 +84,6 @@ from prompt_ops.core.metrics import (
 )
 from prompt_ops.core.migrator import PromptMigrator
 from prompt_ops.core.model import setup_model
-from prompt_ops.core.model_strategies import LlamaStrategy
 from prompt_ops.core.prompt_strategies import (
     BaseStrategy,
     BasicOptimizationStrategy,
@@ -95,7 +94,7 @@ from prompt_ops.core.prompt_strategies import (
 @click.group()
 def cli():
     """
-    prompt-ops - A tool for migrating and optimizing prompts for Llama models.
+    prompt-ops - A tool for migrating and optimizing prompts for any LLM.
     """
     pass
 
@@ -158,7 +157,7 @@ def create(project_name, output_dir, model, api_key_env):
                 "strict_json": False,
                 "output_field": "answer",
             },
-            "optimization": {"strategy": "llama"},
+            "optimization": {"strategy": "basic"},
         }
 
         with open(os.path.join(project_dir, "config.yaml"), "w") as f:
@@ -562,90 +561,24 @@ def get_strategy(
     # Extract just the model name without provider path
     model_name = model_name_with_path.split("/")[-1]
 
-    # Check if strategy is specified in config
-    strategy_type = strategy_config.get("type")
+    # Default to BasicOptimizationStrategy for all models (strategy.type config is ignored)
+    # Extract additional strategy parameters from config
+    strategy_params = {
+        k: v
+        for k, v in strategy_config.items()
+        if k not in ["type", "strategy"]  # Exclude non-parameter keys
+    }
 
-    # If strategy type is specified in config, use it
-    if strategy_type:
-        if strategy_type.lower() == "llama":
-            # Get Llama-specific parameters
-            apply_formatting = strategy_config.get("apply_formatting", True)
-            apply_templates = strategy_config.get("apply_templates", True)
-            template_type = strategy_config.get("template_type", "basic")
-
-            strategy = LlamaStrategy(
-                model_name=model_name,
-                metric=metric,
-                task_model=task_model,
-                prompt_model=prompt_model,
-                task_model_name=task_model_name,
-                prompt_model_name=prompt_model_name,
-                apply_formatting=apply_formatting,
-                apply_templates=apply_templates,
-                template_type=template_type,
-            )
-            click.echo(f"Using LlamaStrategy from config for model: {model_name}")
-            return strategy
-
-        elif strategy_type.lower() == "basic":
-            # Extract additional strategy parameters from config
-            strategy_params = {
-                k: v
-                for k, v in strategy_config.items()
-                if k not in ["type", "strategy"]  # Exclude non-parameter keys
-            }
-
-            strategy = BasicOptimizationStrategy(
-                model_name=model_name,
-                metric=metric,
-                task_model=task_model,
-                prompt_model=prompt_model,
-                task_model_name=task_model_name,
-                prompt_model_name=prompt_model_name,
-                **strategy_params,  # Pass all additional config parameters
-            )
-            click.echo(
-                f"Using BasicOptimizationStrategy from config for model: {model_name}"
-            )
-            return strategy
-
-        else:
-            click.echo(
-                f"Unknown strategy type: {strategy_type}, falling back to auto-detection"
-            )
-            # Fall through to auto-detection
-
-    # Auto-detect based on model name
-    if "llama" in model_name.lower():
-        strategy = LlamaStrategy(
-            model_name=model_name,
-            metric=metric,
-            task_model=task_model,
-            prompt_model=prompt_model,
-            task_model_name=task_model_name,
-            prompt_model_name=prompt_model_name,
-            apply_formatting=True,
-            apply_templates=True,
-        )
-        click.echo(f"Auto-detected LlamaStrategy for model: {model_name}")
-    else:
-        # Extract additional strategy parameters from config for auto-detected strategy
-        strategy_params = {
-            k: v
-            for k, v in strategy_config.items()
-            if k not in ["type", "strategy"]  # Exclude non-parameter keys
-        }
-
-        strategy = BasicOptimizationStrategy(
-            model_name=model_name,
-            metric=metric,
-            task_model=task_model,
-            prompt_model=prompt_model,
-            task_model_name=task_model_name,
-            prompt_model_name=prompt_model_name,
-            **strategy_params,  # Pass all additional config parameters
-        )
-        click.echo(f"Auto-detected BasicOptimizationStrategy for model: {model_name}")
+    strategy = BasicOptimizationStrategy(
+        model_name=model_name,
+        metric=metric,
+        task_model=task_model,
+        prompt_model=prompt_model,
+        task_model_name=task_model_name,
+        prompt_model_name=prompt_model_name,
+        **strategy_params,  # Pass all additional config parameters
+    )
+    click.echo(f"Using BasicOptimizationStrategy for model: {model_name}")
 
     return strategy
 
@@ -863,7 +796,7 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
     # Create strategy based on config
     strategy = get_strategy(
         config_dict.get("strategy", {}),
-        config_dict.get("model", {}).get("name", ""),
+        task_model_name,  # Use the actual task model name instead of config default
         metric,
         task_model,
         prompt_model,

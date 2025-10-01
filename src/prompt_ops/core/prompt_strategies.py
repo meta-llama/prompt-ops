@@ -63,26 +63,8 @@ class BaseStrategy(ABC):
         self.trainset = None
         self.valset = None
 
-        if model_family is None:
-            from .utils.llama_utils import is_llama_model
-
-            if is_llama_model(model_name):
-                self.model_family = "llama"
-            else:
-                # Default to Llama since that's our focus
-                logging.warning(
-                    f"Model '{model_name}' does not appear to be a Llama model. "
-                    f"This library is optimized for Llama models."
-                )
-                self.model_family = "llama"
-        else:
-            # If model_family is explicitly provided, use it but warn if not 'llama'
-            self.model_family = model_family
-            if self.model_family != "llama":
-                logging.warning(
-                    f"Model family '{self.model_family}' specified, but this library "
-                    f"is optimized for Llama models."
-                )
+        # Set model family if provided, otherwise leave as None (model-agnostic)
+        self.model_family = model_family
 
     @abstractmethod
     def run(self, prompt_data: Dict[str, Any]) -> Any:
@@ -144,7 +126,6 @@ class BasicOptimizationStrategy(BaseStrategy):
         view_data_batch_size: int = 10,
         tip_aware_proposer: bool = True,
         fewshot_aware_proposer: bool = True,
-        use_llama_tips: bool = True,
         requires_permission_to_run: bool = False,
         # Baseline computation settings
         compute_baseline: bool = True,
@@ -206,9 +187,6 @@ class BasicOptimizationStrategy(BaseStrategy):
         self.trainset = kwargs.get("trainset", [])
         self.valset = kwargs.get("valset", [])
         self.testset = kwargs.get("testset", [])
-
-        # Model-specific optimization settings
-        self.use_llama_tips = use_llama_tips
 
         # MIPROv2 constructor parameters
         self.max_bootstrapped_demos = max_bootstrapped_demos
@@ -349,7 +327,7 @@ class BasicOptimizationStrategy(BaseStrategy):
             score = evaluator.evaluate(baseline_program)
             duration = time.time() - start_time
 
-            print(f"✅ Baseline Score: {score:.3f} in {duration:.2f}s\n")
+            print(f"Baseline Score: {score:.3f} in {duration:.2f}s\n")
             return float(score)
 
         except Exception as e:
@@ -378,39 +356,7 @@ class BasicOptimizationStrategy(BaseStrategy):
         create_and_display_summary(self, prompt_data)
 
         try:
-            # Add model-specific tips to the prompt if enabled
-            model_tips = None
-            if self.use_llama_tips:
-                # Check if model_tips are already in prompt_data
-                if "model_tips" in prompt_data:
-                    model_tips = prompt_data["model_tips"]
-                else:
-                    # Import here to avoid circular imports
-                    from .utils.llama_utils import get_llama_tips
-
-                    model_tips = get_llama_tips()
-
-            # Incorporate model-specific tips into the prompt if available
-            if model_tips and isinstance(model_tips, dict):
-                # Add model-specific formatting tips to the prompt
-                if "formatting" in model_tips:
-                    text += f"\n\nFormatting Tip: {model_tips['formatting']}"
-
-                # Add reasoning tips for complex tasks
-                if "reasoning" in model_tips and any(
-                    field in prompt_data.get("inputs", [])
-                    for field in ["context", "document", "text"]
-                ):
-                    text += f"\n\nReasoning Tip: {model_tips['reasoning']}"
-
-                # Add constraint tips if output format is important
-                if "constraints" in model_tips:
-                    text += f"\n\nOutput Requirements: {model_tips['constraints']}"
-
-            # Update the prompt text in prompt_data
-            prompt_data["text"] = text
-
-            # Create signature using consistent helper method with enhanced prompt
+            # Create signature using consistent helper method
             signature = self._create_signature(prompt_data, text)
 
             # Create program instance with the signature
@@ -452,26 +398,17 @@ class BasicOptimizationStrategy(BaseStrategy):
             # Initialize proposer_kwargs if not already present
             optimizer.proposer_kwargs = getattr(optimizer, "proposer_kwargs", {}) or {}
 
-            # First check if we have custom instruction tips from LlamaStrategy
+            # Check if we have custom instruction tips
             if (
                 hasattr(self, "proposer_kwargs")
                 and self.proposer_kwargs
                 and "tip" in self.proposer_kwargs
             ):
-                # Use our custom instruction tips with highest priority
+                # Use our custom instruction tips
                 optimizer.proposer_kwargs["tip"] = self.proposer_kwargs["tip"]
                 logging.info(
                     f"Using custom instruction tips: {self.proposer_kwargs['tip'][:50] if self.proposer_kwargs['tip'] else 'None'}"
                 )
-            # Otherwise, if we have model-specific tips, use those
-            elif model_tips:
-                # Add persona and example tips to the proposer
-                if "persona" in model_tips or "examples" in model_tips:
-                    persona_tip = model_tips.get("persona", "")
-                    examples_tip = model_tips.get("examples", "")
-                    optimizer.proposer_kwargs["tip"] = (
-                        f"{persona_tip} {examples_tip}".strip()
-                    )
 
             logging.info(
                 f"Optimization strategy using {self.max_labeled_demos} labeled demos, {self.max_bootstrapped_demos} bootstrapped demos with {self.num_threads} threads"

@@ -104,16 +104,6 @@ def convert_json_to_yaml(
             if hasattr(strategy, "model_name"):
                 yaml_content += f"    model_name: {strategy.model_name}\n"
 
-            # Include model-specific settings for LlamaStrategy
-            if strategy_name == "LlamaStrategy":
-                if hasattr(strategy, "apply_formatting"):
-                    yaml_content += (
-                        f"    apply_formatting: {strategy.apply_formatting}\n"
-                    )
-
-                if hasattr(strategy, "apply_templates"):
-                    yaml_content += f"    apply_templates: {strategy.apply_templates}\n"
-
             # Extract and include instruction tips if available
             if hasattr(strategy, "instruction_tips"):
                 # Use the directly stored instruction_tips attribute
@@ -131,15 +121,6 @@ def convert_json_to_yaml(
                 # Format the tip with proper indentation for YAML
                 indented_tip = "\n        ".join(tip.strip().split("\n"))
                 yaml_content += f"    instruction_tips: |\n        {indented_tip}\n"
-
-            # For LlamaStrategy, include original instruction preferences if available
-            if strategy_name == "LlamaStrategy" and hasattr(
-                strategy, "_selected_preferences"
-            ):
-                yaml_content += f"    original_preferences:\n"
-                for i, pref in enumerate(strategy._selected_preferences):
-                    indented_pref = "\n        ".join(pref.strip().split("\n"))
-                    yaml_content += f"      - |\n        {indented_pref}\n"
 
     return yaml_content
 

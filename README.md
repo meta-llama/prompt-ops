@@ -24,11 +24,11 @@
 
 
 
-prompt-ops is a Python package that **automatically optimizes prompts** for Llama models. It transforms prompts that work well with other LLMs into prompts that are optimized for Llama models, improving performance and reliability.
+prompt-ops is a Python package that **automatically optimizes prompts** for Llama models. It transforms prompts that work well with other LLMs into prompts that are optimized for LLM models, improving performance and reliability.
 
 **Key Benefits:**
 - **No More Trial and Error**: Stop manually tweaking prompts to get better results
-- **Fast Optimization**: Get Llama-optimized prompts in minutes with template-based optimization
+- **Fast Optimization**: Get model-optimized prompts in minutes with template-based optimization
 - **Data-Driven Improvements**: Use your own examples to create prompts that work for your specific use case
 - **Measurable Results**: Evaluate prompt performance with customizable metrics
 
@@ -66,7 +66,7 @@ To get started with prompt-ops, you'll need:
 2. [**Prepare your dataset**](#preparing-your-data): Create a JSON file with query-response pairs for evaluation and optimization
 3. **Configure optimization**: Set up a simple YAML file with your dataset and preferences (see [example configuration](configs/facility-simple.yaml))
 4. [**Run optimization**](#step-4-run-optimization): Execute a single command to transform your prompt
-5. [**Get results**](#prompt-transformation-example): Receive a Llama-optimized prompt with performance metrics
+5. [**Get results**](#prompt-transformation-example): Receive a model-optimized prompt with performance metrics
 
 
 ## Real-world Results
