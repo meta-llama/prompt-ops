@@ -15,8 +15,9 @@ import yaml
 # 3. when running tests for specific components in isolation
 CLI_COMPONENTS_AVAILABLE = False
 try:
-    from llama_prompt_ops.core.migrator import PromptMigrator
-    from llama_prompt_ops.interfaces.cli import cli
+    from prompt_ops.core.migrator import PromptMigrator
+
+    from prompt_ops.interfaces.cli import cli
 
     CLI_COMPONENTS_AVAILABLE = True
 except ImportError as e:
@@ -48,7 +49,7 @@ def temp_config_file():
             "proposer_model": "test-model",
         },
         "metric": {
-            "class": "llama_prompt_ops.core.metrics.FacilityMetric",
+            "class": "prompt_ops.core.metrics.FacilityMetric",
             "strict_json": False,
             "output_field": "answer",
         },
@@ -75,9 +76,7 @@ def get_skip_reason():
 @pytest.fixture
 def mock_api_key_check():
     """Mock the API key check function to always return a test API key."""
-    with patch(
-        "llama_prompt_ops.interfaces.cli.check_api_key", return_value="test_api_key"
-    ):
+    with patch("prompt_ops.interfaces.cli.check_api_key", return_value="test_api_key"):
         yield
 
 
@@ -113,26 +112,22 @@ class TestCLIIntegration:
         # Set up multiple patches
         with (
             patch(
-                "llama_prompt_ops.interfaces.cli.PromptMigrator",
+                "prompt_ops.interfaces.cli.PromptMigrator",
                 return_value=mock_migrator,
             ),
             patch(
-                "llama_prompt_ops.interfaces.cli.get_dataset_adapter_from_config",
+                "prompt_ops.interfaces.cli.get_dataset_adapter_from_config",
                 return_value=mock_dataset_adapter,
             ),
             patch(
-                "llama_prompt_ops.interfaces.cli.get_models_from_config",
+                "prompt_ops.interfaces.cli.get_models_from_config",
                 return_value=(None, None, "test_task_model", "test_prompt_model"),
             ),
+            patch("prompt_ops.interfaces.cli.get_metric", return_value=MagicMock()),
+            patch("prompt_ops.interfaces.cli.get_strategy", return_value=MagicMock()),
+            patch("prompt_ops.interfaces.cli.load_config", return_value={}),
             patch(
-                "llama_prompt_ops.interfaces.cli.get_metric", return_value=MagicMock()
-            ),
-            patch(
-                "llama_prompt_ops.interfaces.cli.get_strategy", return_value=MagicMock()
-            ),
-            patch("llama_prompt_ops.interfaces.cli.load_config", return_value={}),
-            patch(
-                "llama_prompt_ops.interfaces.cli.validate_min_records_in_dataset",
+                "prompt_ops.interfaces.cli.validate_min_records_in_dataset",
                 return_value=None,
             ),
         ):
@@ -155,7 +150,7 @@ class TestCLIIntegration:
             mock_migrator.optimize.assert_called_once()
 
             # Verify the migrator was properly initialized
-            from llama_prompt_ops.interfaces.cli import PromptMigrator
+            from prompt_ops.interfaces.cli import PromptMigrator
 
             PromptMigrator.assert_called_once()
             # what was loaded from temp_config_file
@@ -180,26 +175,22 @@ class TestCLIIntegration:
         # Set up multiple patches
         with (
             patch(
-                "llama_prompt_ops.interfaces.cli.PromptMigrator",
+                "prompt_ops.interfaces.cli.PromptMigrator",
                 return_value=mock_migrator,
             ),
             patch(
-                "llama_prompt_ops.interfaces.cli.get_dataset_adapter_from_config",
+                "prompt_ops.interfaces.cli.get_dataset_adapter_from_config",
                 return_value=mock_dataset_adapter,
             ),
             patch(
-                "llama_prompt_ops.interfaces.cli.get_models_from_config",
+                "prompt_ops.interfaces.cli.get_models_from_config",
                 return_value=(None, None, "test_task_model", "test_prompt_model"),
             ),
+            patch("prompt_ops.interfaces.cli.get_metric", return_value=MagicMock()),
+            patch("prompt_ops.interfaces.cli.get_strategy", return_value=MagicMock()),
+            patch("prompt_ops.interfaces.cli.load_config", return_value={}),
             patch(
-                "llama_prompt_ops.interfaces.cli.get_metric", return_value=MagicMock()
-            ),
-            patch(
-                "llama_prompt_ops.interfaces.cli.get_strategy", return_value=MagicMock()
-            ),
-            patch("llama_prompt_ops.interfaces.cli.load_config", return_value={}),
-            patch(
-                "llama_prompt_ops.interfaces.cli.validate_min_records_in_dataset",
+                "prompt_ops.interfaces.cli.validate_min_records_in_dataset",
                 return_value=None,
             ),
         ):
@@ -222,12 +213,12 @@ class TestCLIIntegration:
             mock_migrator.optimize.assert_called_once()
 
             # Verify the migrator was properly initialized
-            from llama_prompt_ops.interfaces.cli import PromptMigrator
+            from prompt_ops.interfaces.cli import PromptMigrator
 
             PromptMigrator.assert_called_once()
 
             # Verify the config was loaded with the facility_config_path
-            from llama_prompt_ops.interfaces.cli import load_config
+            from prompt_ops.interfaces.cli import load_config
 
             load_config.assert_called_once_with(facility_config_path)
 
@@ -256,28 +247,28 @@ class TestCLIIntegration:
             # Set up multiple patches
             with (
                 patch(
-                    "llama_prompt_ops.interfaces.cli.PromptMigrator",
+                    "prompt_ops.interfaces.cli.PromptMigrator",
                     return_value=mock_migrator,
                 ),
                 patch(
-                    "llama_prompt_ops.interfaces.cli.get_dataset_adapter_from_config",
+                    "prompt_ops.interfaces.cli.get_dataset_adapter_from_config",
                     return_value=mock_dataset_adapter,
                 ),
                 patch(
-                    "llama_prompt_ops.interfaces.cli.get_models_from_config",
+                    "prompt_ops.interfaces.cli.get_models_from_config",
                     return_value=(None, None, "test_task_model", "test_prompt_model"),
                 ),
                 patch(
-                    "llama_prompt_ops.interfaces.cli.get_metric",
+                    "prompt_ops.interfaces.cli.get_metric",
                     return_value=MagicMock(),
                 ),
                 patch(
-                    "llama_prompt_ops.interfaces.cli.get_strategy",
+                    "prompt_ops.interfaces.cli.get_strategy",
                     return_value=MagicMock(),
                 ),
-                patch("llama_prompt_ops.interfaces.cli.load_config", return_value={}),
+                patch("prompt_ops.interfaces.cli.load_config", return_value={}),
                 patch(
-                    "llama_prompt_ops.interfaces.cli.validate_min_records_in_dataset",
+                    "prompt_ops.interfaces.cli.validate_min_records_in_dataset",
                     return_value=None,
                 ),
             ):
@@ -309,7 +300,7 @@ class TestCLIIntegration:
                 mock_migrator.optimize.assert_called_once()
 
                 # Verify the migrator was properly initialized
-                from llama_prompt_ops.interfaces.cli import PromptMigrator
+                from prompt_ops.interfaces.cli import PromptMigrator
 
                 PromptMigrator.assert_called_once()
         finally:

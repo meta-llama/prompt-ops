@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from llama_prompt_ops.core.prompt_processors import (
+from prompt_ops.core.prompt_processors import (
     InstructionPreference,
     LlamaFormatting,
     PromptProcessor,
@@ -22,7 +22,7 @@ class TestPromptProcessor(unittest.TestCase):
 
         self.assertEqual(result["text"], "Test prompt")
 
-    @patch("llama_prompt_ops.core.prompt_processors.format_prompt_for_llama")
+    @patch("prompt_ops.core.prompt_processors.format_prompt_for_llama")
     def test_llama_formatting(self, mock_format):
         # Configure mock
         mock_format.return_value = "[FORMATTED] Test prompt"
@@ -37,8 +37,8 @@ class TestPromptProcessor(unittest.TestCase):
         mock_format.assert_called_once()
         self.assertEqual(result["text"], "[FORMATTED] Test prompt")
 
-    @patch("llama_prompt_ops.core.prompt_processors.select_instruction_preference")
-    @patch("llama_prompt_ops.core.prompt_processors.get_task_type_from_prompt")
+    @patch("prompt_ops.core.prompt_processors.select_instruction_preference")
+    @patch("prompt_ops.core.prompt_processors.get_task_type_from_prompt")
     def test_instruction_preference(self, mock_get_task, mock_select):
         # Configure mocks
         mock_get_task.return_value = "classification"
@@ -64,9 +64,9 @@ class TestPromptProcessor(unittest.TestCase):
 
 
 class TestLlamaProcessingChain(unittest.TestCase):
-    @patch("llama_prompt_ops.core.prompt_processors.format_prompt_for_llama")
-    @patch("llama_prompt_ops.core.prompt_processors.select_instruction_preference")
-    @patch("llama_prompt_ops.core.prompt_processors.get_task_type_from_prompt")
+    @patch("prompt_ops.core.prompt_processors.format_prompt_for_llama")
+    @patch("prompt_ops.core.prompt_processors.select_instruction_preference")
+    @patch("prompt_ops.core.prompt_processors.get_task_type_from_prompt")
     def test_processing_chain(self, mock_get_task, mock_select, mock_format):
         # Configure mocks
         mock_get_task.return_value = "summarization"
@@ -119,7 +119,7 @@ class TestLlamaProcessingChain(unittest.TestCase):
 
         # Mock the format_prompt_for_llama function to verify examples are passed
         with patch(
-            "llama_prompt_ops.core.prompt_processors.format_prompt_for_llama"
+            "prompt_ops.core.prompt_processors.format_prompt_for_llama"
         ) as mock_format:
             mock_format.return_value = "[FORMATTED WITH EXAMPLES]"
             result = chain.process(data)

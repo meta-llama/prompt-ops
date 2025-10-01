@@ -6,14 +6,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 # Mock the BaseStrategy class before importing PromptMigrator
-with patch("llama_prompt_ops.core.prompt_strategies.BaseStrategy") as MockBaseStrategy:
+with patch("prompt_ops.core.prompt_strategies.BaseStrategy") as MockBaseStrategy:
     # Make the mock return itself when instantiated
     MockBaseStrategy.return_value = MockBaseStrategy
     # Import after patching
-    from llama_prompt_ops.core.migrator import PromptMigrator
+    from prompt_ops.core.migrator import PromptMigrator
 
-from llama_prompt_ops.core.utils import json_to_yaml_file
-from llama_prompt_ops.core.utils.format_utils import convert_json_to_yaml
+from prompt_ops.core.utils.format_utils import convert_json_to_yaml
+
+from prompt_ops.core.utils import json_to_yaml_file
 
 
 @pytest.fixture
@@ -74,7 +75,7 @@ def test_load_prompt_from_json(temp_json_file):
     assert loaded_data["metadata"]["name"] == prompt_data["metadata"]["name"]
 
 
-@patch("llama_prompt_ops.core.migrator.json_to_yaml_file")
+@patch("prompt_ops.core.migrator.json_to_yaml_file")
 def test_save_optimized_prompt(mock_json_to_yaml, temp_yaml_file):
     # Test saving optimized prompt to YAML
 
@@ -112,7 +113,7 @@ def test_save_optimized_prompt(mock_json_to_yaml, temp_yaml_file):
     assert file_basename in str(call_args)
 
 
-@patch("llama_prompt_ops.core.migrator.json_to_yaml_file")
+@patch("prompt_ops.core.migrator.json_to_yaml_file")
 def test_migrator_uses_utils_function(mock_json_to_yaml, temp_yaml_file):
     # Test that migrator uses the utility function for conversion
 

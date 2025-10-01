@@ -4,8 +4,7 @@ import tempfile
 from unittest.mock import MagicMock
 
 import pytest
-
-from llama_prompt_ops.core.datasets import (
+from prompt_ops.core.datasets import (
     ConfigurableJSONAdapter,
     DatasetAdapter,
     load_dataset,
@@ -169,7 +168,7 @@ def test_custom_split_ratios(mock_dataset_adapter):
 
 def test_minimum_records_in_dataset(simple_data_file):
     try:
-        from llama_prompt_ops.interfaces.cli import validate_min_records_in_dataset
+        from prompt_ops.interfaces.cli import validate_min_records_in_dataset
     except ImportError as e:
         pytest.skip(f"Skipping test because module import failed: {str(e)}")
 

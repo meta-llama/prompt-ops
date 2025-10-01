@@ -5,7 +5,7 @@ from click.testing import CliRunner
 def test_cli_help():
     """Test that the CLI help command works."""
     try:
-        from llama_prompt_ops.interfaces.cli import cli
+        from prompt_ops.interfaces.cli import cli
     except ImportError:
         pytest.skip("CLI module not found, skipping test")
 
@@ -18,7 +18,7 @@ def test_cli_help():
 def test_cli_commands_exist():
     """Test that the expected commands exist in the CLI."""
     try:
-        from llama_prompt_ops.interfaces.cli import cli
+        from prompt_ops.interfaces.cli import cli
     except ImportError:
         pytest.skip("CLI module not found, skipping test")
 

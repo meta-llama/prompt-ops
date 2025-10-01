@@ -8,10 +8,10 @@ import pytest
 # Check if optimization components are available
 OPTIMIZATION_COMPONENTS_AVAILABLE = False
 try:
-    from llama_prompt_ops.core.datasets import ConfigurableJSONAdapter
-    from llama_prompt_ops.core.metrics import FacilityMetric
-    from llama_prompt_ops.core.model import ModelAdapter
-    from llama_prompt_ops.core.model_strategies import LlamaStrategy
+    from prompt_ops.core.datasets import ConfigurableJSONAdapter
+    from prompt_ops.core.metrics import FacilityMetric
+    from prompt_ops.core.model import ModelAdapter
+    from prompt_ops.core.model_strategies import LlamaStrategy
 
     OPTIMIZATION_COMPONENTS_AVAILABLE = True
 except ImportError as e:
@@ -179,8 +179,8 @@ class TestOptimizationIntegration:
 
     def test_pre_optimization_summary_creation(self):
         """Test that pre-optimization summary is created with correct data and baseline computation."""
-        from llama_prompt_ops.core.prompt_strategies import BasicOptimizationStrategy
-        from llama_prompt_ops.core.utils.summary_utils import (
+        from prompt_ops.core.prompt_strategies import BasicOptimizationStrategy
+        from prompt_ops.core.utils.summary_utils import (
             create_pre_optimization_summary,
         )
 
@@ -220,7 +220,7 @@ class TestOptimizationIntegration:
 
         # Mock the baseline evaluation
         with patch(
-            "llama_prompt_ops.core.prompt_strategies.create_evaluator"
+            "prompt_ops.core.prompt_strategies.create_evaluator"
         ) as mock_create_evaluator:
             mock_evaluator = MagicMock()
             mock_evaluator.evaluate.return_value = 0.65

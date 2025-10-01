@@ -10,11 +10,11 @@ import pytest
 # Check if core components are available
 CORE_COMPONENTS_AVAILABLE = False
 try:
-    from llama_prompt_ops.core.datasets import ConfigurableJSONAdapter
-    from llama_prompt_ops.core.metrics import FacilityMetric
-    from llama_prompt_ops.core.migrator import PromptMigrator
-    from llama_prompt_ops.core.model import ModelAdapter
-    from llama_prompt_ops.core.prompt_strategies import BasicOptimizationStrategy
+    from prompt_ops.core.datasets import ConfigurableJSONAdapter
+    from prompt_ops.core.metrics import FacilityMetric
+    from prompt_ops.core.migrator import PromptMigrator
+    from prompt_ops.core.model import ModelAdapter
+    from prompt_ops.core.prompt_strategies import BasicOptimizationStrategy
 
     CORE_COMPONENTS_AVAILABLE = True
 except ImportError as e:
@@ -258,7 +258,7 @@ def test_config_loading(facility_config_path):
 
     # Check metric config
     assert "class" in config["metric"]
-    assert config["metric"]["class"] == "llama_prompt_ops.core.metrics.FacilityMetric"
+    assert config["metric"]["class"] == "prompt_ops.core.metrics.FacilityMetric"
 
 
 @pytest.mark.skipif(
@@ -289,7 +289,7 @@ def test_end_to_end_flow_with_mocks(facility_config_path):
     mock_program.signature.instructions = "Optimized prompt"
 
     # Patch the ModelAdapter to use our mock
-    with patch("llama_prompt_ops.core.model.ModelAdapter", MockModelAdapter):
+    with patch("prompt_ops.core.model.ModelAdapter", MockModelAdapter):
         # Create a migrator with the strategy
         migrator = PromptMigrator(
             strategy=strategy, task_model=model, prompt_model=model

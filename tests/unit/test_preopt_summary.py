@@ -11,8 +11,7 @@ import json
 from unittest.mock import Mock, patch
 
 import pytest
-
-from llama_prompt_ops.core.utils.telemetry import PreOptimizationSummary
+from prompt_ops.core.utils.telemetry import PreOptimizationSummary
 
 
 class TestPreOptimizationSummary:
@@ -126,7 +125,7 @@ class TestPreOptimizationSummary:
         assert parsed["guidance"] == "test guidance"
         assert parsed["baseline_score"] == 0.85
 
-    @patch("llama_prompt_ops.core.utils.telemetry.get_logger")
+    @patch("prompt_ops.core.utils.telemetry.get_logger")
     def test_log(self, mock_get_logger):
         """Test that log() calls the logger with formatted output."""
         mock_logger = Mock()

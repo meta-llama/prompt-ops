@@ -5,17 +5,16 @@ import time
 from unittest.mock import mock_open, patch
 
 import pytest
-
-from llama_prompt_ops.core.utils.logging import LoggingManager, get_logger
+from prompt_ops.core.utils.logging import LoggingManager, get_logger
 
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
     """Reset the logger singleton before each test."""
     # This is a bit of a hack to reset the singleton for isolated tests
-    import llama_prompt_ops.core.utils.logging
+    import prompt_ops.core.utils.logging
 
-    llama_prompt_ops.core.utils.logging._LOG_SINGLETON = None
+    prompt_ops.core.utils.logging._LOG_SINGLETON = None
 
 
 def test_get_logger_singleton():

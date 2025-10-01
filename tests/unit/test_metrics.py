@@ -4,7 +4,7 @@ import pytest
 
 # Import the metrics classes
 try:
-    from llama_prompt_ops.core.metrics import (
+    from prompt_ops.core.metrics import (
         ExactMatchMetric,
         FacilityMetric,
         MetricBase,
