@@ -7,6 +7,7 @@ Tests the summary creation utility functions in isolation.
 from unittest.mock import MagicMock
 
 import pytest
+
 from prompt_ops.core.utils.summary_utils import (
     create_and_display_summary,
     create_pre_optimization_summary,
