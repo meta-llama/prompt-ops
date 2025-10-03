@@ -1,0 +1,39 @@
+import React, { createContext, useState, ReactNode, useContext } from 'react';
+
+interface AppContextType {
+  activeMode: string;
+  setActiveMode: (mode: string) => void;
+  isModeLocked: boolean;
+  setIsModeLocked: (locked: boolean) => void;
+}
+
+export const AppContext = createContext<AppContextType | undefined>(undefined);
+
+interface AppProviderProps {
+  children: ReactNode;
+}
+
+export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
+  const [activeMode, setActiveMode] = useState('migrate');
+  const [isModeLocked, setIsModeLocked] = useState(false);
+
+  return (
+    <AppContext.Provider value={{
+      activeMode,
+      setActiveMode,
+      isModeLocked,
+      setIsModeLocked
+    }}>
+      {children}
+    </AppContext.Provider>
+  );
+};
+
+// Custom hook for using the app context
+export const useAppContext = () => {
+  const context = useContext(AppContext);
+  if (context === undefined) {
+    throw new Error('useAppContext must be used within an AppProvider');
+  }
+  return context;
+};
