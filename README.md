@@ -1,5 +1,17 @@
 <h1 align="center"> Prompt Ops </h1>
 
+### 🎉 New: Prompt Duel Optimizer (PDO) Published!
+
+We've published a new paper on **PDO (Prompt Duel Optimizer)** - an efficient label-free prompt optimization method using dueling bandits and Thompson sampling. PDO achieves state-of-the-art results on BIG-bench Hard and MS MARCO benchmarks.
+
+📄 **Read the paper:** [LLM Prompt Duel Optimizer: Efficient Label-Free Prompt Optimization](https://www.arxiv.org/abs/2510.13907) (arXiv:2510.13907)
+
+🧪 **Try it yourself:** Check out the [Web of Lies use case](use-cases/web-of-lies-pdo/) demonstrating PDO on logical reasoning tasks
+
+⭐ **Star this repo** and follow along - we'll be publishing a detailed tutorial notebook soon!
+
+---
+
 ## What is prompt-ops?
 <p align="center">
   <a href="https://pypi.org/project/prompt-ops/"><img src="https://img.shields.io/pypi/v/prompt-ops.svg" /></a>
