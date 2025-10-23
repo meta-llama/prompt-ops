@@ -31,6 +31,13 @@ try:
 except ImportError:
     TEXTGRAD_AVAILABLE = False
 
+try:
+    import litellm
+
+    LITELLM_AVAILABLE = True
+except ImportError:
+    LITELLM_AVAILABLE = False
+
 
 class ModelAdapter(ABC):
     """
@@ -80,6 +87,36 @@ class ModelAdapter(ABC):
             The generated text response
         """
         pass
+
+    def generate_batch(
+        self, prompts: List[str], max_threads: int = 1, **kwargs
+    ) -> List[str]:
+        """
+        Generate responses for multiple prompts, optionally in parallel.
+
+        This method is useful for optimizers that need to evaluate multiple
+        candidates simultaneously (e.g., PDO duels, batch evaluation).
+
+        Args:
+            prompts: List of input prompts
+            max_threads: Maximum number of threads for parallel execution
+            **kwargs: Generation parameters (temperature, max_tokens, etc.)
+
+        Returns:
+            List of generated responses in same order as input prompts
+        """
+        if max_threads <= 1:
+            # Sequential execution
+            return [self.generate(prompt, **kwargs) for prompt in prompts]
+
+        # Parallel execution
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
+            futures = [
+                executor.submit(self.generate, prompt, **kwargs) for prompt in prompts
+            ]
+            return [future.result() for future in futures]
 
 
 class DSPyModelAdapter(ModelAdapter):
@@ -334,6 +371,186 @@ class TextGradModelAdapter(ModelAdapter):
         return response.text
 
 
+class LiteLLMModelAdapter(ModelAdapter):
+    """
+    Lightweight adapter using LiteLLM for simple text generation.
+
+    Provides a clean "prompt in, string out" interface without
+    framework overhead. Ideal for optimization strategies that
+    don't need DSPy's advanced features.
+    """
+
+    def __init__(
+        self,
+        model_name: str = None,
+        api_base: str = None,
+        api_key: str = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.0,
+        **kwargs,
+    ):
+        """
+        Initialize the LiteLLM model adapter with configuration parameters.
+
+        Args:
+            model_name: The model identifier (e.g., "openrouter/meta-llama/llama-3.3-70b-instruct")
+            api_base: The API base URL
+            api_key: The API key
+            max_tokens: Maximum number of tokens to generate
+            temperature: Sampling temperature
+            **kwargs: Additional arguments to pass to litellm.completion
+        """
+        if not LITELLM_AVAILABLE:
+            raise ImportError(
+                "LiteLLM is not installed. Install it with `pip install litellm`"
+            )
+
+        # Store configuration
+        self.model_name = model_name
+        self.api_base = api_base
+        self.api_key = api_key
+        self.max_tokens = max_tokens
+        self.temperature = temperature
+        self.kwargs = kwargs
+
+        # Set up environment variables for LiteLLM if needed
+        if api_key:
+            self._setup_api_key(model_name, api_key)
+        if api_base:
+            self._setup_api_base(model_name, api_base)
+
+    def _setup_api_key(self, model_name: str, api_key: str):
+        """Set appropriate environment variable based on model provider."""
+        model_lower = model_name.lower() if model_name else ""
+
+        if "openai" in model_lower and "openrouter" not in model_lower:
+            os.environ["OPENAI_API_KEY"] = api_key
+        elif "anthropic" in model_lower or "claude" in model_lower:
+            os.environ["ANTHROPIC_API_KEY"] = api_key
+        elif "openrouter" in model_lower:
+            os.environ["OPENROUTER_API_KEY"] = api_key
+        elif "together" in model_lower:
+            os.environ["TOGETHER_API_KEY"] = api_key
+        # Add more providers as needed
+
+    def _setup_api_base(self, model_name: str, api_base: str):
+        """Set appropriate base URL environment variable."""
+        model_lower = model_name.lower() if model_name else ""
+
+        if "openai" in model_lower and "openrouter" not in model_lower:
+            os.environ["OPENAI_API_BASE"] = api_base
+        elif "openrouter" in model_lower:
+            os.environ["OPENROUTER_API_BASE"] = api_base
+        # Add more as needed
+
+    def generate(
+        self, prompt: str, temperature: float = None, max_tokens: int = None, **kwargs
+    ) -> str:
+        """
+        Generate text from a prompt using LiteLLM.
+
+        Args:
+            prompt: The input prompt text
+            temperature: Override the default temperature
+            max_tokens: Override the default max tokens
+            **kwargs: Additional generation parameters
+
+        Returns:
+            The generated text response
+        """
+        # Use override values or defaults
+        temp = temperature if temperature is not None else self.temperature
+        tokens = max_tokens if max_tokens is not None else self.max_tokens
+
+        # Prepare LiteLLM call
+        messages = [{"role": "user", "content": prompt}]
+
+        # Filter out DSPy-specific parameters that LiteLLM doesn't understand
+        filtered_kwargs = {
+            k: v
+            for k, v in self.kwargs.items()
+            if k not in ["cache", "model"]  # Remove DSPy-specific params
+        }
+
+        # Prepare kwargs for litellm
+        litellm_kwargs = {
+            "model": self.model_name,
+            "messages": messages,
+            "temperature": temp,
+            "max_tokens": tokens,
+            **filtered_kwargs,
+            **kwargs,
+        }
+
+        # Add API base if specified
+        if self.api_base:
+            litellm_kwargs["api_base"] = self.api_base
+
+        try:
+            response = litellm.completion(**litellm_kwargs)
+
+            # Extract text from response
+            return response.choices[0].message.content
+
+        except Exception as e:
+            # Convert to our standard error types if needed
+            raise e
+
+    def generate_with_chat_format(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = None,
+        max_tokens: int = None,
+        **kwargs,
+    ) -> str:
+        """
+        Generate text using a chat format with multiple messages.
+
+        Args:
+            messages: List of message dictionaries with 'role' and 'content' keys
+            temperature: Override the default temperature
+            max_tokens: Override the default max tokens
+            **kwargs: Additional generation parameters
+
+        Returns:
+            The generated text response
+        """
+        # Use override values or defaults
+        temp = temperature if temperature is not None else self.temperature
+        tokens = max_tokens if max_tokens is not None else self.max_tokens
+
+        # Filter out DSPy-specific parameters that LiteLLM doesn't understand
+        filtered_kwargs = {
+            k: v
+            for k, v in self.kwargs.items()
+            if k not in ["cache", "model"]  # Remove DSPy-specific params
+        }
+
+        # Prepare kwargs for litellm
+        litellm_kwargs = {
+            "model": self.model_name,
+            "messages": messages,
+            "temperature": temp,
+            "max_tokens": tokens,
+            **filtered_kwargs,
+            **kwargs,
+        }
+
+        # Add API base if specified
+        if self.api_base:
+            litellm_kwargs["api_base"] = self.api_base
+
+        try:
+            response = litellm.completion(**litellm_kwargs)
+
+            # Extract text from response
+            return response.choices[0].message.content
+
+        except Exception as e:
+            # Convert to our standard error types if needed
+            raise e
+
+
 def setup_model(model_name=None, adapter_type="dspy", **kwargs):
     """
     Set up a model adapter using the specified adapter type.
@@ -343,7 +560,7 @@ def setup_model(model_name=None, adapter_type="dspy", **kwargs):
 
     Args:
         model_name: The model identifier (e.g., "openai/gpt-4o-mini", "anthropic/claude-3-opus-20240229")
-        adapter_type: The adapter type to use ("dspy" or "textgrad")
+        adapter_type: The adapter type to use ("dspy", "textgrad", or "litellm")
         **kwargs: Additional adapter-specific configuration options
 
     Returns:
@@ -394,6 +611,14 @@ def setup_model(model_name=None, adapter_type="dspy", **kwargs):
         logger.progress(
             f" Using model with TextGrad: {kwargs.get('model_name', 'custom configuration')}"
         )
+    elif adapter_type.lower() == "litellm":
+        # For LiteLLM, use model_name directly
+        if model_name and "model_name" not in kwargs:
+            kwargs["model_name"] = model_name
+        adapter = LiteLLMModelAdapter(**kwargs)
+        logger.progress(
+            f" Using model with LiteLLM: {kwargs.get('model_name', 'custom configuration')}"
+        )
     else:
         raise ValueError(f"Unsupported adapter type: {adapter_type}")
 
@@ -405,7 +630,7 @@ def get_model_adapter(adapter_type, **kwargs):
     Get a model adapter instance by type.
 
     Args:
-        adapter_type: The adapter type ("dspy" or "textgrad")
+        adapter_type: The adapter type ("dspy", "textgrad", or "litellm")
         **kwargs: Configuration parameters for the adapter
 
     Returns:
