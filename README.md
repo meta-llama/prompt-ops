@@ -85,18 +85,20 @@ These results were measured on the [HotpotQA multi-hop reasoning benchmark](http
 
 ### Step 1: Installation
 
+> **Note:** We recommend installing from source as we are currently transitioning package names on PyPI. This ensures you get the latest stable version without any naming conflicts.
+
 ```bash
 # Create a virtual environment
 conda create -n prompt-ops python=3.10
 conda activate prompt-ops
 
-# Install from PyPI
-pip install prompt-ops
-
-# OR install from source
+# Recommended: Install from source
 git clone https://github.com/meta-llama/prompt-ops.git
 cd prompt-ops
 pip install -e .
+
+# Alternative: Install from PyPI (may have naming transition issues, still on version 0.0.7)
+# pip install llama-prompt-ops
 
 ```
 
