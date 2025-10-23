@@ -4,7 +4,7 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 """
-Ranking systems for QPDO dueling bandit optimization.
+Ranking systems for PDO dueling bandit optimization.
 
 This module implements multiple ranking algorithms including Copeland,
 Borda, Elo, average win-rate, and TrueSkill rankings.

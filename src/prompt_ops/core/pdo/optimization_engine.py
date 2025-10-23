@@ -4,7 +4,7 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 """
-QPDO optimization engine.
+PDO optimization engine.
 
 This module implements the core dueling bandit optimization loop using
 Thompson sampling, multiple ranking systems, and instruction evolution.
@@ -55,9 +55,9 @@ except ImportError:
     HAS_TABULATE = False
 
 
-class QPDOEngine:
+class PDOEngine:
     """
-    QPDO (Quick Prompt Duel Optimizer) engine.
+    PDO (Prompt Duel Optimizer) engine.
 
     Implements dueling bandit optimization using Thompson sampling,
     multiple ranking systems, and instruction evolution.
@@ -90,7 +90,7 @@ class QPDOEngine:
         ranking_method: str = "copeland",
     ):
         """
-        Initialize QPDO optimization engine.
+        Initialize PDO optimization engine.
 
         Args:
             task_model: ModelAdapter for task execution
@@ -370,7 +370,7 @@ class QPDOEngine:
             response_format = {
                 "type": "json_schema",
                 "json_schema": {
-                    "name": "qpdo_reasoned_answer",
+                    "name": "pdo_reasoned_answer",
                     "schema": get_reason_schema(base_choices),
                     "strict": True,
                 },
@@ -457,7 +457,7 @@ class QPDOEngine:
             judge_rf = {
                 "type": "json_schema",
                 "json_schema": {
-                    "name": "qpdo_evaluate_verdict",
+                    "name": "pdo_evaluate_verdict",
                     "schema": EVALUATE_SCHEMA,
                     "strict": True,
                 },
@@ -677,7 +677,7 @@ class QPDOEngine:
             response_format = {
                 "type": "json_schema",
                 "json_schema": {
-                    "name": "qpdo_mutate_instruction",
+                    "name": "pdo_mutate_instruction",
                     "schema": {
                         "type": "object",
                         "properties": {"mutated_prompt": {"type": "string"}},
@@ -800,7 +800,7 @@ class QPDOEngine:
         labels: Optional[List[str]] = None,
     ) -> Tuple[str, Dict[str, Any]]:
         """
-        Run the full QPDO optimization process.
+        Run the full PDO optimization process.
 
         Args:
             base_instruction: Initial instruction to start from
@@ -813,7 +813,7 @@ class QPDOEngine:
         # Initialize instruction pool
         self.initialize_instruction_pool(base_instruction, examples, labels)
 
-        print(f"\nStarting QPDO optimization:")
+        print(f"\nStarting PDO optimization:")
         print(f"- Total rounds: {self.total_rounds}")
         print(f"- Duels per round: {self.num_duels_per_round}")
         print(f"- Examples per duel: {self.num_eval_examples_per_duel}")
@@ -847,7 +847,7 @@ class QPDOEngine:
                 top_instructions = self.update_prompt_pool(examples, labels)
 
         # Get final results
-        print("\n🎉 QPDO optimization complete!")
+        print("\n🎉 PDO optimization complete!")
 
         # Find best instruction using user-selected ranking method
         final_order = self._get_rank_order()

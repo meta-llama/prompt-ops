@@ -4,7 +4,7 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 """
-Thompson sampling algorithms for QPDO dueling bandit optimization.
+Thompson sampling algorithms for PDO dueling bandit optimization.
 
 This module implements Double Thompson Sampling with variance-based selection
 and multi-ranker fusion for prompt duel optimization.

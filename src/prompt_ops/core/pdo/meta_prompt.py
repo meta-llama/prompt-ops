@@ -4,7 +4,7 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 """
-Centralized meta prompt templates for QPDO.
+Centralized meta prompt templates for PDO.
 
 This module contains all user-facing prompt templates used by the optimization
 engine: dataset summarization, instruction proposal, task prompting, judging,

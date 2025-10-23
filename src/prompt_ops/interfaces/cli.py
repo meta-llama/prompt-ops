@@ -88,7 +88,7 @@ from prompt_ops.core.prompt_strategies import (
     BaseStrategy,
     BasicOptimizationStrategy,
     OptimizationError,
-    QPDOStrategy,
+    PDOStrategy,
 )
 
 
@@ -457,8 +457,8 @@ def get_models_from_config(config_dict, override_model_name=None, api_key=None):
     strategy_type = optimization_config.get("strategy", "").lower()
 
     # Strategy-aware adapter selection
-    if strategy_type == "qpdo":
-        # QPDO uses LiteLLM for lightweight text generation
+    if strategy_type == "pdo":
+        # PDO uses LiteLLM for lightweight text generation
         adapter_type = model_config.get("adapter_type", "litellm")
     else:
         # Other strategies use DSPy by default
@@ -600,24 +600,24 @@ def get_strategy(
             )
             return strategy
 
-        elif strategy_type.lower() == "qpdo":
-            # Extract QPDO-specific parameters
-            qpdo_params = {
+        elif strategy_type.lower() == "pdo":
+            # Extract PDO-specific parameters
+            pdo_params = {
                 k: v
                 for k, v in strategy_config.items()
                 if k not in ["strategy"]  # Exclude non-parameter keys
             }
 
-            strategy = QPDOStrategy(
+            strategy = PDOStrategy(
                 model_name=model_name,
                 metric=metric,
                 task_model=task_model,
                 prompt_model=prompt_model,
                 task_model_name=task_model_name,
                 prompt_model_name=prompt_model_name,
-                **qpdo_params,  # Pass all additional config parameters
+                **pdo_params,  # Pass all additional config parameters
             )
-            click.echo(f"Using QPDOStrategy from config for model: {model_name}")
+            click.echo(f"Using PDOStrategy from config for model: {model_name}")
             click.echo(
                 f"Task model: {task_model_name}, Judge model: {prompt_model_name}"
             )

@@ -95,7 +95,7 @@ class ModelAdapter(ABC):
         Generate responses for multiple prompts, optionally in parallel.
 
         This method is useful for optimizers that need to evaluate multiple
-        candidates simultaneously (e.g., QPDO duels, batch evaluation).
+        candidates simultaneously (e.g., PDO duels, batch evaluation).
 
         Args:
             prompts: List of input prompts
