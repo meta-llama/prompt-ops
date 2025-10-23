@@ -88,6 +88,7 @@ from prompt_ops.core.prompt_strategies import (
     BaseStrategy,
     BasicOptimizationStrategy,
     OptimizationError,
+    QPDOStrategy,
 )
 
 
@@ -450,7 +451,18 @@ def get_models_from_config(config_dict, override_model_name=None, api_key=None):
         tuple: (task_model, proposer_model, task_model_name, proposer_model_name)
     """
     model_config = config_dict.get("model", {})
-    adapter_type = model_config.get("adapter_type", "dspy")
+
+    # Check optimization strategy to determine appropriate adapter type
+    optimization_config = config_dict.get("optimization", {})
+    strategy_type = optimization_config.get("strategy", "").lower()
+
+    # Strategy-aware adapter selection
+    if strategy_type == "qpdo":
+        # QPDO uses LiteLLM for lightweight text generation
+        adapter_type = model_config.get("adapter_type", "litellm")
+    else:
+        # Other strategies use DSPy by default
+        adapter_type = model_config.get("adapter_type", "dspy")
 
     # Get API configuration
     api_base = model_config.get("api_base", "https://openrouter.ai/api/v1")
@@ -561,7 +573,63 @@ def get_strategy(
     # Extract just the model name without provider path
     model_name = model_name_with_path.split("/")[-1]
 
-    # Default to BasicOptimizationStrategy for all models (strategy.type config is ignored)
+    # Check if strategy is specified in config
+    strategy_type = strategy_config.get("strategy")
+
+    # If strategy type is specified in config, use it
+    if strategy_type:
+        if strategy_type.lower() == "basic":
+            # Extract additional strategy parameters from config
+            strategy_params = {
+                k: v
+                for k, v in strategy_config.items()
+                if k not in ["strategy"]  # Exclude non-parameter keys
+            }
+
+            strategy = BasicOptimizationStrategy(
+                model_name=model_name,
+                metric=metric,
+                task_model=task_model,
+                prompt_model=prompt_model,
+                task_model_name=task_model_name,
+                prompt_model_name=prompt_model_name,
+                **strategy_params,  # Pass all additional config parameters
+            )
+            click.echo(
+                f"Using BasicOptimizationStrategy from config for model: {model_name}"
+            )
+            return strategy
+
+        elif strategy_type.lower() == "qpdo":
+            # Extract QPDO-specific parameters
+            qpdo_params = {
+                k: v
+                for k, v in strategy_config.items()
+                if k not in ["strategy"]  # Exclude non-parameter keys
+            }
+
+            strategy = QPDOStrategy(
+                model_name=model_name,
+                metric=metric,
+                task_model=task_model,
+                prompt_model=prompt_model,
+                task_model_name=task_model_name,
+                prompt_model_name=prompt_model_name,
+                **qpdo_params,  # Pass all additional config parameters
+            )
+            click.echo(f"Using QPDOStrategy from config for model: {model_name}")
+            click.echo(
+                f"Task model: {task_model_name}, Judge model: {prompt_model_name}"
+            )
+            return strategy
+
+        else:
+            click.echo(
+                f"Unknown strategy type: {strategy_type}, falling back to BasicOptimizationStrategy"
+            )
+            # Fall through to default
+
+    # Default to BasicOptimizationStrategy for all models
     # Extract additional strategy parameters from config
     strategy_params = {
         k: v
@@ -795,7 +863,7 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
 
     # Create strategy based on config
     strategy = get_strategy(
-        config_dict.get("strategy", {}),
+        config_dict.get("optimization", {}),
         task_model_name,  # Use the actual task model name instead of config default
         metric,
         task_model,
