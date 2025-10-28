@@ -1,5 +1,17 @@
 <h1 align="center"> Prompt Ops </h1>
 
+### 🎉 New: Prompt Duel Optimizer (PDO) Published!
+
+We've published a new paper on **PDO (Prompt Duel Optimizer)** - an efficient label-free prompt optimization method using dueling bandits and Thompson sampling. PDO achieves state-of-the-art results on BIG-bench Hard and MS MARCO benchmarks.
+
+📄 **Read the paper:** [LLM Prompt Duel Optimizer: Efficient Label-Free Prompt Optimization](https://www.arxiv.org/abs/2510.13907) (arXiv:2510.13907)
+
+🧪 **Try it yourself:** Check out the [Web of Lies use case](use-cases/web-of-lies-pdo/) demonstrating PDO on logical reasoning tasks
+
+⭐ **Star this repo** and follow along - we'll be publishing a detailed tutorial notebook soon!
+
+---
+
 ## What is prompt-ops?
 <p align="center">
   <a href="https://pypi.org/project/prompt-ops/"><img src="https://img.shields.io/pypi/v/prompt-ops.svg" /></a>
@@ -85,18 +97,20 @@ These results were measured on the [HotpotQA multi-hop reasoning benchmark](http
 
 ### Step 1: Installation
 
+> **Note:** We recommend installing from source as we are currently transitioning package names on PyPI. This ensures you get the latest stable version without any naming conflicts.
+
 ```bash
 # Create a virtual environment
 conda create -n prompt-ops python=3.10
 conda activate prompt-ops
 
-# Install from PyPI
-pip install prompt-ops
-
-# OR install from source
+# Recommended: Install from source
 git clone https://github.com/meta-llama/prompt-ops.git
 cd prompt-ops
 pip install -e .
+
+# Alternative: Install from PyPI (may have naming transition issues, still on version 0.0.7)
+# pip install llama-prompt-ops
 
 ```
 
