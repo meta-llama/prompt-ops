@@ -793,6 +793,9 @@ class PDOStrategy(BaseStrategy):
             "answer_choices": kwargs.get("answer_choices", ["Yes", "No"]),
             # Shared ranking method for mutation and final selection
             "ranking_method": kwargs.get("ranking_method", "copeland"),
+            # Task type and judge requirement (for open-ended tasks)
+            "task_type": kwargs.get("task_type", "close_ended"),
+            "judge_requirement": kwargs.get("judge_requirement"),
         }
 
         # Training and validation data (will be set by migrator)
