@@ -237,8 +237,10 @@ INITIAL_INSTRUCTION_TIPS = {
     "simple": "Keep the instruction clear and concise.",
     "description": "Make sure your instruction is very informative and descriptive.",
     "persona": "Provide the LM with a creative persona that is relevant to the task.",
-    "edge_cases": "List tricky cases the instruction must handle.",
-    "assumptions": "Have the model state assumptions before solving.",
+    "relevance": "Focus on creating instructions that promote relevant, focused answers that directly address the question",
+    "completeness": "Instruct the model to provide complete answers that address all aspects of the question",
+    "clarity": "Provide guidance on creating clear, well-articulated answers that are easy to understand",
+    "evidence": "Emphasize using evidence from the provided context to support answer generation",
 }
 
 # Mutation tips and templates
