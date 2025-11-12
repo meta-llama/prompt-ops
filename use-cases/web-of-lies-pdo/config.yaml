@@ -20,14 +20,15 @@ model:
 
 optimization:
   strategy: "pdo"
+  task_type: close_ended            # Explicitly set task type (default is close_ended)
+  answer_choices: ["Yes", "No"]   # Choices used only for close-ended tasks
 
   # Core PDO parameters
   total_rounds: 30                    # Number of optimization rounds
   gen_new_prompt_round_frequency: 10  # How often to generate new prompts (in rounds)
-  num_duels_per_round: 25             # Number of duels per round
+  num_duels_per_round: 50             # Number of duels per round
   num_eval_examples_per_duel: 1       # Examples evaluated per duel
   num_initial_instructions: 20        # Initial instruction pool size
-  answer_choices: ["Yes", "No"]       # Expected answer format for the task
 
   # Thompson sampling parameters
   thompson_alpha: 1.2                 # Alpha parameter for confidence bounds

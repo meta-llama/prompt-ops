@@ -48,6 +48,9 @@ Below is an *LM‑written summary* of the unlabeled question pool:
 # Prompt‑Engineering Tip
 {tip}
 
+# Reference Instruction (Optional)
+{base_instruction_block}
+
 # Length & Style Constraints
 - Avoid dataset‑specific jargon unless it appears in the sample inputs.
 - Vary phrasing and level of explicit reasoning to foster exploration.
@@ -127,6 +130,17 @@ EVALUATE_SCHEMA = {
     "additionalProperties": False,
 }
 
+# Open-ended judge schema (winner only)
+EVALUATE_OPEN_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "reasoning": {"type": "string"},
+        "winner": {"type": "string", "enum": ["X", "Y"]},
+    },
+    "required": ["reasoning", "winner"],
+    "additionalProperties": False,
+}
+
 
 # Helper to build task JSON schema given dynamic answer choices
 def get_reason_schema(answer_choices):
@@ -148,14 +162,85 @@ def get_reason_schema(answer_choices):
     }
 
 
+# =============================
+# Open-ended task prompt support
+# =============================
+
+# Task response prompt template for open-ended tasks (no JSON, answer only)
+ANSWER_PROMPT_OPEN = """
+## Instruction ##
+{instruction}
+
+## Question ##
+{question}
+"""
+
+
+# Requirement proposer for open-ended judging criteria
+REQUIREMENT_PROPOSER_TEMPLATE = """
+You are an expert evaluation designer. Write a concise, objective rubric to compare two answers to the same question.
+
+# Dataset Snapshot
+{dataset_summary}
+
+# Sample Inputs (do NOT answer)
+{questions}
+
+# Output (STRICT)
+Return 5–7 bullet points ONLY, one per line, each in the form:
+- CriterionName (Weight%): short, actionable rule.
+
+Guidelines:
+- Emphasize factual correctness and completeness relative to the question.
+- Require faithfulness to provided information; penalize hallucinations.
+- Prefer clarity, specificity, and relevance; penalize verbosity/off-topic content.
+- Include scope adherence (no unsupported claims).
+- Add a Tie-Breaker (5–10%) preferring more precise, directly stated answers when otherwise comparable.
+
+Do not include any preamble or closing text.
+"""
+
+
+# Evaluation prompt template for open-ended tasks (answers only)
+EVALUATE_OPEN_PROMPT = """
+## Role ##
+You are a meticulous, impartial referee evaluating two competing answers to determine which better satisfies the given task.
+
+## Task ##
+{question}
+
+## Answer from Prompt X ##
+{answer_X}
+
+## Answer from Prompt Y ##
+{answer_Y}
+
+## Evaluation Criteria ##
+{criteria_text}
+
+## Output Instructions ##
+- Provide detailed justification for your decision (~100 words)
+- Select the winner: either "X" or "Y"
+- Output **only** the JSON object below with **no additional text**
+
+## Output Format ##
+{{
+  "reasoning": "Your detailed justification explaining why prompt X or Y produced the better response (~100 words).",
+  "winner": "X or Y"
+}}
+"""
+
+
 # Initial instruction tips used during seed generation
 INITIAL_INSTRUCTION_TIPS = {
     "framing": "Set the context for the task by framing it as a concrete creative scenario.",
     "simple": "Keep the instruction clear and concise.",
     "description": "Make sure your instruction is very informative and descriptive.",
     "persona": "Provide the LM with a creative persona that is relevant to the task.",
-    "edge_cases": "List tricky cases the instruction must handle.",
-    "assumptions": "Have the model state assumptions before solving.",
+    "relevance": "Focus on creating instructions that promote relevant, focused answers that directly address the question",
+    "completeness": "Instruct the model to provide complete answers that address all aspects of the question",
+    "clarity": "Provide guidance on creating clear, well-articulated answers that are easy to understand",
+    "evidence": "Emphasize using evidence from the provided context to support answer generation",
 }
 
 # Mutation tips and templates

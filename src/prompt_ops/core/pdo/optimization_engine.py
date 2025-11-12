@@ -22,7 +22,10 @@ if TYPE_CHECKING:
     from ..model import ModelAdapter
 
 from .meta_prompt import (
+    ANSWER_PROMPT_OPEN,
     DATASET_DESCRIPTOR_PROMPT,
+    EVALUATE_OPEN_PROMPT,
+    EVALUATE_OPEN_SCHEMA,
     EVALUATE_PROMPT,
     EVALUATE_SCHEMA,
     INITIAL_INSTRUCTION_TIPS,
@@ -31,6 +34,7 @@ from .meta_prompt import (
     MUTATE_PROMPT_TEMPLATE_WITH_LABELS,
     MUTATION_TIPS,
     REASON_PROMPT,
+    REQUIREMENT_PROPOSER_TEMPLATE,
     get_reason_schema,
 )
 from .ranking_systems import (
@@ -41,6 +45,7 @@ from .ranking_systems import (
     compare_json_task,
     copeland_ranking,
     elo_ranking,
+    trueskill_ranking,
 )
 from .thompson_sampling import sample_duel_pair
 
@@ -88,6 +93,9 @@ class PDOEngine:
         task_json_default_values: Optional[Dict] = None,
         answer_choices: Optional[List[str]] = None,
         ranking_method: str = "copeland",
+        # Task type configuration
+        task_type: str = "close_ended",
+        judge_requirement: Optional[str] = None,
     ):
         """
         Initialize PDO optimization engine.
@@ -137,6 +145,11 @@ class PDOEngine:
         self.task_json_default_values = task_json_default_values or {}
         self.answer_choices = answer_choices or ["Yes", "No"]
         self.ranking_method = ranking_method
+        self.task_type = (task_type or "close_ended").lower()
+        self.judge_requirement = judge_requirement
+
+        # Derived context
+        self.dataset_summary: Optional[str] = None
 
         # State variables
         self.instruction_pool: List[str] = []
@@ -168,19 +181,24 @@ class PDOEngine:
         """Initialize the instruction pool with base and generated instructions."""
         print(f"Generating {self.num_initial_instructions} initial instructions...")
 
-        # Debug: ignoring base_instruction by design
+        # Debug information
         print(
-            f"Debug: (ignoring base_instruction) examples type: {type(examples)}, length: {len(examples) if isinstance(examples, list) else 'N/A'}"
+            f"Debug: examples type: {type(examples)}, length: {len(examples) if isinstance(examples, list) else 'N/A'}"
         )
         print(f"Debug: labels type: {type(labels)}")
         print(f"Debug: judge_model type: {type(self.judge_model)}")
 
         self.instruction_pool = self._generate_initial_instructions(
+            base_instruction=base_instruction,
             examples=examples,
             labels=labels,
             total_instructions=self.num_initial_instructions,
             n_sample_examples=3,
         )
+
+        # Append original base instruction as an additional candidate if provided
+        if base_instruction and str(base_instruction).strip():
+            self.instruction_pool.append(str(base_instruction).strip())
 
         self.allowed_prompt_indices = list(range(len(self.instruction_pool)))
 
@@ -193,6 +211,7 @@ class PDOEngine:
 
     def _generate_initial_instructions(
         self,
+        base_instruction: Optional[str],
         examples: List[str],
         labels: Optional[List[str]],
         total_instructions: int,
@@ -214,6 +233,12 @@ class PDOEngine:
         dataset_summary = self.judge_model.generate(
             summary_prompt, temperature=0.7, max_tokens=self.max_tokens
         )
+        # Store summary for later reuse (e.g., open-ended judge criteria)
+        try:
+            if isinstance(dataset_summary, str) and dataset_summary.strip():
+                self.dataset_summary = dataset_summary.strip()
+        except Exception:
+            pass
 
         tip_categories = list(INITIAL_INSTRUCTION_TIPS.keys())
         distributed_tips = [
@@ -233,10 +258,21 @@ class PDOEngine:
             # Always use only inputs (ignore labels per user request)
             questions_text = "\n".join([f"- {examples[i]}" for i in sample_indices])
 
+            # Build optional base-instruction block only when provided
+            if base_instruction and str(base_instruction).strip():
+                base_instruction_block = (
+                    "Here is the referenced instruction prompt,\n"
+                    + str(base_instruction).strip()
+                    + "\n"
+                )
+            else:
+                base_instruction_block = ""
+
             instruction_prompt = INSTRUCTION_PROPOSER_TEMPLATE.format(
                 dataset_summary=dataset_summary,
                 questions=questions_text,
                 tip=tip,
+                base_instruction_block=base_instruction_block,
             )
 
             batch_prompts.append(instruction_prompt)
@@ -324,65 +360,89 @@ class PDOEngine:
 
             # Create prompts for both instructions
             for ex_idx in selected_examples_indices:
-                # Build structured task prompts for both instructions using REASON_PROMPT
-                # Use configured answer choices (default Yes/No), optionally overridden per-label choices
-                answer_choices = list(self.answer_choices)
-                if labels is not None and ex_idx < len(labels):
-                    try:
-                        if isinstance(labels[ex_idx], str):
-                            label_obj = json.loads(labels[ex_idx])
-                        else:
-                            label_obj = labels[ex_idx]
-                        if (
-                            isinstance(label_obj, dict)
-                            and "choices" in label_obj
-                            and isinstance(label_obj["choices"], list)
-                        ):
-                            answer_choices = [str(c) for c in label_obj["choices"]]
-                    except Exception:
-                        pass
+                if self.task_type == "close_ended":
+                    # Build structured task prompts for both instructions using REASON_PROMPT
+                    # Use configured answer choices (default Yes/No), optionally overridden per-label choices
+                    answer_choices = list(self.answer_choices)
+                    if labels is not None and ex_idx < len(labels):
+                        try:
+                            if isinstance(labels[ex_idx], str):
+                                label_obj = json.loads(labels[ex_idx])
+                            else:
+                                label_obj = labels[ex_idx]
+                            if (
+                                isinstance(label_obj, dict)
+                                and "choices" in label_obj
+                                and isinstance(label_obj["choices"], list)
+                            ):
+                                answer_choices = [str(c) for c in label_obj["choices"]]
+                        except Exception:
+                            pass
 
-                # Track choices and build string
-                for choice in answer_choices:
-                    seen_answer_choices.add(choice)
-                answer_choices_str = ", ".join(answer_choices)
+                    # Track choices and build string
+                    for choice in answer_choices:
+                        seen_answer_choices.add(choice)
+                    answer_choices_str = ", ".join(answer_choices)
 
-                formatted_prompts.append(
-                    REASON_PROMPT.format(
-                        instruction=self.instruction_pool[i],
-                        question=examples[ex_idx],
-                        answer_choices_str=answer_choices_str,
+                    formatted_prompts.append(
+                        REASON_PROMPT.format(
+                            instruction=self.instruction_pool[i],
+                            question=examples[ex_idx],
+                            answer_choices_str=answer_choices_str,
+                        )
                     )
-                )
-                formatted_prompts.append(
-                    REASON_PROMPT.format(
-                        instruction=self.instruction_pool[j],
-                        question=examples[ex_idx],
-                        answer_choices_str=answer_choices_str,
+                    formatted_prompts.append(
+                        REASON_PROMPT.format(
+                            instruction=self.instruction_pool[j],
+                            question=examples[ex_idx],
+                            answer_choices_str=answer_choices_str,
+                        )
                     )
-                )
+                else:
+                    # Open-ended: answers only, no JSON schema
+                    formatted_prompts.append(
+                        ANSWER_PROMPT_OPEN.format(
+                            instruction=self.instruction_pool[i],
+                            question=examples[ex_idx],
+                        )
+                    )
+                    formatted_prompts.append(
+                        ANSWER_PROMPT_OPEN.format(
+                            instruction=self.instruction_pool[j],
+                            question=examples[ex_idx],
+                        )
+                    )
 
         # Execute prompts (single batch, threaded by max_concurrent_threads)
         print(f"Executing {len(formatted_prompts)} prompts...")
-        # Use configured base answer choices for schema (no unioning)
-        base_choices = list(self.answer_choices)
-        try:
-            response_format = {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "pdo_reasoned_answer",
-                    "schema": get_reason_schema(base_choices),
-                    "strict": True,
-                },
-            }
-            prompt_outputs = self.task_model.generate_batch(
-                formatted_prompts,
-                max_threads=self.max_threads,
-                temperature=0.0,
-                response_format=response_format,
-                max_tokens=self.max_tokens,
-            )
-        except Exception:
+        if self.task_type == "close_ended":
+            # Use configured base answer choices for schema (no unioning)
+            base_choices = list(self.answer_choices)
+            try:
+                response_format = {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "pdo_reasoned_answer",
+                        "schema": get_reason_schema(base_choices),
+                        "strict": True,
+                    },
+                }
+                prompt_outputs = self.task_model.generate_batch(
+                    formatted_prompts,
+                    max_threads=self.max_threads,
+                    temperature=0.0,
+                    response_format=response_format,
+                    max_tokens=self.max_tokens,
+                )
+            except Exception:
+                prompt_outputs = self.task_model.generate_batch(
+                    formatted_prompts,
+                    max_threads=self.max_threads,
+                    temperature=0.0,
+                    max_tokens=self.max_tokens,
+                )
+        else:
+            # Open-ended: no response_format, free-form answers
             prompt_outputs = self.task_model.generate_batch(
                 formatted_prompts,
                 max_threads=self.max_threads,
@@ -424,29 +484,46 @@ class PDOEngine:
                 else:
                     ra_raw, rb_raw = response_j_raw, response_i_raw
 
-                # Parse structured task outputs (fallback to base choice if missing)
-                ra = self._parse_json_response(ra_raw, {})
-                rb = self._parse_json_response(rb_raw, {})
-
                 question_text = examples[ex_idx]
-                reasoning_X = ra.get("reasoning", "")
-                answer_X = ra.get("answer", "") or (
-                    self.answer_choices[0] if self.answer_choices else ""
-                )
-                reasoning_Y = rb.get("reasoning", "")
-                answer_Y = rb.get("answer", "") or (
-                    self.answer_choices[0] if self.answer_choices else ""
-                )
 
-                evaluation_prompts.append(
-                    EVALUATE_PROMPT.format(
-                        question=question_text,
-                        reasoning_X=reasoning_X,
-                        answer_X=answer_X,
-                        reasoning_Y=reasoning_Y,
-                        answer_Y=answer_Y,
+                if self.task_type == "close_ended":
+                    # Parse structured task outputs (fallback to base choice if missing)
+                    ra = self._parse_json_response(ra_raw, {})
+                    rb = self._parse_json_response(rb_raw, {})
+
+                    reasoning_X = ra.get("reasoning", "")
+                    answer_X = ra.get("answer", "") or (
+                        self.answer_choices[0] if self.answer_choices else ""
                     )
-                )
+                    reasoning_Y = rb.get("reasoning", "")
+                    answer_Y = rb.get("answer", "") or (
+                        self.answer_choices[0] if self.answer_choices else ""
+                    )
+
+                    evaluation_prompts.append(
+                        EVALUATE_PROMPT.format(
+                            question=question_text,
+                            reasoning_X=reasoning_X,
+                            answer_X=answer_X,
+                            reasoning_Y=reasoning_Y,
+                            answer_Y=answer_Y,
+                        )
+                    )
+                else:
+                    # Open-ended: use answers only and dynamic criteria
+                    answer_X = str(ra_raw).strip()
+                    answer_Y = str(rb_raw).strip()
+
+                    criteria_text = self._get_or_generate_judge_requirement(examples)
+
+                    evaluation_prompts.append(
+                        EVALUATE_OPEN_PROMPT.format(
+                            question=question_text,
+                            answer_X=answer_X,
+                            answer_Y=answer_Y,
+                            criteria_text=criteria_text,
+                        )
+                    )
                 duel_meta.append((i, j, swapped))
 
                 # Example agreement tracking removed for conciseness
@@ -454,11 +531,16 @@ class PDOEngine:
         # Get judge evaluations in parallel
         print(f"Getting judge evaluations for {len(evaluation_prompts)} comparisons...")
         try:
+            schema = (
+                EVALUATE_SCHEMA
+                if self.task_type == "close_ended"
+                else EVALUATE_OPEN_SCHEMA
+            )
             judge_rf = {
                 "type": "json_schema",
                 "json_schema": {
                     "name": "pdo_evaluate_verdict",
-                    "schema": EVALUATE_SCHEMA,
+                    "schema": schema,
                     "strict": True,
                 },
             }
@@ -522,6 +604,41 @@ class PDOEngine:
             "ts_mu": ts_mu,
             "ts_cons": ts_cons,
         }
+
+    def _get_or_generate_judge_requirement(self, examples: List[str]) -> str:
+        """Return existing judge requirement or generate one for open-ended tasks."""
+        if self.judge_requirement and str(self.judge_requirement).strip():
+            return str(self.judge_requirement).strip()
+
+        # Ensure dataset summary exists
+        if not self.dataset_summary or not str(self.dataset_summary).strip():
+            try:
+                sampled_indices = random.sample(
+                    range(len(examples)), min(3, len(examples))
+                )
+                sample_examples = [examples[i] for i in sampled_indices]
+                examples_text = "\n\n".join([f"- {ex}" for ex in sample_examples])
+                summary_prompt = DATASET_DESCRIPTOR_PROMPT.format(
+                    examples=examples_text
+                )
+                self.dataset_summary = self.judge_model.generate(
+                    summary_prompt, temperature=0.7, max_tokens=self.max_tokens
+                )
+            except Exception:
+                self.dataset_summary = ""
+
+        # Build requirement proposer prompt
+        sample_indices = random.sample(range(len(examples)), min(3, len(examples)))
+        questions_text = "\n".join([f"- {examples[i]}" for i in sample_indices])
+        proposer_prompt = REQUIREMENT_PROPOSER_TEMPLATE.format(
+            dataset_summary=self.dataset_summary or "",
+            questions=questions_text,
+        )
+        requirement = self.judge_model.generate(
+            proposer_prompt, temperature=0.7, max_tokens=self.max_tokens
+        )
+        self.judge_requirement = str(requirement).strip()
+        return self.judge_requirement
 
     def update_prompt_pool(
         self, examples: List[str], labels: Optional[List[str]] = None
@@ -601,6 +718,7 @@ class PDOEngine:
                 borda_ranking,
                 avg_winrate_ranking,
                 elo_ranking,
+                trueskill_ranking,
             ]
             rankings = [ranker(self.win_matrix)[0] for ranker in rankers]
             scores = aggregate_ranks(rankings)

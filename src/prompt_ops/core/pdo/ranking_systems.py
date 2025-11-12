@@ -16,14 +16,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-# Optional dependency handling
-try:
-    from trueskill import Rating, rate
-
-    HAS_TRUESKILL = True
-except ImportError:
-    HAS_TRUESKILL = False
-
 
 def copeland_ranking(win_matrix: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -254,11 +246,6 @@ class TrueSkillFromCounts:
         epochs: int = 50,
         track_history: bool = False,
     ):
-        if not HAS_TRUESKILL:
-            raise ImportError(
-                "TrueSkill library not available. Install with: pip install trueskill"
-            )
-
         self.mu0 = mu0
         self.sigma0 = sigma0
         self.solver = solver
@@ -268,7 +255,7 @@ class TrueSkillFromCounts:
 
     def fit(self, win_matrix: np.ndarray):
         """
-        Fit TrueSkill ratings from win matrix.
+        Fit TrueSkill-like ratings from win matrix without external deps.
 
         Args:
             win_matrix: W[i,j] = wins of i over j
@@ -278,40 +265,67 @@ class TrueSkillFromCounts:
         """
         n = len(win_matrix)
 
-        # Initialize ratings
-        ratings = [Rating(mu=self.mu0, sigma=self.sigma0) for _ in range(n)]
+        # Initialize Gaussian skill estimates
+        mu = np.full(n, float(self.mu0))
+        sigma = np.full(n, float(self.sigma0))
 
-        # Process all matches
-        for epoch in range(self.epochs):
+        # Helper: probability i beats j under logistic using uncertainty
+        def win_prob(mi: float, mj: float, si: float, sj: float) -> float:
+            scale = max(1e-6, np.sqrt(si * si + sj * sj))
+            x = (mi - mj) / scale
+            # Logistic sigmoid
+            return 1.0 / (1.0 + np.exp(-x))
+
+        # Iterative updates akin to TrueSkill intuition (not exact factor graph)
+        for _ in range(max(1, int(self.epochs))):
             for i in range(n):
                 for j in range(i + 1, n):
                     wins_i = int(win_matrix[i, j])
                     wins_j = int(win_matrix[j, i])
 
-                    # Process each match
-                    for _ in range(wins_i):
-                        # i beats j
-                        new_ratings = rate([(ratings[i],), (ratings[j],)], ranks=[0, 1])
-                        ratings[i] = new_ratings[0][0]
-                        ratings[j] = new_ratings[1][0]
+                    total_matches = wins_i + wins_j
+                    if total_matches <= 0:
+                        continue
 
-                    for _ in range(wins_j):
-                        # j beats i
-                        new_ratings = rate([(ratings[j],), (ratings[i],)], ranks=[0, 1])
-                        ratings[j] = new_ratings[0][0]
-                        ratings[i] = new_ratings[1][0]
+                    # Process each observed outcome
+                    for __ in range(wins_i):
+                        p = win_prob(mu[i], mu[j], sigma[i], sigma[j])
+                        # Update magnitudes modulated by uncertainty and damping
+                        denom = max(1e-6, sigma[i] * sigma[i] + sigma[j] * sigma[j])
+                        delta = self.damping * (1.0 - p)
+                        mu[i] += (sigma[i] * sigma[i] / denom) * delta
+                        mu[j] -= (sigma[j] * sigma[j] / denom) * delta
+                        # Reduce uncertainty slightly after each observed match
+                        sigma[i] *= 0.995
+                        sigma[j] *= 0.995
 
-        # Extract final ratings
-        mu = np.array([r.mu for r in ratings])
-        sigma = np.array([r.sigma for r in ratings])
-        conservative = mu - 3 * sigma  # Conservative estimate
+                    for __ in range(wins_j):
+                        p = win_prob(mu[j], mu[i], sigma[j], sigma[i])
+                        denom = max(1e-6, sigma[i] * sigma[i] + sigma[j] * sigma[j])
+                        delta = self.damping * (1.0 - p)
+                        mu[j] += (sigma[j] * sigma[j] / denom) * delta
+                        mu[i] -= (sigma[i] * sigma[i] / denom) * delta
+                        sigma[i] *= 0.995
+                        sigma[j] *= 0.995
 
-        # Create ranking based on conservative scores
+        conservative = mu - 3.0 * sigma  # Conservative estimate
         rank_order = np.argsort(-conservative)
 
         return TrueSkillRatings(
             mu=mu, sigma=sigma, conservative=conservative, rank_order=rank_order
         )
+
+
+def trueskill_ranking(win_matrix: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    TrueSkill-based ranking using internal updater.
+
+    Returns:
+        Tuple of (ranking_order, conservative_scores)
+    """
+    ts = TrueSkillFromCounts()
+    ratings = ts.fit(win_matrix)
+    return ratings.rank_order, ratings.conservative
 
 
 class TrueSkillRatings:
