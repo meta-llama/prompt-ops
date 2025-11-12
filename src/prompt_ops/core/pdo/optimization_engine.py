@@ -22,19 +22,19 @@ if TYPE_CHECKING:
     from ..model import ModelAdapter
 
 from .meta_prompt import (
+    ANSWER_PROMPT_OPEN,
     DATASET_DESCRIPTOR_PROMPT,
+    EVALUATE_OPEN_PROMPT,
+    EVALUATE_OPEN_SCHEMA,
     EVALUATE_PROMPT,
     EVALUATE_SCHEMA,
-    EVALUATE_OPEN_SCHEMA,
     INITIAL_INSTRUCTION_TIPS,
     INSTRUCTION_PROPOSER_TEMPLATE,
-    ANSWER_PROMPT_OPEN,
-    EVALUATE_OPEN_PROMPT,
-    REQUIREMENT_PROPOSER_TEMPLATE,
     MUTATE_PROMPT_TEMPLATE,
     MUTATE_PROMPT_TEMPLATE_WITH_LABELS,
     MUTATION_TIPS,
     REASON_PROMPT,
+    REQUIREMENT_PROPOSER_TEMPLATE,
     get_reason_schema,
 )
 from .ranking_systems import (
@@ -261,7 +261,9 @@ class PDOEngine:
             # Build optional base-instruction block only when provided
             if base_instruction and str(base_instruction).strip():
                 base_instruction_block = (
-                    "Here is the referenced instruction prompt,\n" + str(base_instruction).strip() + "\n"
+                    "Here is the referenced instruction prompt,\n"
+                    + str(base_instruction).strip()
+                    + "\n"
                 )
             else:
                 base_instruction_block = ""
@@ -529,7 +531,11 @@ class PDOEngine:
         # Get judge evaluations in parallel
         print(f"Getting judge evaluations for {len(evaluation_prompts)} comparisons...")
         try:
-            schema = EVALUATE_SCHEMA if self.task_type == "close_ended" else EVALUATE_OPEN_SCHEMA
+            schema = (
+                EVALUATE_SCHEMA
+                if self.task_type == "close_ended"
+                else EVALUATE_OPEN_SCHEMA
+            )
             judge_rf = {
                 "type": "json_schema",
                 "json_schema": {
@@ -612,7 +618,9 @@ class PDOEngine:
                 )
                 sample_examples = [examples[i] for i in sampled_indices]
                 examples_text = "\n\n".join([f"- {ex}" for ex in sample_examples])
-                summary_prompt = DATASET_DESCRIPTOR_PROMPT.format(examples=examples_text)
+                summary_prompt = DATASET_DESCRIPTOR_PROMPT.format(
+                    examples=examples_text
+                )
                 self.dataset_summary = self.judge_model.generate(
                     summary_prompt, temperature=0.7, max_tokens=self.max_tokens
                 )

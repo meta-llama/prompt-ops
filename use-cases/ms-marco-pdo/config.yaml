@@ -49,5 +49,3 @@ metric:
   class: "prompt_ops.core.metrics.StandardJSONMetric"
   strict_json: false
   output_field: answer
-
-
