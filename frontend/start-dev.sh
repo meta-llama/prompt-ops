@@ -63,18 +63,26 @@ fi
 
 cd backend
 
-# Activate conda environment
-print_color $YELLOW "Activating prompt-ops-frontend conda environment..."
-source ~/anaconda3/etc/profile.d/conda.sh
-conda activate prompt-ops-frontend
+# Activate Python virtual environment
+if [[ ! -d "venv" ]]; then
+    print_color $YELLOW "Creating Python virtual environment..."
+    python3 -m venv venv
+
+    print_color $YELLOW "Installing Python dependencies..."
+    source venv/bin/activate
+    pip install -r requirements.txt
+else
+    print_color $YELLOW "Activating Python virtual environment..."
+    source venv/bin/activate
+fi
 
 # Verify environment is activated
-if [[ "$CONDA_DEFAULT_ENV" != "prompt-ops-frontend" ]]; then
-    print_color $RED "❌ Failed to activate prompt-ops-frontend environment"
+if [[ -z "$VIRTUAL_ENV" ]]; then
+    print_color $RED "❌ Failed to activate virtual environment"
     exit 1
 fi
 
-print_color $GREEN "Using conda environment: $CONDA_DEFAULT_ENV"
+print_color $GREEN "Using Python virtual environment: $VIRTUAL_ENV"
 
 # Check for .env file
 if [[ ! -f ".env" ]]; then

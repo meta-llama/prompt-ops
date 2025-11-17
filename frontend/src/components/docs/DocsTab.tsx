@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Book, Search, FileText, Code, Settings, ChevronRight, ExternalLink } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Book, Search, FileText, Code, Settings, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { DocsContent } from './DocsContent';
 import { DocsSidebar } from './DocsSidebar';
@@ -16,6 +16,8 @@ export interface DocItem {
 }
 
 export const DocsTab = () => {
+  const { docId } = useParams<{ docId?: string }>();
+  const navigate = useNavigate();
   const [selectedDoc, setSelectedDoc] = useState<DocItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -102,6 +104,24 @@ export const DocsTab = () => {
     }
   ];
 
+  // Sync selectedDoc with URL parameter
+  useEffect(() => {
+    if (docId) {
+      const doc = docsStructure.find(d => d.id === docId);
+      if (doc) {
+        setSelectedDoc(doc);
+      }
+    } else {
+      setSelectedDoc(null);
+    }
+  }, [docId]);
+
+  // Handler to update both state and URL when selecting a doc
+  const handleSelectDoc = (doc: DocItem) => {
+    setSelectedDoc(doc);
+    navigate(`/docs/${doc.id}`);
+  };
+
   const filteredDocs = docsStructure.filter(doc =>
     doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     doc.description?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -145,7 +165,7 @@ export const DocsTab = () => {
             docs={filteredDocs}
             categories={categories}
             selectedDoc={selectedDoc}
-            onSelectDoc={setSelectedDoc}
+            onSelectDoc={handleSelectDoc}
             isOpen={sidebarOpen}
             onToggle={() => setSidebarOpen(!sidebarOpen)}
           />
@@ -156,7 +176,7 @@ export const DocsTab = () => {
           {selectedDoc ? (
             <DocsContent doc={selectedDoc} />
           ) : (
-            <DocsOverview docs={docsStructure} onSelectDoc={setSelectedDoc} />
+            <DocsOverview docs={docsStructure} onSelectDoc={handleSelectDoc} />
           )}
         </div>
       </div>

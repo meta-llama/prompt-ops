@@ -19,6 +19,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/docs" element={<Index />} />
+            <Route path="/docs/:docId" element={<Index />} />
             <Route path="/optimization-grid" element={<OptimizationGrid />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
