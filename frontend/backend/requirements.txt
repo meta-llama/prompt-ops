@@ -1,6 +1,7 @@
 # Core API dependencies
 fastapi==0.104.0
 uvicorn==0.23.2
+websockets>=15.0
 python-dotenv==1.0.0
 httpx==0.25.0
 python-multipart==0.0.20

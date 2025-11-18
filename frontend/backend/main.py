@@ -36,6 +36,18 @@ logger = logging.getLogger(__name__)
 # Load environment variables from .env file
 load_dotenv()
 
+# Check for WebSocket support
+try:
+    import websockets as websockets_lib
+
+    print("✓ WebSocket support is available")
+    WEBSOCKETS_AVAILABLE = True
+except ImportError:
+    print("⚠️  WARNING: WebSocket support not available!")
+    print("   Install with: pip install websockets")
+    print("   WebSocket endpoints will not work until this is installed.")
+    WEBSOCKETS_AVAILABLE = False
+
 # Install required dependencies if missing
 required_packages = ["scipy", "llama-prompt-ops==0.0.7"]
 try:
@@ -117,6 +129,51 @@ class ConfigResponse(BaseModel):
 @app.options("/docs/{file_path:path}")
 async def options_route():
     return {"status": "OK"}
+
+
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint to verify backend dependencies."""
+    issues = []
+
+    if not WEBSOCKETS_AVAILABLE:
+        issues.append(
+            {
+                "component": "websockets",
+                "status": "missing",
+                "message": "WebSocket support not available. Install with: pip install websockets",
+                "severity": "error",
+            }
+        )
+
+    if not LLAMA_PROMPT_OPS_AVAILABLE:
+        issues.append(
+            {
+                "component": "llama-prompt-ops",
+                "status": "missing",
+                "message": "llama-prompt-ops not available. Some features may not work.",
+                "severity": "warning",
+            }
+        )
+
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        issues.append(
+            {
+                "component": "api_key",
+                "status": "missing",
+                "message": "OPENROUTER_API_KEY not set in environment",
+                "severity": "warning",
+            }
+        )
+
+    return {
+        "status": "healthy" if len(issues) == 0 else "degraded",
+        "websockets_available": WEBSOCKETS_AVAILABLE,
+        "llama_prompt_ops_available": LLAMA_PROMPT_OPS_AVAILABLE,
+        "api_key_configured": bool(api_key),
+        "issues": issues,
+    }
 
 
 @app.get("/api/configurations", response_model=ConfigResponse)

@@ -104,32 +104,59 @@ class StreamingLogHandler(logging.Handler):
         super().__init__()
         self.websocket = websocket
         self.formatter = logging.Formatter("%(levelname)s - %(name)s - %(message)s")
+        self._closed = False
 
     def emit(self, record):
         """Send log record to WebSocket client."""
+        # Skip if we've marked this handler as closed
+        if self._closed:
+            return
+
         try:
             log_entry = self.format(record)
             # Create task to send message (non-blocking) only if there's an event loop
             try:
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
-                    asyncio.create_task(
-                        self.websocket.send_json(
-                            {
-                                "type": "log",
-                                "message": log_entry,
-                                "level": record.levelname,
-                                "logger": record.name,
-                                "timestamp": record.created,
-                            }
-                        )
-                    )
+                    asyncio.create_task(self._send_log_safe(log_entry, record))
             except RuntimeError:
                 # No event loop running, skip WebSocket logging
                 pass
         except Exception as e:
             # Avoid infinite recursion by not logging this error
             pass
+
+    async def _send_log_safe(self, log_entry: str, record):
+        """Safely send log message, catching WebSocket closure errors."""
+        if self._closed:
+            return
+
+        try:
+            # Check if WebSocket client_state indicates it's still connected
+            if hasattr(self.websocket, "client_state"):
+                from starlette.websockets import WebSocketState
+
+                if self.websocket.client_state != WebSocketState.CONNECTED:
+                    self._closed = True
+                    return
+
+            await self.websocket.send_json(
+                {
+                    "type": "log",
+                    "message": log_entry,
+                    "level": record.levelname,
+                    "logger": record.name,
+                    "timestamp": record.created,
+                }
+            )
+        except (RuntimeError, Exception):
+            # WebSocket is closed or errored, mark as closed and stop trying to send
+            self._closed = True
+
+    def close(self):
+        """Mark the handler as closed."""
+        self._closed = True
+        super().close()
 
 
 class OptimizationManager:

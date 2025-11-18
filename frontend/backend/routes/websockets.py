@@ -8,7 +8,7 @@ import os
 import yaml
 from config import UPLOAD_DIR
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from utils import OptimizationManager, load_class_dynamically
+from utils import load_class_dynamically, OptimizationManager
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -28,6 +28,22 @@ except ImportError:
 @router.websocket("/ws/optimize/{project_name}")
 async def optimize_with_streaming(websocket: WebSocket, project_name: str):
     """WebSocket endpoint for real-time optimization with streaming logs."""
+    # Check for websockets library availability before accepting connection
+    try:
+        import websockets as ws_lib
+    except ImportError:
+        logger.error("WebSocket library not available - cannot accept connection")
+        # Note: We can't send a proper error before accepting, so we'll accept then close
+        await websocket.accept()
+        await websocket.send_json(
+            {
+                "type": "error",
+                "message": "WebSocket support not available on server. Install with: pip install websockets",
+            }
+        )
+        await websocket.close()
+        return
+
     await websocket.accept()
 
     # Initialize optimization manager
