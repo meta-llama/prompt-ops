@@ -380,14 +380,14 @@ class ConfigurationTransformer:
 
             for candidate in output_candidates:
                 if candidate in field_mappings and field_mappings[candidate]:
-                    metric_config["output_field"] = (
+                    metric_config["output_fields"] = [
                         candidate  # Use the target field name
-                    )
+                    ]
                     break
 
-        # Ensure output_field is set (fallback to "answer")
-        if "output_field" not in metric_config:
-            metric_config["output_field"] = "answer"
+        # Ensure output_fields is set (fallback to ["answer"])
+        if "output_fields" not in metric_config:
+            metric_config["output_fields"] = ["answer"]
 
         return metric_config
 
