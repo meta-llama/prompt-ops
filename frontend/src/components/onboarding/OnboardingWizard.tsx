@@ -1318,7 +1318,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               <div className="flex items-center space-x-3 mb-4">
                 <CheckCircle className="w-8 h-8 text-green-600" />
                 <h3 className="text-xl font-bold text-green-800">
-                  🎉 Optimization Complete!
+                  🎉 {optimizationResult.message || "Optimization Complete!"}
                 </h3>
               </div>
 
@@ -1354,6 +1354,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <p className="text-sm text-blue-800">
                   <strong>Next Steps:</strong> Your optimized prompt has been saved to the project directory.
                   You can now use this improved prompt in your applications!
+                </p>
+                <p className="text-sm text-blue-800">
+                  {optimizationResult.projectName} : {optimizationResult.projectPath}
                 </p>
               </div>
             </div>
