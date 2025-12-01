@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ArrowUp, FileJson, Loader2, Plus, Trash2, Upload, Zap, X } from 'lucide-react';
+import { ArrowUp, FileJson, Loader2, Plus, Trash2, Upload, Zap, X, Settings, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { AppContext } from '../../context/AppContext';
 import { Badge } from '@/components/ui/badge';
@@ -49,6 +49,35 @@ export const PromptInput = () => {
     useLlamaTips: true,
     openrouterApiKey: undefined
   });
+
+  // Enhance mode settings state
+  const [showEnhanceSettings, setShowEnhanceSettings] = useState(false);
+  const [enhanceSettings, setEnhanceSettings] = useState({
+    apiBaseUrl: '',  // Empty means use backend default
+    apiFormat: 'openai',  // Default to OpenAI-compatible format
+    apiKey: '',  // Empty means use backend default
+    model: '',  // Empty means use backend default
+  });
+  const [showApiKey, setShowApiKey] = useState(false);
+
+  // Load enhance settings from localStorage on mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('enhanceSettings');
+    if (savedSettings) {
+      try {
+        setEnhanceSettings(JSON.parse(savedSettings));
+      } catch (e) {
+        console.error('Failed to load saved enhance settings:', e);
+      }
+    }
+  }, []);
+
+  // Save enhance settings to localStorage when changed
+  useEffect(() => {
+    if (enhanceSettings.apiBaseUrl || enhanceSettings.apiKey || enhanceSettings.model) {
+      localStorage.setItem('enhanceSettings', JSON.stringify(enhanceSettings));
+    }
+  }, [enhanceSettings]);
   const [showWizard, setShowWizard] = useState(true);
   const [wizardCompleted, setWizardCompleted] = useState(false);
 
@@ -295,9 +324,18 @@ export const PromptInput = () => {
       // Connect to FastAPI backend with the appropriate endpoint based on mode
       const endpoint = activeMode === 'enhance' ? 'enhance-prompt' : 'migrate-prompt';
 
-      // Only include configuration for migrate-prompt endpoint
+      // Build request body with configuration
       const requestBody = activeMode === 'enhance'
-        ? { prompt }
+        ? {
+            prompt,
+            config: {
+              // Only include non-empty enhance settings
+              ...(enhanceSettings.apiBaseUrl && { apiBaseUrl: enhanceSettings.apiBaseUrl }),
+              ...(enhanceSettings.apiFormat && { apiFormat: enhanceSettings.apiFormat }),
+              ...(enhanceSettings.apiKey && { apiKey: enhanceSettings.apiKey }),
+              ...(enhanceSettings.model && { model: enhanceSettings.model }),
+            }
+          }
         : {
             prompt,
             config: {
@@ -394,6 +432,116 @@ export const PromptInput = () => {
                 disabled={isOptimizing}
                 className={`w-full h-28 p-0 text-xl text-facebook-text bg-transparent placeholder:text-facebook-text/50 border-none outline-none resize-none leading-relaxed ${isOptimizing ? 'opacity-75' : ''}`}
               />
+
+              {/* Collapsible settings panel */}
+              <div className="mt-4 border-t border-facebook-border/30 pt-4">
+                <button
+                  onClick={() => setShowEnhanceSettings(!showEnhanceSettings)}
+                  className="flex items-center gap-2 text-sm text-facebook-text/70 hover:text-facebook-text transition-colors"
+                >
+                  <Settings size={16} />
+                  <span>API Settings</span>
+                  {showEnhanceSettings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  {(enhanceSettings.apiBaseUrl || enhanceSettings.apiKey || enhanceSettings.model) && (
+                    <Badge variant="secondary" className="ml-2 text-xs">Configured</Badge>
+                  )}
+                </button>
+
+                {showEnhanceSettings && (
+                  <div className="mt-4 space-y-4 p-4 bg-gray-50 rounded-lg">
+                    <div className="text-xs text-facebook-text/60 mb-3">
+                      Leave fields empty to use backend defaults from .env file
+                    </div>
+
+                    {/* API Base URL */}
+                    <div>
+                      <Label className="text-sm text-facebook-text/80 mb-1.5">API Base URL</Label>
+                      <input
+                        type="text"
+                        value={enhanceSettings.apiBaseUrl}
+                        onChange={(e) => setEnhanceSettings({ ...enhanceSettings, apiBaseUrl: e.target.value })}
+                        placeholder="e.g., https://api.llama.com/compat/v1"
+                        className="w-full px-3 py-2 text-sm border border-facebook-border rounded-lg focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                        disabled={isOptimizing}
+                      />
+                      <div className="text-xs text-facebook-text/50 mt-1">
+                        The base URL for your API endpoint
+                      </div>
+                    </div>
+
+                    {/* API Format */}
+                    <div>
+                      <Label className="text-sm text-facebook-text/80 mb-1.5">API Format</Label>
+                      <select
+                        value={enhanceSettings.apiFormat}
+                        onChange={(e) => setEnhanceSettings({ ...enhanceSettings, apiFormat: e.target.value })}
+                        className="w-full px-3 py-2 text-sm border border-facebook-border rounded-lg focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                        disabled={true}
+                      >
+                        <option value="openai">OpenAI-compatible</option>
+                      </select>
+                      <div className="text-xs text-facebook-text/50 mt-1">
+                        Most APIs are OpenAI-compatible
+                      </div>
+                    </div>
+
+                    {/* API Key input */}
+                    <div>
+                      <Label className="text-sm text-facebook-text/80 mb-1.5">API Key</Label>
+                      <div className="relative">
+                        <input
+                          type={showApiKey ? "text" : "password"}
+                          value={enhanceSettings.apiKey}
+                          onChange={(e) => setEnhanceSettings({ ...enhanceSettings, apiKey: e.target.value })}
+                          placeholder="Your API key"
+                          className="w-full px-3 py-2 pr-10 text-sm border border-facebook-border rounded-lg focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                          disabled={isOptimizing}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowApiKey(!showApiKey)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-facebook-text/50 hover:text-facebook-text"
+                        >
+                          {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                      <div className="text-xs text-facebook-text/50 mt-1">
+                        Required if not set in backend .env
+                      </div>
+                    </div>
+
+                    {/* Model name input */}
+                    <div>
+                      <Label className="text-sm text-facebook-text/80 mb-1.5">Model Name</Label>
+                      <input
+                        type="text"
+                        value={enhanceSettings.model}
+                        onChange={(e) => setEnhanceSettings({ ...enhanceSettings, model: e.target.value })}
+                        placeholder="e.g., Llama-4-Maverick-17B-128E-Instruct-FP8"
+                        className="w-full px-3 py-2 text-sm border border-facebook-border rounded-lg focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                        disabled={isOptimizing}
+                      />
+                      <div className="text-xs text-facebook-text/50 mt-1">
+                        The exact model name as expected by your API
+                      </div>
+                    </div>
+
+                    {/* Clear settings button */}
+                    {(enhanceSettings.apiBaseUrl || enhanceSettings.apiKey || enhanceSettings.model) && (
+                      <button
+                        onClick={() => {
+                          setEnhanceSettings({ apiBaseUrl: '', apiFormat: 'openai', apiKey: '', model: '' });
+                          localStorage.removeItem('enhanceSettings');
+                        }}
+                        className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1"
+                      >
+                        <X size={14} />
+                        Clear all settings
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <div className="flex items-center justify-end mt-6">
                 <div className="relative group">

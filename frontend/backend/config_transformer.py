@@ -381,7 +381,7 @@ class ConfigurationTransformer:
             for candidate in output_candidates:
                 if candidate in field_mappings and field_mappings[candidate]:
                     metric_config["output_fields"] = [
-                        candidate  # Use the target field name
+                        field_mappings[candidate]  # Use the actual source field name
                     ]
                     break
 

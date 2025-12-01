@@ -268,10 +268,10 @@ class DatasetAnalyzer:
         for value in sample_values:
             if isinstance(value, str):
                 type_counts["string"] += 1
+            elif isinstance(value, bool):  # Check bool BEFORE int/float (bool is subclass of int)
+                type_counts["boolean"] += 1
             elif isinstance(value, (int, float)):
                 type_counts["number"] += 1
-            elif isinstance(value, bool):
-                type_counts["boolean"] += 1
             elif isinstance(value, list):
                 type_counts["array"] += 1
             elif isinstance(value, dict):

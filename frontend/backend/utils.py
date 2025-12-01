@@ -8,9 +8,9 @@ import json
 import logging
 import os
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-import openai
+from litellm import completion
 from config import OPENROUTER_API_KEY, UPLOAD_DIR
 from fastapi import WebSocket
 
@@ -22,16 +22,47 @@ def load_class_dynamically(class_path: str):
     return getattr(module, class_name)
 
 
-def create_openrouter_client(api_key: str = None):
-    """Create OpenRouter client with the provided API key."""
+def create_llm_completion(
+    model: str,
+    messages: list,
+    api_key: Optional[str] = None,
+    api_base: Optional[str] = None,
+    temperature: float = 0.7,
+    **kwargs
+):
+    """
+    Create a completion using LiteLLM for any OpenAI-compatible API.
+    
+    Args:
+        model: Model name (e.g., "Llama-4-Maverick-17B-128E-Instruct-FP8")
+        messages: List of message dicts with 'role' and 'content'
+        api_key: API key for authentication (falls back to OPENROUTER_API_KEY)
+        api_base: Base URL for the API endpoint (e.g., "https://api.llama.com/compat/v1")
+        temperature: Sampling temperature
+        **kwargs: Additional arguments passed to litellm.completion
+    
+    Returns:
+        LiteLLM completion response
+    """
     key_to_use = api_key or OPENROUTER_API_KEY
     if not key_to_use:
-        raise ValueError("OpenRouter API key is required")
-
-    return openai.OpenAI(
-        api_key=key_to_use,
-        base_url="https://openrouter.ai/api/v1",
-    )
+        raise ValueError("API key is required. Provide via parameter or set OPENROUTER_API_KEY in .env")
+    
+    completion_kwargs = {
+        "model": model,
+        "messages": messages,
+        "api_key": key_to_use,
+        "temperature": temperature,
+        **kwargs
+    }
+    
+    # Add api_base if provided
+    if api_base:
+        completion_kwargs["api_base"] = api_base
+    
+    print(f"🚀 LiteLLM completion - Model: {model}, API Base: {api_base or 'default'}")
+    
+    return completion(**completion_kwargs)
 
 
 def get_uploaded_datasets():

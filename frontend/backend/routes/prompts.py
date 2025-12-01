@@ -18,7 +18,7 @@ from config import (
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from utils import (
-    create_openrouter_client,
+    create_llm_completion,
     get_uploaded_datasets,
     load_class_dynamically,
 )
@@ -53,33 +53,37 @@ async def enhance_prompt_with_openrouter(
     request: PromptRequest, system_message: str, operation_name: str = "processing"
 ):
     """
-    Shared function to enhance prompts using OpenRouter.
+    Shared function to enhance prompts using any OpenAI-compatible API via LiteLLM.
     """
     config = request.config or {}
 
-    # API key precedence: env > client supplied
-    api_key = OPENROUTER_API_KEY or config.get("openrouterApiKey")
+    # Get API configuration from request or use defaults
+    api_key = config.get("apiKey") or config.get("openrouterApiKey") or OPENROUTER_API_KEY
+    api_base = config.get("apiBaseUrl")  # Optional - uses provider default if not set
+    model = config.get("model", "meta-llama/llama-3.3-70b-instruct")
+    
+    # Handle legacy MODEL_MAPPING if friendly name provided
+    if model in MODEL_MAPPING:
+        model = MODEL_MAPPING[model]
+    
     if not api_key:
         raise HTTPException(
             status_code=400,
-            detail="OpenRouter API key missing. Supply via UI or set OPENROUTER_API_KEY environment variable.",
+            detail="API key missing. Supply via UI or set OPENROUTER_API_KEY environment variable.",
         )
 
     try:
-        # Create OpenRouter client with the API key
-        openrouter_client = create_openrouter_client(api_key)
-
-        # Use the model from config or default to Llama 3.3 70B
-        model = config.get("model", "meta-llama/llama-3.3-70b-instruct")
-        if model in MODEL_MAPPING:
-            model = MODEL_MAPPING[model]
-
-        response = openrouter_client.chat.completions.create(
+        print(f"🎯 Enhance endpoint - Model: {model}, API Base: {api_base or 'default'}")
+        
+        # Use LiteLLM for completion
+        response = create_llm_completion(
             model=model,
             messages=[
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": request.prompt},
             ],
+            api_key=api_key,
+            api_base=api_base,
             temperature=0.7,
         )
 
@@ -176,6 +180,11 @@ async def migrate_prompt(request: PromptRequest):
         else:
             metric_name = metrics_config
             metric_cfg = METRIC_MAPPING.get(metric_name)
+            # Apply user customizations for backward-compatible string format too
+            if metric_cfg and metric_name in metric_configurations:
+                user_config = metric_configurations[metric_name]
+                metric_cfg = metric_cfg.copy()
+                metric_cfg["params"] = {**metric_cfg["params"], **user_config}
 
         if not metric_cfg:
             metric_name = "exact_match"
@@ -188,6 +197,10 @@ async def migrate_prompt(request: PromptRequest):
         model_configurations = config.get("modelConfigurations", [])
         target_model_config = None
         optimizer_model_config = None
+        
+        # Variables to store final model names
+        final_task_model_name = task_model_name
+        final_proposer_model_name = proposer_model_name
 
         if model_configurations:
             for model_config in model_configurations:
@@ -198,26 +211,37 @@ async def migrate_prompt(request: PromptRequest):
                     optimizer_model_config = model_config
 
                 if model_config.get("api_key"):
-                    provider_id = model_config["provider_id"]
+                    provider_id = model_config.get("provider_id")
                     if provider_id == "openrouter":
                         os.environ["OPENROUTER_API_KEY"] = model_config["api_key"]
                     elif provider_id == "together":
                         os.environ["TOGETHER_API_KEY"] = model_config["api_key"]
 
+            # Use custom model configs if provided
             if target_model_config:
-                target_model_name = f"{target_model_config['provider_id']}/{target_model_config['model_name']}"
+                provider_id = target_model_config.get("provider_id")
+                model_name = target_model_config.get("model_name")
+                if provider_id and model_name:
+                    final_task_model_name = f"{provider_id}/{model_name}"
             if optimizer_model_config:
-                optimizer_model_name = f"{optimizer_model_config['provider_id']}/{optimizer_model_config['model_name']}"
+                provider_id = optimizer_model_config.get("provider_id")
+                model_name = optimizer_model_config.get("model_name")
+                if provider_id and model_name:
+                    final_proposer_model_name = f"{provider_id}/{model_name}"
 
         # Instantiate components
         try:
+            # Only prepend "openrouter/" if the model name doesn't already have a provider prefix
+            task_model_full = final_task_model_name if "/" in final_task_model_name else f"openrouter/{final_task_model_name}"
+            proposer_model_full = final_proposer_model_name if "/" in final_proposer_model_name else f"openrouter/{final_proposer_model_name}"
+            
             task_model = setup_model(
-                model_name=f"openrouter/{task_model_name}",
+                model_name=task_model_full,
                 api_key=api_key,
                 temperature=0.0,
             )
             proposer_model = setup_model(
-                model_name=f"openrouter/{proposer_model_name}",
+                model_name=proposer_model_full,
                 api_key=api_key,
                 temperature=0.7,
             )
