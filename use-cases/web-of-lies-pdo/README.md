@@ -30,6 +30,7 @@ PDO (Prompt Duel Optimizer) is a dueling bandit optimization strategy that:
 1. **Set your API key** in a `.env` file in the project root:
    ```bash
    OPENROUTER_API_KEY=your_api_key_here
+   # LiteLLM auto-detects the provider from your model name (openrouter/model)
    ```
 
 2. **Run the optimization**:

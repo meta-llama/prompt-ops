@@ -1,12 +1,9 @@
 # Facility dataset configuration for prompt optimization
 
-#TODO: think if there are any way to abstract this
-# provider: openrouter/hosted_vllm/togethercomputer
-# model: meta-llama/llama-3.3-70b-instruct
-# litellm
+# Model configuration - uses LiteLLM with provider prefix
+# LiteLLM auto-detects API key from provider-specific env vars (e.g., OPENROUTER_API_KEY, GROQ_API_KEY)
 model:
   name: "openrouter/meta-llama/llama-3.3-70b-instruct"
-  api_base: "https://openrouter.ai/api/v1" # rename base_url:
   temperature: 0.0
   # max_tokens: 2048       # Maximum number of tokens to generate
   # top_p: 0.9             # Nucleus sampling parameter

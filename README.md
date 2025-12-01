@@ -130,7 +130,8 @@ Add your API key to the `.env` file:
 ```bash
 OPENROUTER_API_KEY=your_key_here
 ```
-You can get an OpenRouter API key by creating an account at [OpenRouter](https://openrouter.ai/). For more inference provider options, see [Inference Providers](./docs/inference_providers.md).
+
+prompt-ops uses LiteLLM as a unified API client. LiteLLM automatically detects the provider from your model name (e.g., `openrouter/model`, `groq/model`) and looks for the corresponding provider-specific environment variable (`OPENROUTER_API_KEY`, `GROQ_API_KEY`, etc.). For more inference provider options, see [Inference Providers](./docs/inference_providers.md).
 
 ### Step 4: Run Optimization
 The optimization will take about 5 minutes.

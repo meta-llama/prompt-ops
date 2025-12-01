@@ -279,7 +279,7 @@ class TextGradModelAdapter(ModelAdapter):
         Initialize the TextGrad model adapter with configuration parameters.
 
         Args:
-            model_name: The model identifier (e.g., "openrouter/meta-llama/llama-3.3-70b-instruct")
+            model_name: The model identifier with provider prefix (e.g., "openrouter/meta-llama/llama-3.3-70b-instruct")
             api_base: The API base URL
             api_key: The API key
             **kwargs: Additional arguments to pass to tg.get_engine
@@ -393,9 +393,10 @@ class LiteLLMModelAdapter(ModelAdapter):
         Initialize the LiteLLM model adapter with configuration parameters.
 
         Args:
-            model_name: The model identifier (e.g., "openrouter/meta-llama/llama-3.3-70b-instruct")
-            api_base: The API base URL
-            api_key: The API key
+            model_name: The model identifier with provider prefix (e.g., "openrouter/meta-llama/llama-3.3-70b-instruct")
+                       LiteLLM auto-detects the provider and uses the appropriate API key from environment
+            api_base: The API base URL (optional, LiteLLM uses provider defaults)
+            api_key: The API key (optional, LiteLLM reads from provider-specific env vars like OPENROUTER_API_KEY)
             max_tokens: Maximum number of tokens to generate
             temperature: Sampling temperature
             **kwargs: Additional arguments to pass to litellm.completion
@@ -412,36 +413,6 @@ class LiteLLMModelAdapter(ModelAdapter):
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.kwargs = kwargs
-
-        # Set up environment variables for LiteLLM if needed
-        if api_key:
-            self._setup_api_key(model_name, api_key)
-        if api_base:
-            self._setup_api_base(model_name, api_base)
-
-    def _setup_api_key(self, model_name: str, api_key: str):
-        """Set appropriate environment variable based on model provider."""
-        model_lower = model_name.lower() if model_name else ""
-
-        if "openai" in model_lower and "openrouter" not in model_lower:
-            os.environ["OPENAI_API_KEY"] = api_key
-        elif "anthropic" in model_lower or "claude" in model_lower:
-            os.environ["ANTHROPIC_API_KEY"] = api_key
-        elif "openrouter" in model_lower:
-            os.environ["OPENROUTER_API_KEY"] = api_key
-        elif "together" in model_lower:
-            os.environ["TOGETHER_API_KEY"] = api_key
-        # Add more providers as needed
-
-    def _setup_api_base(self, model_name: str, api_base: str):
-        """Set appropriate base URL environment variable."""
-        model_lower = model_name.lower() if model_name else ""
-
-        if "openai" in model_lower and "openrouter" not in model_lower:
-            os.environ["OPENAI_API_BASE"] = api_base
-        elif "openrouter" in model_lower:
-            os.environ["OPENROUTER_API_BASE"] = api_base
-        # Add more as needed
 
     def generate(
         self, prompt: str, temperature: float = None, max_tokens: int = None, **kwargs
