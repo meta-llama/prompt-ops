@@ -149,12 +149,26 @@ def cli():
 )
 @click.option(
     "--api-key-env",
-    default="OPENROUTER_API_KEY",
-    help="Name of the environment variable for the API key (provider-specific, e.g. OPENROUTER_API_KEY, GROQ_API_KEY)",
+    default=None,
+    help="Name of the environment variable for the API key (optional - inferred from model if not specified)",
 )
 def create(project_name, output_dir, model, api_key_env):
     """Create a new prompt optimization project with all necessary files."""
     project_dir = os.path.join(output_dir, project_name)
+    
+    # Infer API key environment variable from model if not specified
+    if not api_key_env:
+        provider = model.split('/')[0] if '/' in model else 'openai'
+        provider_to_key = {
+            'openrouter': 'OPENROUTER_API_KEY',
+            'openai': 'OPENAI_API_KEY',
+            'anthropic': 'ANTHROPIC_API_KEY',
+            'groq': 'GROQ_API_KEY',
+            'cerebras': 'CEREBRAS_API_KEY',
+            'together': 'TOGETHER_API_KEY',
+            'cohere': 'COHERE_API_KEY',
+        }
+        api_key_env = provider_to_key.get(provider.lower(), f'{provider.upper()}_API_KEY')
 
     try:
         # Check if directory already exists
@@ -795,8 +809,8 @@ def load_config(config_path):
 )
 @click.option(
     "--api-key-env",
-    default="OPENROUTER_API_KEY",
-    help="Environment variable name for the API key (provider-specific, e.g. OPENROUTER_API_KEY, GROQ_API_KEY)",
+    default=None,
+    help="Environment variable name for the API key (optional - LiteLLM will auto-detect based on model)",
 )
 @click.option(
     "--dotenv-path", default=".env", help="Path to the .env file containing API keys"
@@ -843,8 +857,15 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
     for logger_name in external_loggers:
         logging.getLogger(logger_name).setLevel(getattr(logging, external_log_level))
 
-    # Get API key using the extracted function
-    api_key = check_api_key(api_key_env, dotenv_path)
+    # Get API key using the extracted function, or let LiteLLM auto-detect
+    if api_key_env:
+        api_key = check_api_key(api_key_env, dotenv_path)
+    else:
+        # Load .env file if it exists, but don't check for specific keys
+        if os.path.exists(dotenv_path):
+            load_dotenv(dotenv_path)
+            click.echo(f"Loaded environment variables from {dotenv_path}")
+        api_key = None  # LiteLLM will auto-detect based on model
 
     # Load configuration
     try:
