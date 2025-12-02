@@ -209,7 +209,7 @@ def create(project_name, output_dir, model, api_key_env):
                 "strict_json": False,
                 "output_field": "answer",
             },
-            "optimization": {"strategy": "basic"},
+            "optimization": {"strategy": "basic", "num_threads": 2},
         }
 
         with open(os.path.join(project_dir, "config.yaml"), "w") as f:
