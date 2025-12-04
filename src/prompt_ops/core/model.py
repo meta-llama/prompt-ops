@@ -12,6 +12,7 @@ It leverages LiteLLM's unified interface for accessing various LLM providers.
 """
 
 import os
+import time
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Union
 
@@ -132,6 +133,7 @@ class DSPyModelAdapter(ModelAdapter):
         max_tokens: int = 48000,
         temperature: float = 0.0,
         cache: bool = False,
+        num_retries: int = 15,
         **kwargs,
     ):
         """
@@ -144,6 +146,7 @@ class DSPyModelAdapter(ModelAdapter):
             max_tokens: Maximum number of tokens to generate
             temperature: Sampling temperature
             cache: Whether to cache responses
+            num_retries: Number of retries for rate limit errors with exponential backoff (default: 15)
             **kwargs: Additional arguments to pass to dspy.LM
         """
         if not DSPY_AVAILABLE:
@@ -162,7 +165,7 @@ class DSPyModelAdapter(ModelAdapter):
             **kwargs,
         }
 
-        # Create the DSPy model
+        # Create the DSPy model - pass num_retries directly to dspy.LM
         self._model = dspy.LM(
             model=model_name,
             api_base=api_base,
@@ -170,6 +173,7 @@ class DSPyModelAdapter(ModelAdapter):
             max_tokens=max_tokens,
             temperature=temperature,
             cache=cache,
+            num_retries=num_retries,
             **kwargs,
         )
 
@@ -206,7 +210,12 @@ class DSPyModelAdapter(ModelAdapter):
 
         Returns:
             The generated text response
+
+        Raises:
+            litellm.exceptions.RateLimitError: If rate limit is exceeded after retries
         """
+        logger = get_logger()
+
         # Create a temporary configuration with override parameters if provided
         temp_config = {}
         if temperature is not None:
@@ -214,14 +223,23 @@ class DSPyModelAdapter(ModelAdapter):
         if max_tokens is not None:
             temp_config["max_tokens"] = max_tokens
 
-        # Use the model to generate a completion
-        if temp_config:
-            with dspy.settings(**temp_config):
+        try:
+            # Use the model to generate a completion
+            if temp_config:
+                with dspy.settings(**temp_config):
+                    response = self._model(prompt)
+            else:
                 response = self._model(prompt)
-        else:
-            response = self._model(prompt)
 
-        return response
+            return response
+
+        except Exception as e:
+            # Check if it's a rate limit error
+            if LITELLM_AVAILABLE and isinstance(e, litellm.exceptions.RateLimitError):
+                logger.error(f"Rate limit exceeded in generate(): {e}")
+            else:
+                logger.error(f"Error in generate(): {e}")
+            raise
 
     def generate_with_chat_format(
         self,
@@ -279,7 +297,7 @@ class TextGradModelAdapter(ModelAdapter):
         Initialize the TextGrad model adapter with configuration parameters.
 
         Args:
-            model_name: The model identifier (e.g., "openrouter/meta-llama/llama-3.3-70b-instruct")
+            model_name: The model identifier with provider prefix (e.g., "openrouter/meta-llama/llama-3.3-70b-instruct")
             api_base: The API base URL
             api_key: The API key
             **kwargs: Additional arguments to pass to tg.get_engine
@@ -387,17 +405,22 @@ class LiteLLMModelAdapter(ModelAdapter):
         api_key: str = None,
         max_tokens: int = 4096,
         temperature: float = 0.0,
+        max_retries: int = 5,
+        retry_delay: float = 1.0,
         **kwargs,
     ):
         """
         Initialize the LiteLLM model adapter with configuration parameters.
 
         Args:
-            model_name: The model identifier (e.g., "openrouter/meta-llama/llama-3.3-70b-instruct")
-            api_base: The API base URL
-            api_key: The API key
+            model_name: The model identifier with provider prefix (e.g., "openrouter/meta-llama/llama-3.3-70b-instruct")
+                       LiteLLM auto-detects the provider and uses the appropriate API key from environment
+            api_base: The API base URL (optional, LiteLLM uses provider defaults)
+            api_key: The API key (optional, LiteLLM reads from provider-specific env vars like OPENROUTER_API_KEY)
             max_tokens: Maximum number of tokens to generate
             temperature: Sampling temperature
+            max_retries: Maximum number of retries for rate limit errors (default: 5)
+            retry_delay: Initial delay in seconds for exponential backoff (default: 1.0)
             **kwargs: Additional arguments to pass to litellm.completion
         """
         if not LITELLM_AVAILABLE:
@@ -411,37 +434,59 @@ class LiteLLMModelAdapter(ModelAdapter):
         self.api_key = api_key
         self.max_tokens = max_tokens
         self.temperature = temperature
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
         self.kwargs = kwargs
+        self.logger = get_logger()
 
-        # Set up environment variables for LiteLLM if needed
-        if api_key:
-            self._setup_api_key(model_name, api_key)
-        if api_base:
-            self._setup_api_base(model_name, api_base)
+    def _call_with_retry(self, litellm_kwargs: Dict[str, Any]) -> str:
+        """
+        Call LiteLLM completion with retry logic for rate limit errors.
 
-    def _setup_api_key(self, model_name: str, api_key: str):
-        """Set appropriate environment variable based on model provider."""
-        model_lower = model_name.lower() if model_name else ""
+        Args:
+            litellm_kwargs: Arguments to pass to litellm.completion
 
-        if "openai" in model_lower and "openrouter" not in model_lower:
-            os.environ["OPENAI_API_KEY"] = api_key
-        elif "anthropic" in model_lower or "claude" in model_lower:
-            os.environ["ANTHROPIC_API_KEY"] = api_key
-        elif "openrouter" in model_lower:
-            os.environ["OPENROUTER_API_KEY"] = api_key
-        elif "together" in model_lower:
-            os.environ["TOGETHER_API_KEY"] = api_key
-        # Add more providers as needed
+        Returns:
+            The generated text response
 
-    def _setup_api_base(self, model_name: str, api_base: str):
-        """Set appropriate base URL environment variable."""
-        model_lower = model_name.lower() if model_name else ""
+        Raises:
+            Exception: If all retries are exhausted or a non-retryable error occurs
+        """
+        last_exception = None
 
-        if "openai" in model_lower and "openrouter" not in model_lower:
-            os.environ["OPENAI_API_BASE"] = api_base
-        elif "openrouter" in model_lower:
-            os.environ["OPENROUTER_API_BASE"] = api_base
-        # Add more as needed
+        for attempt in range(self.max_retries + 1):
+            try:
+                response = litellm.completion(**litellm_kwargs)
+                return response.choices[0].message.content
+
+            except litellm.exceptions.RateLimitError as e:
+                last_exception = e
+
+                if attempt < self.max_retries:
+                    # Exponential backoff: 1s, 2s, 4s, 8s, 16s...
+                    delay = self.retry_delay * (2**attempt)
+                    self.logger.warning(
+                        f"Rate limit hit (attempt {attempt + 1}/{self.max_retries + 1}). "
+                        f"Retrying in {delay:.1f}s..."
+                    )
+                    time.sleep(delay)
+                else:
+                    self.logger.error(
+                        f"Rate limit error: All {self.max_retries + 1} attempts exhausted."
+                    )
+                    raise
+
+            except Exception as e:
+                # For non-rate-limit errors, fail immediately
+                self.logger.error(f"API call failed: {str(e)}")
+                raise
+
+        # Should never reach here, but just in case
+        raise (
+            last_exception
+            if last_exception
+            else Exception("Unknown error in retry logic")
+        )
 
     def generate(
         self, prompt: str, temperature: float = None, max_tokens: int = None, **kwargs
@@ -486,15 +531,8 @@ class LiteLLMModelAdapter(ModelAdapter):
         if self.api_base:
             litellm_kwargs["api_base"] = self.api_base
 
-        try:
-            response = litellm.completion(**litellm_kwargs)
-
-            # Extract text from response
-            return response.choices[0].message.content
-
-        except Exception as e:
-            # Convert to our standard error types if needed
-            raise e
+        # Use retry logic for rate limit handling
+        return self._call_with_retry(litellm_kwargs)
 
     def generate_with_chat_format(
         self,
@@ -540,15 +578,8 @@ class LiteLLMModelAdapter(ModelAdapter):
         if self.api_base:
             litellm_kwargs["api_base"] = self.api_base
 
-        try:
-            response = litellm.completion(**litellm_kwargs)
-
-            # Extract text from response
-            return response.choices[0].message.content
-
-        except Exception as e:
-            # Convert to our standard error types if needed
-            raise e
+        # Use retry logic for rate limit handling
+        return self._call_with_retry(litellm_kwargs)
 
 
 def setup_model(model_name=None, adapter_type="dspy", **kwargs):
