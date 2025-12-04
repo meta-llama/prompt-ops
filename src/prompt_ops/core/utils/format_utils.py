@@ -92,8 +92,16 @@ def convert_json_to_yaml(
         # TextGradModelAdapter uses self.kwargs["engine_name"]
         model_name = (
             getattr(task_model, "model_name", None)
-            or (task_model.kwargs.get("model") if hasattr(task_model, "kwargs") else None)
-            or (task_model.kwargs.get("engine_name") if hasattr(task_model, "kwargs") else None)
+            or (
+                task_model.kwargs.get("model")
+                if hasattr(task_model, "kwargs")
+                else None
+            )
+            or (
+                task_model.kwargs.get("engine_name")
+                if hasattr(task_model, "kwargs")
+                else None
+            )
             or str(task_model)
         )
         yaml_content += "\n\nconfig:\n"

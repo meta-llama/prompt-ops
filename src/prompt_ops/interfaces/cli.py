@@ -29,6 +29,7 @@ from dotenv import load_dotenv
 
 try:
     import litellm
+
     LITELLM_AVAILABLE = True
 except ImportError:
     LITELLM_AVAILABLE = False
@@ -74,27 +75,30 @@ def check_api_key(api_key_env, dotenv_path=".env"):
 
 def validate_litellm_environment(model_name):
     """Validate that the environment is properly configured for the model using LiteLLM.
-    
+
     Args:
         model_name: The full model name with provider prefix (e.g., "openrouter/model")
-    
+
     Returns:
         bool: True if environment is valid, False otherwise
     """
     if not LITELLM_AVAILABLE:
         return True  # Skip validation if litellm not available
-    
+
     try:
         # Use LiteLLM's validate_environment to check for required env vars
         result = litellm.validate_environment(model_name)
-        
+
         if result.get("keys_in_environment", False):
             click.echo(f"✓ Environment validated for model: {model_name}")
             return True
         else:
             missing_keys = result.get("missing_keys", [])
             if missing_keys:
-                click.echo(f"Warning: Missing environment variables: {', '.join(missing_keys)}", err=True)
+                click.echo(
+                    f"Warning: Missing environment variables: {', '.join(missing_keys)}",
+                    err=True,
+                )
                 click.echo(f"LiteLLM expects these for model '{model_name}'", err=True)
             return False
     except Exception as e:
@@ -155,20 +159,22 @@ def cli():
 def create(project_name, output_dir, model, api_key_env):
     """Create a new prompt optimization project with all necessary files."""
     project_dir = os.path.join(output_dir, project_name)
-    
+
     # Infer API key environment variable from model if not specified
     if not api_key_env:
-        provider = model.split('/')[0] if '/' in model else 'openai'
+        provider = model.split("/")[0] if "/" in model else "openai"
         provider_to_key = {
-            'openrouter': 'OPENROUTER_API_KEY',
-            'openai': 'OPENAI_API_KEY',
-            'anthropic': 'ANTHROPIC_API_KEY',
-            'groq': 'GROQ_API_KEY',
-            'cerebras': 'CEREBRAS_API_KEY',
-            'together': 'TOGETHER_API_KEY',
-            'cohere': 'COHERE_API_KEY',
+            "openrouter": "OPENROUTER_API_KEY",
+            "openai": "OPENAI_API_KEY",
+            "anthropic": "ANTHROPIC_API_KEY",
+            "groq": "GROQ_API_KEY",
+            "cerebras": "CEREBRAS_API_KEY",
+            "together": "TOGETHER_API_KEY",
+            "cohere": "COHERE_API_KEY",
         }
-        api_key_env = provider_to_key.get(provider.lower(), f'{provider.upper()}_API_KEY')
+        api_key_env = provider_to_key.get(
+            provider.lower(), f"{provider.upper()}_API_KEY"
+        )
 
     try:
         # Check if directory already exists
@@ -900,7 +906,10 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
         validate_litellm_environment(task_model_name)
     except Exception as e:
         click.echo(f"Warning: Environment validation failed: {str(e)}", err=True)
-        click.echo("Continuing anyway - LiteLLM will error if credentials are actually missing.", err=True)
+        click.echo(
+            "Continuing anyway - LiteLLM will error if credentials are actually missing.",
+            err=True,
+        )
 
     # Create metric based on config - use task_model for metric
     try:

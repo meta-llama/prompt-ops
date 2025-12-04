@@ -210,12 +210,12 @@ class DSPyModelAdapter(ModelAdapter):
 
         Returns:
             The generated text response
-            
+
         Raises:
             litellm.exceptions.RateLimitError: If rate limit is exceeded after retries
         """
         logger = get_logger()
-        
+
         # Create a temporary configuration with override parameters if provided
         temp_config = {}
         if temperature is not None:
@@ -232,7 +232,7 @@ class DSPyModelAdapter(ModelAdapter):
                 response = self._model(prompt)
 
             return response
-            
+
         except Exception as e:
             # Check if it's a rate limit error
             if LITELLM_AVAILABLE and isinstance(e, litellm.exceptions.RateLimitError):
@@ -442,29 +442,29 @@ class LiteLLMModelAdapter(ModelAdapter):
     def _call_with_retry(self, litellm_kwargs: Dict[str, Any]) -> str:
         """
         Call LiteLLM completion with retry logic for rate limit errors.
-        
+
         Args:
             litellm_kwargs: Arguments to pass to litellm.completion
-            
+
         Returns:
             The generated text response
-            
+
         Raises:
             Exception: If all retries are exhausted or a non-retryable error occurs
         """
         last_exception = None
-        
+
         for attempt in range(self.max_retries + 1):
             try:
                 response = litellm.completion(**litellm_kwargs)
                 return response.choices[0].message.content
-                
+
             except litellm.exceptions.RateLimitError as e:
                 last_exception = e
-                
+
                 if attempt < self.max_retries:
                     # Exponential backoff: 1s, 2s, 4s, 8s, 16s...
-                    delay = self.retry_delay * (2 ** attempt)
+                    delay = self.retry_delay * (2**attempt)
                     self.logger.warning(
                         f"Rate limit hit (attempt {attempt + 1}/{self.max_retries + 1}). "
                         f"Retrying in {delay:.1f}s..."
@@ -475,14 +475,18 @@ class LiteLLMModelAdapter(ModelAdapter):
                         f"Rate limit error: All {self.max_retries + 1} attempts exhausted."
                     )
                     raise
-                    
+
             except Exception as e:
                 # For non-rate-limit errors, fail immediately
                 self.logger.error(f"API call failed: {str(e)}")
                 raise
-        
+
         # Should never reach here, but just in case
-        raise last_exception if last_exception else Exception("Unknown error in retry logic")
+        raise (
+            last_exception
+            if last_exception
+            else Exception("Unknown error in retry logic")
+        )
 
     def generate(
         self, prompt: str, temperature: float = None, max_tokens: int = None, **kwargs
