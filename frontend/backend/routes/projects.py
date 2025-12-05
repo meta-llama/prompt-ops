@@ -223,27 +223,27 @@ async def list_projects():
     """List all available projects in the uploads directory."""
     try:
         uploads_dir = UPLOAD_DIR
-        
+
         # Return empty list if directory doesn't exist yet
         if not os.path.exists(uploads_dir):
             return {"success": True, "projects": []}
-        
+
         projects = []
-        
+
         # List all directories in the uploads folder
         for item in os.listdir(uploads_dir):
             item_path = os.path.join(uploads_dir, item)
-            
+
             # Only include directories (skip individual files)
             if os.path.isdir(item_path):
                 config_path = os.path.join(item_path, "config.yaml")
-                prompt_path = os.path.join(item_path, "prompt.txt")
-                dataset_path = os.path.join(item_path, "dataset.json")
-                
+                prompt_path = os.path.join(item_path, "prompts", "prompt.txt")
+                dataset_path = os.path.join(item_path, "data", "dataset.json")
+
                 # Get creation/modification time
                 created_at = os.path.getctime(item_path)
                 modified_at = os.path.getmtime(item_path)
-                
+
                 project_info = {
                     "name": item,
                     "path": item_path,
@@ -253,15 +253,17 @@ async def list_projects():
                     "createdAt": created_at,
                     "modifiedAt": modified_at,
                 }
-                
+
                 projects.append(project_info)
-        
+
         # Sort by modification time (most recent first)
         projects.sort(key=lambda x: x["modifiedAt"], reverse=True)
-        
+
         logger.info(f"Found {len(projects)} projects")
         return {"success": True, "projects": projects}
-        
+
     except Exception as e:
         logger.error(f"Error listing projects: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to list projects: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to list projects: {str(e)}"
+        )
