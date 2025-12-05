@@ -6,14 +6,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 # Mock the BaseStrategy class before importing PromptMigrator
-with patch("llama_prompt_ops.core.prompt_strategies.BaseStrategy") as MockBaseStrategy:
+with patch("prompt_ops.core.prompt_strategies.BaseStrategy") as MockBaseStrategy:
     # Make the mock return itself when instantiated
     MockBaseStrategy.return_value = MockBaseStrategy
     # Import after patching
-    from llama_prompt_ops.core.migrator import PromptMigrator
+    from prompt_ops.core.migrator import PromptMigrator
 
-from llama_prompt_ops.core.utils import json_to_yaml_file
-from llama_prompt_ops.core.utils.format_utils import convert_json_to_yaml
+from prompt_ops.core.utils import json_to_yaml_file
+from prompt_ops.core.utils.format_utils import convert_json_to_yaml
 
 
 @pytest.fixture
@@ -41,9 +41,10 @@ def temp_json_file():
     with open(file.name, "w") as f:
         json.dump(prompt_data, f)
 
-    yield file, prompt_data
+    yield file.name, prompt_data
 
     # Clean up temporary file
+    file.close()
     os.unlink(file.name)
 
 
@@ -52,9 +53,10 @@ def temp_yaml_file():
     # Create temporary file for testing
     file = tempfile.NamedTemporaryFile(delete=False, suffix=".yaml")
 
-    yield file
+    yield file.name
 
     # Clean up temporary file
+    file.close()
     os.unlink(file.name)
 
 
@@ -64,7 +66,7 @@ def test_load_prompt_from_json(temp_json_file):
 
     # Since the PromptMigrator no longer has a load_prompt method,
     # we'll test loading JSON directly
-    with open(file.name, "r") as f:
+    with open(file, "r") as f:
         loaded_data = json.load(f)
 
     # Verify the loaded data matches the expected data
@@ -72,7 +74,7 @@ def test_load_prompt_from_json(temp_json_file):
     assert loaded_data["metadata"]["name"] == prompt_data["metadata"]["name"]
 
 
-@patch("llama_prompt_ops.core.migrator.json_to_yaml_file")
+@patch("prompt_ops.core.migrator.json_to_yaml_file")
 def test_save_optimized_prompt(mock_json_to_yaml, temp_yaml_file):
     # Test saving optimized prompt to YAML
 
@@ -91,10 +93,10 @@ def test_save_optimized_prompt(mock_json_to_yaml, temp_yaml_file):
     migrator._optimized_program = mock_program
 
     # Save to YAML
-    migrator.save_optimized_prompt(file_path=temp_yaml_file.name, save_yaml=True)
+    migrator.save_optimized_prompt(file_path=temp_yaml_file, save_yaml=True)
 
     # Verify file was created
-    assert os.path.exists(temp_yaml_file.name)
+    assert os.path.exists(temp_yaml_file)
 
     # Verify json_to_yaml_file was called with the correct arguments
     mock_json_to_yaml.assert_called_once()
@@ -106,11 +108,11 @@ def test_save_optimized_prompt(mock_json_to_yaml, temp_yaml_file):
 
     # Extract the basename of the file to check if it's included in the call args
     # This is because the save_optimized_prompt method modifies the path to include a "results" directory
-    file_basename = os.path.basename(temp_yaml_file.name)
+    file_basename = os.path.basename(temp_yaml_file)
     assert file_basename in str(call_args)
 
 
-@patch("llama_prompt_ops.core.migrator.json_to_yaml_file")
+@patch("prompt_ops.core.migrator.json_to_yaml_file")
 def test_migrator_uses_utils_function(mock_json_to_yaml, temp_yaml_file):
     # Test that migrator uses the utility function for conversion
 
@@ -127,7 +129,7 @@ def test_migrator_uses_utils_function(mock_json_to_yaml, temp_yaml_file):
     migrator._optimized_program = mock_program
 
     # Call save_optimized_prompt
-    migrator.save_optimized_prompt(file_path=temp_yaml_file.name, save_yaml=True)
+    migrator.save_optimized_prompt(file_path=temp_yaml_file, save_yaml=True)
 
     # Verify the utility function was called
     mock_json_to_yaml.assert_called_once()
@@ -152,9 +154,11 @@ def json_yaml_temp_files():
     temp_json = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
     temp_yaml = tempfile.NamedTemporaryFile(delete=False, suffix=".yaml")
 
-    yield temp_json, temp_yaml
+    yield temp_json.name, temp_yaml.name
 
     # Clean up
+    temp_json.close()
+    temp_yaml.close()
     os.unlink(temp_json.name)
     os.unlink(temp_yaml.name)
 
@@ -167,14 +171,14 @@ def test_json_to_yaml_file(json_yaml_temp_files):
     json_data = {"prompt": "Test prompt", "few_shots": []}
 
     # Write JSON data
-    with open(temp_json.name, "w") as f:
+    with open(temp_json, "w") as f:
         json.dump(json_data, f)
 
     # Convert to YAML
-    json_to_yaml_file(temp_json.name, temp_yaml.name)
+    json_to_yaml_file(temp_json, temp_yaml)
 
     # Verify YAML file
-    with open(temp_yaml.name, "r") as f:
+    with open(temp_yaml, "r") as f:
         yaml_content = f.read()
 
     # Check for the basic structure in the new YAML format

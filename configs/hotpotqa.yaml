@@ -1,11 +1,10 @@
 model:
   name: "openrouter/meta-llama/llama-3.1-8b-instruct"
-  api_base: "https://openrouter.ai/api/v1"
   temperature: 0.0
   max_tokens: 40960
 
 dataset:
-  adapter_class: "src/llama_prompt_ops/datasets/hotpotqa/adapter.py"
+  adapter_class: "src/prompt_ops/datasets/hotpotqa/adapter.py"
   path: "../use-cases/hotpotqa/hotpotqa_sample.json"
   train_size: 0.07
   validation_size: 0.07
@@ -28,7 +27,7 @@ system_prompt:
   outputs: ["answer"]
 
 metric:
-  class: "src/llama_prompt_ops/datasets/hotpotqa/metric.py"
+  class: "src/prompt_ops/datasets/hotpotqa/metric.py"
   output_field: "answer"
   passage_weight: 0.5
 

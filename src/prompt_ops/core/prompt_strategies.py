@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import sys
+import time
 import traceback
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -21,6 +22,8 @@ from typing import Any, Callable, Dict, List, Optional, Union
 import dspy
 from typing_extensions import Literal
 
+from .evaluation import create_evaluator
+from .model import LiteLLMModelAdapter
 from .utils import map_auto_mode_to_dspy
 
 
@@ -61,26 +64,8 @@ class BaseStrategy(ABC):
         self.trainset = None
         self.valset = None
 
-        if model_family is None:
-            from .utils.llama_utils import is_llama_model
-
-            if is_llama_model(model_name):
-                self.model_family = "llama"
-            else:
-                # Default to Llama since that's our focus
-                logging.warning(
-                    f"Model '{model_name}' does not appear to be a Llama model. "
-                    f"This library is optimized for Llama models."
-                )
-                self.model_family = "llama"
-        else:
-            # If model_family is explicitly provided, use it but warn if not 'llama'
-            self.model_family = model_family
-            if self.model_family != "llama":
-                logging.warning(
-                    f"Model family '{self.model_family}' specified, but this library "
-                    f"is optimized for Llama models."
-                )
+        # Set model family if provided, otherwise leave as None (model-agnostic)
+        self.model_family = model_family
 
     @abstractmethod
     def run(self, prompt_data: Dict[str, Any]) -> Any:
@@ -142,8 +127,12 @@ class BasicOptimizationStrategy(BaseStrategy):
         view_data_batch_size: int = 10,
         tip_aware_proposer: bool = True,
         fewshot_aware_proposer: bool = True,
-        use_llama_tips: bool = True,
         requires_permission_to_run: bool = False,
+        # Baseline computation settings
+        compute_baseline: bool = True,
+        # Model name parameters for display
+        task_model_name: Optional[str] = None,
+        prompt_model_name: Optional[str] = None,
         **kwargs,
     ):
         """
@@ -179,7 +168,13 @@ class BasicOptimizationStrategy(BaseStrategy):
             tip_aware_proposer: Whether to use tip-aware instruction proposals
             fewshot_aware_proposer: Whether to use few-shot aware instruction proposals
             requires_permission_to_run: Whether to require user permission to run
-            provide_traceback: Whether to provide tracebacks for errors
+
+            # Baseline computation parameters
+            compute_baseline: Whether to compute baseline score before optimization
+
+            # Model name parameters for display
+            task_model_name: Name of the task model
+            prompt_model_name: Name of the prompt model
 
             **kwargs: Additional configuration parameters
         """
@@ -192,9 +187,7 @@ class BasicOptimizationStrategy(BaseStrategy):
         # Training and validation data
         self.trainset = kwargs.get("trainset", [])
         self.valset = kwargs.get("valset", [])
-
-        # Model-specific optimization settings
-        self.use_llama_tips = use_llama_tips
+        self.testset = kwargs.get("testset", [])
 
         # MIPROv2 constructor parameters
         self.max_bootstrapped_demos = max_bootstrapped_demos
@@ -221,6 +214,127 @@ class BasicOptimizationStrategy(BaseStrategy):
         self.fewshot_aware_proposer = fewshot_aware_proposer
         self.requires_permission_to_run = requires_permission_to_run
 
+        # Baseline computation settings
+        self.compute_baseline = compute_baseline
+
+        # Model name parameters for display
+        self.task_model_name = task_model_name
+        self.prompt_model_name = prompt_model_name
+
+    def _get_model_name(self, model) -> str:
+        """
+        Get a human-readable name for a model using stored names.
+
+        Args:
+            model: The model object to get the name for
+
+        Returns:
+            A string representation of the model name
+        """
+        if model is None:
+            return "None"
+
+        # Use stored model names if available
+        if model is self.task_model and self.task_model_name:
+            return self.task_model_name
+        if model is self.prompt_model and self.prompt_model_name:
+            return self.prompt_model_name
+
+        # Fallback to legacy introspection for backward compatibility
+        if hasattr(model, "model_name"):
+            return str(model.model_name)
+        if hasattr(model, "model"):
+            return str(model.model)
+        if hasattr(model, "_model") and hasattr(model._model, "model"):
+            return str(model._model.model)
+
+        # Final fallback
+        return str(model)
+
+    def _create_signature(self, prompt_data: Dict[str, Any], instructions: str):
+        """
+        Create a DSPy signature with explicit field definitions.
+
+        Args:
+            prompt_data: Dictionary containing inputs and outputs field definitions
+            instructions: The instruction text for the signature
+
+        Returns:
+            DSPy signature class
+        """
+        # Create a signature class dynamically with proper field definitions
+        input_fields = {}
+        output_fields = {}
+
+        # Define input and output fields based on prompt_data
+        for field in prompt_data.get("inputs", ["question"]):
+            input_fields[field] = dspy.InputField(desc="${" + field + "}")
+        for field in prompt_data.get("outputs", ["answer"]):
+            output_fields[field] = dspy.OutputField(desc="${" + field + "}")
+
+        # Create the signature class with proper field definitions
+        DynamicSignature = type(
+            "DynamicSignature",
+            (dspy.Signature,),
+            {
+                **input_fields,
+                **output_fields,
+                "__doc__": instructions,  # Store the instructions as the docstring
+            },
+        )
+
+        return DynamicSignature
+
+    def _compute_baseline_score(self, prompt_data: Dict[str, Any]) -> Optional[float]:
+        """
+        Compute baseline score using the original prompt before optimization.
+        Uses testset to avoid data leakage and evaluation.py for consistency.
+
+        Args:
+            prompt_data: Dictionary containing the prompt text and metadata
+
+        Returns:
+            Baseline score as float, or None if computation fails or is not possible
+        """
+        if not self.metric or not self.testset:
+            logging.debug("Skipping baseline computation: missing metric or test set")
+            return None
+
+        if not self.compute_baseline:
+            logging.debug("Baseline computation disabled")
+            return None
+
+        try:
+            start_time = time.time()
+
+            # Use consistent signature creation with original prompt
+            baseline_signature = self._create_signature(
+                prompt_data, prompt_data["text"]
+            )
+            baseline_program = dspy.Predict(baseline_signature)
+
+            print(
+                f"\nComputing baseline score on {len(self.testset)} test examples using {self.num_threads} threads..."
+            )
+
+            evaluator = create_evaluator(
+                metric=self.metric,
+                devset=self.testset,
+                num_threads=self.num_threads,  # Use the strategy's num_threads setting
+                display_progress=True,
+                display_table=False,
+            )
+
+            score = evaluator.evaluate(baseline_program)
+            duration = time.time() - start_time
+
+            print(f"Baseline Score: {score:.3f} in {duration:.2f}s\n")
+            return float(score)
+
+        except Exception as e:
+            logging.warning(f"Baseline evaluation failed: {e}")
+            return None
+
     def run(self, prompt_data: Dict[str, Any]) -> Any:
         """
         Apply basic optimization to the prompt using DSPy's MIPROv2.
@@ -237,61 +351,17 @@ class BasicOptimizationStrategy(BaseStrategy):
         if "dspy" not in globals() or not self.trainset:
             return f"[Optimized for {self.model_name}] {text}"
 
+        # Display pre-optimization summary using utility function
+        from .utils.summary_utils import create_and_display_summary
+
+        create_and_display_summary(self, prompt_data)
+
         try:
-            # Add model-specific tips to the prompt if enabled
-            model_tips = None
-            if self.use_llama_tips:
-                # Check if model_tips are already in prompt_data
-                if "model_tips" in prompt_data:
-                    model_tips = prompt_data["model_tips"]
-                else:
-                    # Import here to avoid circular imports
-                    from .utils.llama_utils import get_llama_tips
-
-                    model_tips = get_llama_tips()
-
-            # Incorporate model-specific tips into the prompt if available
-            if model_tips and isinstance(model_tips, dict):
-                # Add model-specific formatting tips to the prompt
-                if "formatting" in model_tips:
-                    text += f"\n\nFormatting Tip: {model_tips['formatting']}"
-
-                # Add reasoning tips for complex tasks
-                if "reasoning" in model_tips and any(
-                    field in prompt_data.get("inputs", [])
-                    for field in ["context", "document", "text"]
-                ):
-                    text += f"\n\nReasoning Tip: {model_tips['reasoning']}"
-
-                # Add constraint tips if output format is important
-                if "constraints" in model_tips:
-                    text += f"\n\nOutput Requirements: {model_tips['constraints']}"
-
-            # Update the prompt text in prompt_data
-            prompt_data["text"] = text
-            # Create a signature class dynamically with proper field definitions
-            input_fields = {}
-            output_fields = {}
-
-            # Define input and output fields based on prompt_data
-            for field in prompt_data.get("inputs", ["question"]):
-                input_fields[field] = dspy.InputField(desc="${" + field + "}")
-            for field in prompt_data.get("outputs", ["answer"]):
-                output_fields[field] = dspy.OutputField(desc="${" + field + "}")
-
-            # Create the signature class with proper field definitions
-            DynamicSignature = type(
-                "DynamicSignature",
-                (dspy.Signature,),
-                {
-                    **input_fields,
-                    **output_fields,
-                    "__doc__": text,  # Store the instructions as the docstring
-                },
-            )
+            # Create signature using consistent helper method
+            signature = self._create_signature(prompt_data, text)
 
             # Create program instance with the signature
-            program = dspy.Predict(DynamicSignature)
+            program = dspy.Predict(signature)
 
             # Map our naming convention to DSPy's expected values
             dspy_auto_mode = map_auto_mode_to_dspy(self.auto)
@@ -329,33 +399,24 @@ class BasicOptimizationStrategy(BaseStrategy):
             # Initialize proposer_kwargs if not already present
             optimizer.proposer_kwargs = getattr(optimizer, "proposer_kwargs", {}) or {}
 
-            # First check if we have custom instruction tips from LlamaStrategy
+            # Check if we have custom instruction tips
             if (
                 hasattr(self, "proposer_kwargs")
                 and self.proposer_kwargs
                 and "tip" in self.proposer_kwargs
             ):
-                # Use our custom instruction tips with highest priority
+                # Use our custom instruction tips
                 optimizer.proposer_kwargs["tip"] = self.proposer_kwargs["tip"]
                 logging.info(
-                    f"Using custom instruction tips: {self.proposer_kwargs['tip']}..."
+                    f"Using custom instruction tips: {self.proposer_kwargs['tip'][:50] if self.proposer_kwargs['tip'] else 'None'}"
                 )
-            # Otherwise, if we have model-specific tips, use those
-            elif model_tips:
-                # Add persona and example tips to the proposer
-                if "persona" in model_tips or "examples" in model_tips:
-                    persona_tip = model_tips.get("persona", "")
-                    examples_tip = model_tips.get("examples", "")
-                    optimizer.proposer_kwargs["tip"] = (
-                        f"{persona_tip} {examples_tip}".strip()
-                    )
 
             logging.info(
                 f"Optimization strategy using {self.max_labeled_demos} labeled demos, {self.max_bootstrapped_demos} bootstrapped demos with {self.num_threads} threads"
             )
 
             logging.info(
-                f"Compiling program with {len(self.trainset)} training examples and {len(self.valset)} validation examples"
+                f"Compiling program with {len(self.trainset)} training examples, {len(self.valset)} validation examples, and {len(self.testset)} test examples"
             )
 
             # Create a custom compile method that injects our tip directly
@@ -490,7 +551,7 @@ class BasicOptimizationStrategy(BaseStrategy):
 
             # Try to apply our debug wrapper to the GroundedProposer class
             try:
-                from llama_prompt_ops.debug import patch_dspy_proposer
+                from prompt_ops.debug import patch_dspy_proposer
 
                 debug_patched = patch_dspy_proposer()
                 if debug_patched:
@@ -615,3 +676,258 @@ class BasicOptimizationStrategy(BaseStrategy):
             logging.error(f"Error in optimization: {str(e)}")
             # Instead of creating a mock program, raise a more descriptive exception
             raise OptimizationError(f"Optimization failed: {str(e)}")
+
+
+class PDOStrategy(BaseStrategy):
+    """
+    PDO (Prompt Duel Optimizer) strategy using dueling bandits.
+
+    This strategy uses Thompson sampling and dueling bandits to optimize
+    prompts through head-to-head competitions, with multiple ranking systems
+    and prompt evolution techniques.
+    """
+
+    def __init__(
+        self,
+        model_name: str = "llama-3",
+        metric: Optional[Callable] = None,
+        num_threads: int = 18,
+        model_family: str = None,
+        # PDO-specific parameters
+        total_rounds: int = 100,
+        num_duels_per_round: int = 3,
+        num_eval_examples_per_duel: int = 50,
+        num_initial_instructions: int = 2,
+        use_labels: bool = True,
+        thompson_alpha: float = 2.0,
+        num_top_prompts_to_combine: int = 3,
+        num_new_prompts_to_generate: int = 1,
+        max_new_prompts_to_generate: int = 50,
+        num_to_prune_each_round: int = 1,
+        gen_new_prompt_round_frequency: int = 1,
+        max_concurrent_threads: int = 8,
+        # Model parameters
+        task_model: Optional[Any] = None,
+        prompt_model: Optional[Any] = None,
+        task_model_name: Optional[str] = None,
+        prompt_model_name: Optional[str] = None,
+        **kwargs,
+    ):
+        """
+        Initialize PDO strategy.
+
+        Args:
+            model_name: Target model name
+            metric: Evaluation metric function
+            num_threads: Number of threads for optimization (used for compatibility)
+            model_family: Model family (e.g., "llama")
+            total_rounds: Number of optimization rounds
+            num_duels_per_round: Number of duels per round
+            num_eval_examples_per_duel: Examples per duel
+            num_initial_instructions: Initial instruction pool size
+            use_labels: Whether to use supervised learning
+            thompson_alpha: Thompson sampling alpha parameter
+            num_top_prompts_to_combine: Top prompts for combination
+            num_new_prompts_to_generate: New prompts per round
+            max_new_prompts_to_generate: Maximum total new prompts
+            num_to_prune_each_round: Prompts to prune per round
+            gen_new_prompt_round_frequency: Frequency of prompt generation
+            max_concurrent_threads: Max threads for parallel execution
+            task_model: ModelAdapter for task execution
+            prompt_model: ModelAdapter for evaluation/judging
+            task_model_name: Name of task model (for display)
+            prompt_model_name: Name of prompt model (for display)
+            **kwargs: Additional parameters
+        """
+        super().__init__(model_name, metric, num_threads, model_family)
+
+        # Create or store models - PDO uses LiteLLMModelAdapter for lightweight text generation
+        if task_model is None:
+            # Extract model configuration from kwargs
+            model_config = {
+                "model_name": task_model_name or model_name,
+                "api_key": kwargs.get("api_key"),
+                "api_base": kwargs.get("api_base"),
+                "temperature": kwargs.get("temperature", 0.0),
+                "max_tokens": kwargs.get("max_tokens", 4096),
+            }
+            # Remove None values
+            model_config = {k: v for k, v in model_config.items() if v is not None}
+            self.task_model = LiteLLMModelAdapter(**model_config)
+        else:
+            self.task_model = task_model
+
+        if prompt_model is None:
+            # Extract model configuration from kwargs
+            model_config = {
+                "model_name": prompt_model_name or model_name,
+                "api_key": kwargs.get("api_key"),
+                "api_base": kwargs.get("api_base"),
+                "temperature": kwargs.get("temperature", 0.0),
+                "max_tokens": kwargs.get("max_tokens", 4096),
+            }
+            # Remove None values
+            model_config = {k: v for k, v in model_config.items() if v is not None}
+            self.prompt_model = LiteLLMModelAdapter(**model_config)
+        else:
+            self.prompt_model = prompt_model
+
+        # Store model names for display
+        self.task_model_name = task_model_name or model_name
+        self.prompt_model_name = prompt_model_name or model_name
+
+        # PDO configuration (add user ranking_method; default copeland)
+        self.pdo_config = {
+            "total_rounds": total_rounds,
+            "num_duels_per_round": num_duels_per_round,
+            "num_eval_examples_per_duel": num_eval_examples_per_duel,
+            "num_initial_instructions": num_initial_instructions,
+            "use_labels": use_labels,
+            "thompson_alpha": thompson_alpha,
+            "num_top_prompts_to_combine": num_top_prompts_to_combine,
+            "num_new_prompts_to_generate": num_new_prompts_to_generate,
+            "num_to_prune_each_round": num_to_prune_each_round,
+            "gen_new_prompt_round_frequency": gen_new_prompt_round_frequency,
+            "max_concurrent_threads": max_concurrent_threads,
+            # Allow YAML to set answer choices via optimization.answer_choices
+            "answer_choices": kwargs.get("answer_choices", ["Yes", "No"]),
+            # Shared ranking method for mutation and final selection
+            "ranking_method": kwargs.get("ranking_method", "copeland"),
+            # Task type and judge requirement (for open-ended tasks)
+            "task_type": kwargs.get("task_type", "close_ended"),
+            "judge_requirement": kwargs.get("judge_requirement"),
+        }
+
+        # Training and validation data (will be set by migrator)
+        self.trainset = kwargs.get("trainset", [])
+        self.valset = kwargs.get("valset", [])
+        self.testset = kwargs.get("testset", [])
+
+    def run(self, prompt_data: Dict[str, Any]) -> Any:
+        """
+        Execute PDO optimization using dueling bandits.
+
+        Args:
+            prompt_data: Dictionary containing prompt information
+                - text: The prompt text to optimize
+                - inputs: List of input field names
+                - outputs: List of output field names
+
+        Returns:
+            DSPy program with optimized prompt for consistency with other strategies
+        """
+        if not self.task_model or not self.prompt_model:
+            raise ValueError("Both task_model and prompt_model are required for PDO")
+
+        # Display pre-optimization summary
+        try:
+            from .utils.summary_utils import create_and_display_summary
+
+            create_and_display_summary(self, prompt_data)
+        except Exception as e:
+            logging.warning(f"Failed to create summary: {e}")
+            print("Starting PDO optimization (summary creation failed)...")
+
+        try:
+            # Import PDO engine
+            from .pdo.optimization_engine import PDOEngine
+
+            # Debug: Print PDO config before engine creation
+            print(f"Debug: PDO config: {self.pdo_config}")
+            print(f"Debug: Task model type: {type(self.task_model)}")
+            print(f"Debug: Prompt model type: {type(self.prompt_model)}")
+
+            # Create PDO engine
+            engine = PDOEngine(
+                task_model=self.task_model,
+                judge_model=self.prompt_model,  # Use prompt model for judging
+                metric=self.metric,
+                **self.pdo_config,
+            )
+
+            # Prepare examples and labels
+            examples = []
+            labels = []
+
+            for example in self.trainset:
+                # Extract input text
+                input_text = ""
+                for field in prompt_data.get("inputs", ["question"]):
+                    if hasattr(example, field):
+                        input_text += f"{getattr(example, field)}\n"
+                examples.append(input_text.strip())
+
+                # Extract expected output
+                expected_output = ""
+                for field in prompt_data.get("outputs", ["answer"]):
+                    if hasattr(example, field):
+                        expected_output = getattr(example, field)
+                        break
+                labels.append(expected_output)
+
+            # Run PDO optimization
+            print(
+                f"Starting PDO optimization with {len(examples)} training examples..."
+            )
+            print(f"Task model: {self.task_model_name or 'Unknown'}")
+            print(f"Judge model: {self.prompt_model_name or 'Unknown'}")
+
+            best_instruction, metadata = engine.optimize(
+                base_instruction=prompt_data["text"],
+                examples=examples,
+                labels=labels if self.pdo_config["use_labels"] else None,
+            )
+
+            # Create DSPy program with optimized instruction for consistency
+            optimized_program = self._create_dspy_program(prompt_data, best_instruction)
+
+            # Store PDO metadata
+            optimized_program.pdo_metadata = metadata
+            optimized_program.model_family = self.model_family
+
+            print(f"✅ PDO optimization completed successfully!")
+            print(
+                f"Generated {metadata['total_instructions_generated']} total instructions"
+            )
+            print(f"Conducted {metadata['total_duels_conducted']} total duels")
+
+            return optimized_program
+
+        except Exception as e:
+            logging.error(f"PDO optimization failed: {str(e)}")
+            raise OptimizationError(f"PDO optimization failed: {str(e)}")
+
+    def _create_dspy_program(self, prompt_data: Dict[str, Any], instruction: str):
+        """Create DSPy program with optimized instruction."""
+        # Create signature using consistent helper method
+        signature = self._create_signature(prompt_data, instruction)
+
+        # Create program instance with the signature
+        program = dspy.Predict(signature)
+
+        return program
+
+    def _create_signature(self, prompt_data: Dict[str, Any], instructions: str):
+        """Create DSPy signature with explicit field definitions."""
+        # Create a signature class dynamically with proper field definitions
+        input_fields = {}
+        output_fields = {}
+
+        # Define input and output fields based on prompt_data
+        for field in prompt_data.get("inputs", ["question"]):
+            input_fields[field] = dspy.InputField(desc="${" + field + "}")
+        for field in prompt_data.get("outputs", ["answer"]):
+            output_fields[field] = dspy.OutputField(desc="${" + field + "}")
+
+        # Create the signature class with proper field definitions
+        DynamicSignature = type(
+            "DynamicSignature",
+            (dspy.Signature,),
+            {
+                **input_fields,
+                **output_fields,
+                "__doc__": instructions,  # Store the instructions as the docstring
+            },
+        )
+
+        return DynamicSignature

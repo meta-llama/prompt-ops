@@ -4,7 +4,7 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 """
-Command-line interface for the llama-prompt-ops tool.
+Command-line interface for the prompt-ops tool.
 
 This module provides a CLI for using the prompt-ops functionality,
 including commands for optimizing individual prompts, batch processing,
@@ -27,8 +27,15 @@ import click
 import yaml
 from dotenv import load_dotenv
 
+try:
+    import litellm
+
+    LITELLM_AVAILABLE = True
+except ImportError:
+    LITELLM_AVAILABLE = False
+
 # Import template utilities
-from llama_prompt_ops.templates import get_template_content, get_template_path
+from prompt_ops.templates import get_template_content, get_template_path
 
 
 def check_api_key(api_key_env, dotenv_path=".env"):
@@ -66,6 +73,40 @@ def check_api_key(api_key_env, dotenv_path=".env"):
     return api_key
 
 
+def validate_litellm_environment(model_name):
+    """Validate that the environment is properly configured for the model using LiteLLM.
+
+    Args:
+        model_name: The full model name with provider prefix (e.g., "openrouter/model")
+
+    Returns:
+        bool: True if environment is valid, False otherwise
+    """
+    if not LITELLM_AVAILABLE:
+        return True  # Skip validation if litellm not available
+
+    try:
+        # Use LiteLLM's validate_environment to check for required env vars
+        result = litellm.validate_environment(model_name)
+
+        if result.get("keys_in_environment", False):
+            click.echo(f"✓ Environment validated for model: {model_name}")
+            return True
+        else:
+            missing_keys = result.get("missing_keys", [])
+            if missing_keys:
+                click.echo(
+                    f"Warning: Missing environment variables: {', '.join(missing_keys)}",
+                    err=True,
+                )
+                click.echo(f"LiteLLM expects these for model '{model_name}'", err=True)
+            return False
+    except Exception as e:
+        # If validation fails, just warn but don't block execution
+        click.echo(f"Warning: Could not validate environment: {str(e)}", err=True)
+        return True
+
+
 # Helper function for real-time output
 def echo_flush(message, err=False):
     """Echo a message and flush the output buffer for real-time display."""
@@ -76,26 +117,26 @@ def echo_flush(message, err=False):
         sys.stdout.flush()
 
 
-from llama_prompt_ops.core.datasets import DatasetAdapter, load_dataset
-from llama_prompt_ops.core.metrics import (
+from prompt_ops.core.datasets import DatasetAdapter, load_dataset
+from prompt_ops.core.metrics import (
     DSPyMetricAdapter,
     MetricBase,
     StandardJSONMetric,
 )
-from llama_prompt_ops.core.migrator import PromptMigrator
-from llama_prompt_ops.core.model import setup_model
-from llama_prompt_ops.core.model_strategies import LlamaStrategy
-from llama_prompt_ops.core.prompt_strategies import (
+from prompt_ops.core.migrator import PromptMigrator
+from prompt_ops.core.model import setup_model
+from prompt_ops.core.prompt_strategies import (
     BaseStrategy,
     BasicOptimizationStrategy,
     OptimizationError,
+    PDOStrategy,
 )
 
 
 @click.group()
 def cli():
     """
-    llama-prompt-ops - A tool for migrating and optimizing prompts for Llama models.
+    prompt-ops - A tool for migrating and optimizing prompts for any LLM.
     """
     pass
 
@@ -108,16 +149,32 @@ def cli():
 @click.option(
     "--model",
     default="openrouter/meta-llama/llama-3.3-70b-instruct",
-    help="Model to use for prompt optimization",
+    help="Model to use for prompt optimization (use provider/model format, e.g. openrouter/model, groq/model)",
 )
 @click.option(
     "--api-key-env",
-    default="OPENROUTER_API_KEY",
-    help="Name of the environment variable for the API key",
+    default=None,
+    help="Name of the environment variable for the API key (optional - inferred from model if not specified)",
 )
 def create(project_name, output_dir, model, api_key_env):
     """Create a new prompt optimization project with all necessary files."""
     project_dir = os.path.join(output_dir, project_name)
+
+    # Infer API key environment variable from model if not specified
+    if not api_key_env:
+        provider = model.split("/")[0] if "/" in model else "openai"
+        provider_to_key = {
+            "openrouter": "OPENROUTER_API_KEY",
+            "openai": "OPENAI_API_KEY",
+            "anthropic": "ANTHROPIC_API_KEY",
+            "groq": "GROQ_API_KEY",
+            "cerebras": "CEREBRAS_API_KEY",
+            "together": "TOGETHER_API_KEY",
+            "cohere": "COHERE_API_KEY",
+        }
+        api_key_env = provider_to_key.get(
+            provider.lower(), f"{provider.upper()}_API_KEY"
+        )
 
     try:
         # Check if directory already exists
@@ -154,11 +211,11 @@ def create(project_name, output_dir, model, api_key_env):
             },
             "model": {"task_model": model, "proposer_model": model},
             "metric": {
-                "class": "llama_prompt_ops.core.metrics.FacilityMetric",
+                "class": "prompt_ops.core.metrics.FacilityMetric",
                 "strict_json": False,
                 "output_field": "answer",
             },
-            "optimization": {"strategy": "llama"},
+            "optimization": {"strategy": "basic", "num_threads": 2},
         }
 
         with open(os.path.join(project_dir, "config.yaml"), "w") as f:
@@ -177,7 +234,7 @@ def create(project_name, output_dir, model, api_key_env):
         # Step 4: Create sample dataset file
         echo_flush(f"\n[4/{total_steps}] Generating sample dataset...")
         # Use the helper function to get the sample dataset
-        from llama_prompt_ops.templates import get_sample_dataset
+        from prompt_ops.templates import get_sample_dataset
 
         sample_data = get_sample_dataset()
 
@@ -197,7 +254,7 @@ def create(project_name, output_dir, model, api_key_env):
         echo_flush(f"\n[6/{total_steps}] Creating documentation...")
         readme_content = f"""# {project_name}
 
-A prompt optimization project created with llama-prompt-ops.
+A prompt optimization project created with prompt-ops.
 
 ## Getting Started
 
@@ -209,7 +266,7 @@ A prompt optimization project created with llama-prompt-ops.
 2. Run the optimization:
    ```bash
    cd {project_name}
-   llama-prompt-ops migrate
+   prompt-ops migrate
    ```
 
 ## Project Structure
@@ -229,8 +286,7 @@ A prompt optimization project created with llama-prompt-ops.
         echo_flush("\nTo get started:")
         echo_flush(f"1. cd {project_name}")
         echo_flush(f"2. Edit the .env file to add your {api_key_env}")
-        echo_flush(f"   You can get an API key at: https://openrouter.ai/")
-        echo_flush("3. Run: llama-prompt-ops migrate")
+        echo_flush("3. Run: prompt-ops migrate")
 
     except Exception as e:
         echo_flush(f"Error creating project: {str(e)}", err=True)
@@ -365,8 +421,8 @@ def get_dataset_adapter(config):
     """
     # Default adapter class map for convenience
     ADAPTER_CLASS_MAP = {
-        "standard_json": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
-        "rag_json": "llama_prompt_ops.core.datasets.RAGJSONAdapter",
+        "standard_json": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
+        "rag_json": "prompt_ops.core.datasets.RAGJSONAdapter",
     }
 
     dataset_config = config.get("dataset", {})
@@ -430,21 +486,42 @@ def get_dataset_adapter_from_config(config_dict, config_path):
     return get_dataset_adapter(config_dict)
 
 
+def validate_min_records_in_dataset(dataset_adapter: DatasetAdapter):
+    # The dataset must contain at least 4 records to avoid runtime errors during optimization.
+    # This is because the data is split into 25% training, 25% validation, and 50% testing.
+    data = dataset_adapter.load_raw_data()
+    if len(data) < 4:
+        raise ValueError("Dataset must contain at least 4 records")
+
+
 def get_models_from_config(config_dict, override_model_name=None, api_key=None):
     """
-    Create model adapter instances from configuration.
+    Create task and proposer model adapter instances from configuration.
 
     Args:
         config_dict: The full configuration dictionary
-        override_model_name: Optional model name to override the ones in config
+        override_model_name: Optional model name to override the one in config
         api_key: API key to use for the models
 
     Returns:
-        A tuple of (task_model, proposer_model) adapter instances
+        tuple: (task_model, proposer_model, task_model_name, proposer_model_name)
     """
     model_config = config_dict.get("model", {})
-    adapter_type = model_config.get("adapter_type", "dspy")
-    api_base = model_config.get("api_base", "https://openrouter.ai/api/v1")
+
+    # Check optimization strategy to determine appropriate adapter type
+    optimization_config = config_dict.get("optimization", {})
+    strategy_type = optimization_config.get("strategy", "").lower()
+
+    # Strategy-aware adapter selection
+    if strategy_type == "pdo":
+        # PDO uses LiteLLM for lightweight text generation
+        adapter_type = model_config.get("adapter_type", "litellm")
+    else:
+        # Other strategies use DSPy by default
+        adapter_type = model_config.get("adapter_type", "dspy")
+
+    # Get API configuration
+    api_base = model_config.get("api_base")
     max_tokens = model_config.get("max_tokens", 2048)
     temperature = model_config.get("temperature", 0.0)
     cache = model_config.get("cache", False)
@@ -490,7 +567,7 @@ def get_models_from_config(config_dict, override_model_name=None, api_key=None):
             cache=cache,
         )
 
-    return task_model, proposer_model
+    return task_model, proposer_model, task_model_name, proposer_model_name
 
 
 def get_model_from_config(config_dict, override_model_name=None, api_key=None):
@@ -517,7 +594,7 @@ def get_model_from_config(config_dict, override_model_name=None, api_key=None):
             )
         ),
         adapter_type=adapter_type,
-        api_base=model_config.get("api_base", "https://openrouter.ai/api/v1"),
+        api_base=model_config.get("api_base"),
         api_key=api_key,
         max_tokens=model_config.get("max_tokens", 2048),
         temperature=model_config.get("temperature", 0.0),
@@ -526,7 +603,13 @@ def get_model_from_config(config_dict, override_model_name=None, api_key=None):
 
 
 def get_strategy(
-    strategy_config, model_name_with_path, metric, task_model, prompt_model
+    strategy_config,
+    model_name_with_path,
+    metric,
+    task_model,
+    prompt_model,
+    task_model_name=None,
+    prompt_model_name=None,
 ):
     """
     Create a prompt optimization strategy based on configuration.
@@ -537,6 +620,8 @@ def get_strategy(
         metric: Metric instance to use for optimization
         task_model: Model adapter instance for task execution
         prompt_model: Model adapter instance for prompt optimization
+        task_model_name: Name of the task model (for display purposes)
+        prompt_model_name: Name of the prompt/proposer model (for display purposes)
 
     Returns:
         A strategy instance appropriate for the model and configuration
@@ -545,65 +630,79 @@ def get_strategy(
     model_name = model_name_with_path.split("/")[-1]
 
     # Check if strategy is specified in config
-    strategy_type = strategy_config.get("type")
+    strategy_type = strategy_config.get("strategy")
 
     # If strategy type is specified in config, use it
     if strategy_type:
-        if strategy_type.lower() == "llama":
-            # Get Llama-specific parameters
-            apply_formatting = strategy_config.get("apply_formatting", True)
-            apply_templates = strategy_config.get("apply_templates", True)
-            template_type = strategy_config.get("template_type", "basic")
+        if strategy_type.lower() == "basic":
+            # Extract additional strategy parameters from config
+            strategy_params = {
+                k: v
+                for k, v in strategy_config.items()
+                if k not in ["strategy"]  # Exclude non-parameter keys
+            }
 
-            strategy = LlamaStrategy(
-                model_name=model_name,
-                metric=metric,
-                task_model=task_model,
-                prompt_model=prompt_model,
-                apply_formatting=apply_formatting,
-                apply_templates=apply_templates,
-                template_type=template_type,
-            )
-            click.echo(f"Using LlamaStrategy from config for model: {model_name}")
-            return strategy
-
-        elif strategy_type.lower() == "basic":
             strategy = BasicOptimizationStrategy(
                 model_name=model_name,
                 metric=metric,
                 task_model=task_model,
                 prompt_model=prompt_model,
+                task_model_name=task_model_name,
+                prompt_model_name=prompt_model_name,
+                **strategy_params,  # Pass all additional config parameters
             )
             click.echo(
                 f"Using BasicOptimizationStrategy from config for model: {model_name}"
             )
             return strategy
 
+        elif strategy_type.lower() == "pdo":
+            # Extract PDO-specific parameters
+            pdo_params = {
+                k: v
+                for k, v in strategy_config.items()
+                if k not in ["strategy"]  # Exclude non-parameter keys
+            }
+
+            strategy = PDOStrategy(
+                model_name=model_name,
+                metric=metric,
+                task_model=task_model,
+                prompt_model=prompt_model,
+                task_model_name=task_model_name,
+                prompt_model_name=prompt_model_name,
+                **pdo_params,  # Pass all additional config parameters
+            )
+            click.echo(f"Using PDOStrategy from config for model: {model_name}")
+            click.echo(
+                f"Task model: {task_model_name}, Judge model: {prompt_model_name}"
+            )
+            return strategy
+
         else:
             click.echo(
-                f"Unknown strategy type: {strategy_type}, falling back to auto-detection"
+                f"Unknown strategy type: {strategy_type}, falling back to BasicOptimizationStrategy"
             )
-            # Fall through to auto-detection
+            # Fall through to default
 
-    # Auto-detect based on model name
-    if "llama" in model_name.lower():
-        strategy = LlamaStrategy(
-            model_name=model_name,
-            metric=metric,
-            task_model=task_model,
-            prompt_model=prompt_model,
-            apply_formatting=True,
-            apply_templates=True,
-        )
-        click.echo(f"Auto-detected LlamaStrategy for model: {model_name}")
-    else:
-        strategy = BasicOptimizationStrategy(
-            model_name=model_name,
-            metric=metric,
-            task_model=task_model,
-            prompt_model=prompt_model,
-        )
-        click.echo(f"Auto-detected BasicOptimizationStrategy for model: {model_name}")
+    # Default to BasicOptimizationStrategy for all models
+    # Extract additional strategy parameters from config
+    strategy_params = {
+        k: v
+        for k, v in strategy_config.items()
+        if k not in ["type", "strategy"]  # Exclude non-parameter keys
+    }
+
+    strategy = BasicOptimizationStrategy(
+        model_name=model_name,
+        metric=metric,
+        task_model=task_model,
+        prompt_model=prompt_model,
+        task_model_name=task_model_name,
+        prompt_model_name=prompt_model_name,
+        **strategy_params,  # Pass all additional config parameters
+    )
+    click.echo(f"Using BasicOptimizationStrategy for model: {model_name}")
 
     return strategy
 
@@ -621,8 +720,8 @@ def get_metric(config, model):
     """
     # Default metric class map for convenience
     METRIC_CLASS_MAP = {
-        "similarity": "llama_prompt_ops.core.metrics.DSPyMetricAdapter",
-        "standard_json": "llama_prompt_ops.core.metrics.StandardJSONMetric",
+        "similarity": "prompt_ops.core.metrics.DSPyMetricAdapter",
+        "standard_json": "prompt_ops.core.metrics.StandardJSONMetric",
     }
 
     metric_config = config.get("metric", {})
@@ -716,8 +815,8 @@ def load_config(config_path):
 )
 @click.option(
     "--api-key-env",
-    default="OPENROUTER_API_KEY",
-    help="Environment variable name for the API key",
+    default=None,
+    help="Environment variable name for the API key (optional - LiteLLM will auto-detect based on model)",
 )
 @click.option(
     "--dotenv-path", default=".env", help="Path to the .env file containing API keys"
@@ -747,8 +846,32 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    # Get API key using the extracted function
-    api_key = check_api_key(api_key_env, dotenv_path)
+    # Suppress verbose external library logging
+    external_loggers = [
+        "LiteLLM",
+        "httpx",
+        "litellm",
+        "openai",
+        "requests",
+        "urllib3",
+        "aiohttp",
+    ]
+
+    # Allow environment override for debugging external libraries
+    external_log_level = os.getenv("EXTERNAL_LOG_LEVEL", "WARNING").upper()
+
+    for logger_name in external_loggers:
+        logging.getLogger(logger_name).setLevel(getattr(logging, external_log_level))
+
+    # Get API key using the extracted function, or let LiteLLM auto-detect
+    if api_key_env:
+        api_key = check_api_key(api_key_env, dotenv_path)
+    else:
+        # Load .env file if it exists, but don't check for specific keys
+        if os.path.exists(dotenv_path):
+            load_dotenv(dotenv_path)
+            click.echo(f"Loaded environment variables from {dotenv_path}")
+        api_key = None  # LiteLLM will auto-detect based on model
 
     # Load configuration
     try:
@@ -774,7 +897,19 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
 
     # Set up models from config
 
-    task_model, prompt_model = get_models_from_config(config_dict, model, api_key)
+    task_model, prompt_model, task_model_name, proposer_model_name = (
+        get_models_from_config(config_dict, model, api_key)
+    )
+
+    # Validate environment for the task model using LiteLLM
+    try:
+        validate_litellm_environment(task_model_name)
+    except Exception as e:
+        click.echo(f"Warning: Environment validation failed: {str(e)}", err=True)
+        click.echo(
+            "Continuing anyway - LiteLLM will error if credentials are actually missing.",
+            err=True,
+        )
 
     # Create metric based on config - use task_model for metric
     try:
@@ -792,13 +927,22 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)
 
+    # Validate the minimum number of records in dataset
+    try:
+        validate_min_records_in_dataset(dataset_adapter)
+    except ValueError as e:
+        click.echo(f"Error: {str(e)}", err=True)
+        sys.exit(1)
+
     # Create strategy based on config
     strategy = get_strategy(
-        config_dict.get("strategy", {}),
-        config_dict.get("model", {}).get("name", ""),
+        config_dict.get("optimization", {}),
+        task_model_name,  # Use the actual task model name instead of config default
         metric,
         task_model,
         prompt_model,
+        task_model_name=task_model_name,
+        prompt_model_name=proposer_model_name,
     )
 
     # Create migrator
@@ -816,7 +960,7 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
 
     # Get prompt from config (support both 'system_prompt' and legacy 'prompt' keys)
     prompt_config = config_dict.get("system_prompt", config_dict.get("prompt", {}))
-    prompt_file = prompt_config.get("file", None)
+    prompt_file = prompt_config.get("file")
     prompt_text = prompt_config.get("text", "")
 
     # Load prompt text from file if specified and text is not provided

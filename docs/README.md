@@ -1,6 +1,6 @@
-# llama-prompt-ops Getting Started Guide
+# prompt-ops Getting Started Guide
 
-Welcome to llama-prompt-ops! This guide will help you understand what's supported out of the box and how to get started quickly.
+Welcome to prompt-ops! This guide will help you understand what's supported out of the box and how to get started quickly.
 
 ## Quick Start: Choose Your Path
 
@@ -34,7 +34,7 @@ See our [detailed metric selection guide](./metric_selection_guide.md) for more 
 
 ## Multiple Inference Provider Support
 
-llama-prompt-ops supports various inference providers and endpoints to fit your infrastructure needs. See our [detailed guide on inference providers](./inference_providers.md) for configuration examples with:
+prompt-ops supports various inference providers and endpoints to fit your infrastructure needs. See our [detailed guide on inference providers](./inference_providers.md) for configuration examples with:
 
 - OpenRouter (cloud-based API)
 - vLLM (local deployment)

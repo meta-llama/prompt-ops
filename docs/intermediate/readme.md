@@ -1,6 +1,6 @@
 # Intermediate Guide: Facility YAML Configuration
 
-> **Note:** If you're new to llama-prompt-ops, start with the [Quick Start Guide](../basic/README.md) before exploring these advanced options.
+> **Note:** If you're new to prompt-ops, start with the [Quick Start Guide](../basic/README.md) before exploring these advanced options.
 
 ## Overview
 
@@ -51,7 +51,7 @@ prompt:
 
 # Metric Configuration
 metric:
-  class: "llama_prompt_ops.core.metrics.FacilityMetric"
+  class: "prompt_ops.core.metrics.FacilityMetric"
   strict_json: false
   output_field: "answer"
 
@@ -174,14 +174,14 @@ The `metric` section defines how to evaluate prompt performance:
 
 ```yaml
 metric:
-  class: "llama_prompt_ops.core.metrics.FacilityMetric"
+  class: "prompt_ops.core.metrics.FacilityMetric"
   strict_json: false
   output_field: "answer"
 ```
 
 | Parameter         | Description                        | Recommended Values                                                                                         |
 | ----------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `class`           | The metric class to use            | For JSON: `prompt_ops.core.metrics.StandardJSONMetric`<br>For similarity: `similarity`<br>For facility: `llama_prompt_ops.core.metrics.FacilityMetric`  |
+| `class`           | The metric class to use            | For JSON: `prompt_ops.core.metrics.StandardJSONMetric`<br>For similarity: `similarity`<br>For facility: `prompt_ops.core.metrics.FacilityMetric`  |
 | `strict_json`     | Whether to require exact JSON      | `false` allows extracting JSON from text                                                                   |
 | `output_field`    | Field to capture from model response | For JSON outputs: `["answer"]`                                                                             |
 

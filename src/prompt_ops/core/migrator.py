@@ -25,7 +25,6 @@ from .evaluation import create_evaluator
 from .exceptions import EvaluationError, OptimizationError
 from .prompt_strategies import BaseStrategy
 from .utils import json_to_yaml_file
-from .utils.llama_utils import is_llama_model
 from .utils.logging import get_logger
 
 
@@ -73,31 +72,8 @@ class PromptMigrator:
         self.valset = valset
         self.testset = testset
 
-        # Determine if we're using a Llama model
-        if model_family is None and task_model is not None:
-            # Try to extract model name from task_model
-            if hasattr(task_model, "model_name"):
-                model_name = task_model.model_name
-            else:
-                model_name = str(task_model)
-
-            if is_llama_model(model_name):
-                self.model_family = "llama"
-            else:
-                logging.warning(
-                    f"Model '{model_name}' does not appear to be a Llama model. "
-                    f"This library is optimized for Llama models and may not work as expected."
-                )
-                self.model_family = (
-                    "llama"  # Default to Llama anyway since that's our focus
-                )
-        else:
-            self.model_family = model_family or "llama"
-            if self.model_family != "llama":
-                logging.warning(
-                    f"Model family '{self.model_family}' specified, but this library "
-                    f"is optimized for Llama models and may not work as expected."
-                )
+        # Set model family if provided (model-agnostic, no defaults)
+        self.model_family = model_family
 
         self._optimized_program = None
         self.logger = get_logger()
@@ -112,7 +88,6 @@ class PromptMigrator:
         file_path: str = None,
         save_yaml: bool = True,
         user_prompt: str = None,
-        use_llama_tips: bool = True,
     ) -> Any:
         """
         Optimize a prompt using the configured strategy.
@@ -136,14 +111,6 @@ class PromptMigrator:
         if "text" not in prompt_data:
             raise ValueError("prompt_data must contain a 'text' key.")
 
-        if use_llama_tips:
-            from .utils.llama_utils import get_llama_tips
-
-            model_tips = get_llama_tips()
-
-            if "model_tips" not in prompt_data:
-                prompt_data["model_tips"] = model_tips
-
         trainset = trainset if trainset is not None else self.trainset
         valset = valset if valset is not None else self.valset
         testset = testset if testset is not None else self.testset
@@ -160,11 +127,15 @@ class PromptMigrator:
         if hasattr(self.strategy, "valset") and valset:
             self.strategy.valset = valset
 
+        if hasattr(self.strategy, "testset") and testset:
+            self.strategy.testset = testset
+
         self.logger.progress(
             f"Applying {self.strategy.__class__.__name__} to optimize prompt"
         )
         self.logger.progress(f"Training set size: {len(trainset) if trainset else 0}")
         self.logger.progress(f"Validation set size: {len(valset) if valset else 0}")
+        self.logger.progress(f"Test set size: {len(testset) if testset else 0}")
 
         with self.logger.phase("Running optimization strategy"):
             optimized_program = self.strategy.run(prompt_data)
@@ -214,6 +185,9 @@ class PromptMigrator:
 
         if hasattr(self.strategy, "valset") and self.valset:
             self.strategy.valset = self.valset
+
+        if hasattr(self.strategy, "testset") and self.testset:
+            self.strategy.testset = self.testset
 
         return self.trainset, self.valset, self.testset
 

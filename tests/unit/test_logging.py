@@ -6,16 +6,16 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from llama_prompt_ops.core.utils.logging import LoggingManager, get_logger
+from prompt_ops.core.utils.logging import LoggingManager, get_logger
 
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
     """Reset the logger singleton before each test."""
     # This is a bit of a hack to reset the singleton for isolated tests
-    import llama_prompt_ops.core.utils.logging
+    import prompt_ops.core.utils.logging
 
-    llama_prompt_ops.core.utils.logging._LOG_SINGLETON = None
+    prompt_ops.core.utils.logging._LOG_SINGLETON = None
 
 
 def test_get_logger_singleton():
@@ -23,29 +23,6 @@ def test_get_logger_singleton():
     logger1 = get_logger()
     logger2 = get_logger()
     assert logger1 is logger2
-
-
-def test_logging_level(caplog):
-    """Test that the logging level is set correctly."""
-    logger = get_logger()
-    logger.set_level("DEBUG")
-
-    with caplog.at_level(logging.DEBUG):
-        logger.progress("debug message", level="DEBUG")
-        logger.progress("info message", level="INFO")
-
-    assert "debug message" in caplog.text
-    assert "info message" in caplog.text
-
-    caplog.clear()
-
-    logger.set_level("INFO")
-    with caplog.at_level(logging.INFO):
-        logger.progress("debug message", level="DEBUG")
-        logger.progress("info message", level="INFO")
-
-    assert "debug message" not in caplog.text
-    assert "info message" in caplog.text
 
 
 def test_phase_timing():

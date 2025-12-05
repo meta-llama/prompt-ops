@@ -10,6 +10,7 @@ dataset:
   golden_output_field: "answer"
 
 # Model configuration (minimal required settings)
+# LiteLLM auto-detects API keys from provider-specific env vars (e.g., OPENROUTER_API_KEY)
 model:
   name: "openrouter/meta-llama/llama-3.3-70b-instruct"
   task_model: "openrouter/meta-llama/llama-3.3-70b-instruct"
@@ -17,7 +18,7 @@ model:
 
 # Metric configuration (simplified but maintains compatibility)
 metric:
-  class: "llama_prompt_ops.core.metrics.FacilityMetric"
+  class: "prompt_ops.core.metrics.FacilityMetric"
   strict_json: false
   output_field: "answer"
 

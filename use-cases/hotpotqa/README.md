@@ -20,9 +20,12 @@ Make sure you have set up your API keys in the `.env` file at the root of the pr
 
 ```
 OPENROUTER_API_KEY=your_key_here
-# or
+# or other provider-specific keys
+GROQ_API_KEY=your_key_here
 HUGGINGFACE_API_KEY=your_key_here
 ```
+
+LiteLLM will automatically detect the correct API key based on your model name prefix (e.g., `openrouter/`, `groq/`).
 
 ### 3. Run Optimization
 

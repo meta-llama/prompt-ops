@@ -86,7 +86,24 @@ def convert_json_to_yaml(
 
     # Add config section with task model and optimization info if available
     if task_model:
-        model_name = getattr(task_model, "model_name", str(task_model))
+        # Get model name from various possible locations depending on adapter type
+        # LiteLLMModelAdapter uses self.model_name
+        # DSPyModelAdapter uses self.kwargs["model"]
+        # TextGradModelAdapter uses self.kwargs["engine_name"]
+        model_name = (
+            getattr(task_model, "model_name", None)
+            or (
+                task_model.kwargs.get("model")
+                if hasattr(task_model, "kwargs")
+                else None
+            )
+            or (
+                task_model.kwargs.get("engine_name")
+                if hasattr(task_model, "kwargs")
+                else None
+            )
+            or str(task_model)
+        )
         yaml_content += "\n\nconfig:\n"
         yaml_content += f"  task_model: {model_name}\n"
 
@@ -103,16 +120,6 @@ def convert_json_to_yaml(
             # Add strategy-specific parameters if available
             if hasattr(strategy, "model_name"):
                 yaml_content += f"    model_name: {strategy.model_name}\n"
-
-            # Include model-specific settings for LlamaStrategy
-            if strategy_name == "LlamaStrategy":
-                if hasattr(strategy, "apply_formatting"):
-                    yaml_content += (
-                        f"    apply_formatting: {strategy.apply_formatting}\n"
-                    )
-
-                if hasattr(strategy, "apply_templates"):
-                    yaml_content += f"    apply_templates: {strategy.apply_templates}\n"
 
             # Extract and include instruction tips if available
             if hasattr(strategy, "instruction_tips"):
@@ -131,15 +138,6 @@ def convert_json_to_yaml(
                 # Format the tip with proper indentation for YAML
                 indented_tip = "\n        ".join(tip.strip().split("\n"))
                 yaml_content += f"    instruction_tips: |\n        {indented_tip}\n"
-
-            # For LlamaStrategy, include original instruction preferences if available
-            if strategy_name == "LlamaStrategy" and hasattr(
-                strategy, "_selected_preferences"
-            ):
-                yaml_content += f"    original_preferences:\n"
-                for i, pref in enumerate(strategy._selected_preferences):
-                    indented_pref = "\n        ".join(pref.strip().split("\n"))
-                    yaml_content += f"      - |\n        {indented_pref}\n"
 
     return yaml_content
 

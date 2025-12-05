@@ -1,0 +1,51 @@
+system_prompt:
+  file: prompts/prompt.txt
+  inputs:
+    - question
+  outputs:
+    - answer
+
+dataset:
+  path: dataset/ms_marco_description.json
+  input_field:
+    - question
+  golden_output_field: answer
+
+model:
+  task_model: openrouter/meta-llama/llama-3.3-70b-instruct
+  proposer_model: openrouter/meta-llama/llama-3.3-70b-instruct
+
+optimization:
+  strategy: "pdo"
+  task_type: open_ended
+  judge_requirement: |
+    - Accuracy: Correct and contextually faithful.
+    - Relevance: Stays on-topic.
+    - Clarity: Clear and well-structured.
+    - Conciseness: Uses only necessary information; avoids unnecessary detail.
+
+  # Core PDO parameters (same as web_of_lies)
+  total_rounds: 20
+  gen_new_prompt_round_frequency: 20
+  num_duels_per_round: 25
+  num_eval_examples_per_duel: 1
+  num_initial_instructions: 20
+
+  # Thompson sampling parameters
+  thompson_alpha: 1.2
+  ranking_method: copeland
+
+  # Instruction evolution parameters
+  num_top_prompts_to_combine: 3
+  num_new_prompts_to_generate: 10
+  num_to_prune_each_round: 10
+
+  # Execution parameters
+  max_concurrent_threads: 10
+  use_labels: false
+
+# PDO is label-free, so this part is optional
+metric:
+  class: "prompt_ops.core.metrics.StandardJSONMetric"
+  strict_json: false
+  output_field: answer
