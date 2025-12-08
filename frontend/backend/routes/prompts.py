@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 from config import (
     DATASET_ADAPTER_MAPPING,
     ENHANCE_SYSTEM_MESSAGE,
+    FAIL_ON_ERROR,
     METRIC_MAPPING,
     MODEL_MAPPING,
     STRATEGY_MAPPING,
@@ -175,15 +176,25 @@ async def enhance_prompt(request: PromptRequest):
 @router.post("/api/migrate-prompt", response_model=PromptResponse)
 async def migrate_prompt(request: PromptRequest):
     """Run llama-prompt-ops optimization based on frontend config."""
+    config = request.config or {}
+
+    # Get fail_on_error setting - if True, raise errors instead of falling back
+    # Priority: request config > global env var (FAIL_ON_ERROR)
+    fail_on_error = config.get("failOnError", FAIL_ON_ERROR)
+
     # Check if llama-prompt-ops is available
     if not LLAMA_PROMPT_OPS_AVAILABLE:
+        if fail_on_error:
+            raise HTTPException(
+                status_code=500,
+                detail="llama-prompt-ops is not available. Cannot proceed with strict mode enabled.",
+            )
         # Fall back to OpenRouter for prompt migration
         return await enhance_prompt_with_openrouter(
             request, ENHANCE_SYSTEM_MESSAGE, "fallback_migrate"
         )
 
     try:
-        config = request.config or {}
 
         # API key precedence: env > client supplied
         api_key = os.getenv("OPENROUTER_API_KEY") or config.get("openrouterApiKey")
@@ -297,17 +308,9 @@ async def migrate_prompt(request: PromptRequest):
 
         # Instantiate components
         try:
-            # Only prepend "openrouter/" if the model name doesn't already have a provider prefix
-            task_model_full = (
-                final_task_model_name
-                if "/" in final_task_model_name
-                else f"openrouter/{final_task_model_name}"
-            )
-            proposer_model_full = (
-                final_proposer_model_name
-                if "/" in final_proposer_model_name
-                else f"openrouter/{final_proposer_model_name}"
-            )
+            # Model names should include provider prefix (e.g., openrouter/meta-llama/...)
+            task_model_full = final_task_model_name
+            proposer_model_full = final_proposer_model_name
 
             task_model = setup_model(
                 model_name=task_model_full,
@@ -338,6 +341,7 @@ async def migrate_prompt(request: PromptRequest):
                 auto=optimization_level,
                 task_model=task_model,
                 prompt_model=proposer_model,
+                fail_on_error=fail_on_error,
             )
 
             migrator = PromptMigrator(
@@ -381,6 +385,11 @@ async def migrate_prompt(request: PromptRequest):
         except Exception as component_error:
             print(f"Error during llama-prompt-ops component setup: {component_error}")
             traceback.print_exc()
+            if fail_on_error:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Optimization failed: {str(component_error)}",
+                )
             print("Falling back to OpenRouter for prompt migration")
             return await enhance_prompt_with_openrouter(
                 request, ENHANCE_SYSTEM_MESSAGE, "fallback_migrate"

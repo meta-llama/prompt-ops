@@ -12,6 +12,12 @@ from typing import Any, Dict
 # Import configuration and utilities
 from config import (
     DATASET_ADAPTER_MAPPING,
+    DEBUG_MODE,
+    DEFAULT_MODEL,
+    DEFAULT_TEMPERATURE,
+    DEFAULT_TRAIN_SIZE,
+    DEFAULT_VAL_SIZE,
+    FAIL_ON_ERROR,
     METRIC_MAPPING,
     MODEL_MAPPING,
     STRATEGY_MAPPING,
@@ -118,6 +124,7 @@ class ConfigResponse(BaseModel):
 @app.options("/api/enhance-prompt")
 @app.options("/api/migrate-prompt")
 @app.options("/api/configurations")
+@app.options("/api/settings")
 @app.options("/api/datasets/upload")
 @app.options("/api/datasets")
 @app.options("/api/datasets/{filename}")
@@ -173,6 +180,21 @@ async def health_check():
         "llama_prompt_ops_available": LLAMA_PROMPT_OPS_AVAILABLE,
         "api_key_configured": bool(api_key),
         "issues": issues,
+    }
+
+
+@app.get("/api/settings")
+async def get_settings():
+    """Return current environment-configurable settings."""
+    return {
+        "failOnError": FAIL_ON_ERROR,
+        "debugMode": DEBUG_MODE,
+        "defaultModel": DEFAULT_MODEL,
+        "defaultTemperature": DEFAULT_TEMPERATURE,
+        "defaultTrainSize": DEFAULT_TRAIN_SIZE,
+        "defaultValSize": DEFAULT_VAL_SIZE,
+        "hasOpenRouterKey": bool(os.getenv("OPENROUTER_API_KEY")),
+        "hasTogetherKey": bool(os.getenv("TOGETHER_API_KEY")),
     }
 
 

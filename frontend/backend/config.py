@@ -9,11 +9,11 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Available models (these would be configured based on your available models)
+# Available models - format: provider/model (e.g., openrouter/meta-llama/...)
 MODEL_MAPPING = {
-    "Llama 3.3 70B": "meta-llama/llama-3.3-70b-instruct",
-    "Llama 3.1 8B": "meta-llama/llama-3.1-8b-instruct",
-    "Llama 3.1 70B": "meta-llama/llama-3.1-70b-instruct",
+    "Llama 3.3 70B": "openrouter/meta-llama/llama-3.3-70b-instruct",
+    "Llama 3.1 8B": "openrouter/meta-llama/llama-3.1-8b-instruct",
+    "Llama 3.1 70B": "openrouter/meta-llama/llama-3.1-70b-instruct",
     "GPT-4o": "openai/gpt-4o",
     "GPT-4o-mini": "openai/gpt-4o-mini",
 }
@@ -144,5 +144,21 @@ ENHANCE_SYSTEM_MESSAGE = """
             Answer: [Provide a brief answer]
             By following this structured approach, you will be able to provide accurate and informative responses to the given input, demonstrating your ability to think critically and solve complex problems."""
 
-# Environment settings
+# ==============================================================================
+# APPLICATION SETTINGS
+# ==============================================================================
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploaded_datasets")
+
+# Behavior
+FAIL_ON_ERROR = (
+    False  # If True, raise errors instead of falling back on optimization failure
+)
+DEBUG_MODE = False
+
+# Model defaults
+DEFAULT_MODEL = "openrouter/meta-llama/llama-3.3-70b-instruct"
+DEFAULT_TEMPERATURE = 0.0
+
+# Dataset split defaults
+DEFAULT_TRAIN_SIZE = 0.7
+DEFAULT_VAL_SIZE = 0.15
