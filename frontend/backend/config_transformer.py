@@ -49,6 +49,13 @@ class ConfigurationTransformer:
         "custom": "exact_match",
     }
 
+    # Metrics that support output_field/output_fields parameters
+    # ExactMatchMetric and DSPyMetricAdapter do NOT support these
+    METRICS_WITH_OUTPUT_FIELD = {
+        "json_structured",
+        "facility_metric",
+    }
+
     # Mapping from wizard dataset types to adapter configurations
     DATASET_FIELD_MAPPING = {
         "qa": {
@@ -361,33 +368,42 @@ class ConfigurationTransformer:
         # Add user-configured parameters if available
         if primary_metric_id in metric_configurations:
             user_config = metric_configurations[primary_metric_id]
+            # Filter out output_fields for metrics that don't support it
+            if primary_metric_id not in self.METRICS_WITH_OUTPUT_FIELD:
+                user_config = {
+                    k: v for k, v in user_config.items() if k != "output_fields"
+                }
             metric_config.update(user_config)
 
-        # Determine output field from field mappings
-        dataset_data = wizard_data.get("dataset", {})
-        field_mappings = dataset_data.get("fieldMappings", {})
+        # Only add output_fields for metrics that support it
+        if primary_metric_id in self.METRICS_WITH_OUTPUT_FIELD:
+            # Determine output field from field mappings
+            dataset_data = wizard_data.get("dataset", {})
+            field_mappings = dataset_data.get("fieldMappings", {})
 
-        if field_mappings:
-            # Find the actual output field from field mappings
-            output_candidates = [
-                "answer",
-                "output",
-                "response",
-                "label",
-                "target",
-                "expected_output",
-            ]
+            if field_mappings:
+                # Find the actual output field from field mappings
+                output_candidates = [
+                    "answer",
+                    "output",
+                    "response",
+                    "label",
+                    "target",
+                    "expected_output",
+                ]
 
-            for candidate in output_candidates:
-                if candidate in field_mappings and field_mappings[candidate]:
-                    metric_config["output_fields"] = [
-                        field_mappings[candidate]  # Use the actual source field name
-                    ]
-                    break
+                for candidate in output_candidates:
+                    if candidate in field_mappings and field_mappings[candidate]:
+                        metric_config["output_fields"] = [
+                            field_mappings[
+                                candidate
+                            ]  # Use the actual source field name
+                        ]
+                        break
 
-        # Ensure output_fields is set (fallback to ["answer"])
-        if "output_fields" not in metric_config:
-            metric_config["output_fields"] = ["answer"]
+            # Ensure output_fields is set for metrics that need it (fallback to ["answer"])
+            if "output_fields" not in metric_config:
+                metric_config["output_fields"] = ["answer"]
 
         return metric_config
 
