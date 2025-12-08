@@ -10,9 +10,9 @@ import os
 import time
 from typing import Any, Dict, List, Optional
 
-from litellm import completion
-from config import OPENROUTER_API_KEY, UPLOAD_DIR
+from config import UPLOAD_DIR
 from fastapi import WebSocket
+from litellm import completion
 
 
 def load_class_dynamically(class_path: str):
@@ -28,40 +28,43 @@ def create_llm_completion(
     api_key: Optional[str] = None,
     api_base: Optional[str] = None,
     temperature: float = 0.7,
-    **kwargs
+    **kwargs,
 ):
     """
-    Create a completion using LiteLLM for any OpenAI-compatible API.
-    
+    Create a completion using LiteLLM.
+
+    LiteLLM automatically reads API keys from environment variables based on the
+    model provider prefix (e.g., openrouter/* uses OPENROUTER_API_KEY).
+
     Args:
-        model: Model name (e.g., "Llama-4-Maverick-17B-128E-Instruct-FP8")
+        model: Model name with provider prefix (e.g., "openrouter/llama-3.3-70b")
         messages: List of message dicts with 'role' and 'content'
-        api_key: API key for authentication (falls back to OPENROUTER_API_KEY)
-        api_base: Base URL for the API endpoint (e.g., "https://api.llama.com/compat/v1")
+        api_key: Optional API key to override environment (for user-provided keys)
+        api_base: Optional base URL override
         temperature: Sampling temperature
         **kwargs: Additional arguments passed to litellm.completion
-    
+
     Returns:
         LiteLLM completion response
     """
-    key_to_use = api_key or OPENROUTER_API_KEY
-    if not key_to_use:
-        raise ValueError("API key is required. Provide via parameter or set OPENROUTER_API_KEY in .env")
-    
     completion_kwargs = {
         "model": model,
         "messages": messages,
-        "api_key": key_to_use,
         "temperature": temperature,
-        **kwargs
+        **kwargs,
     }
-    
+
+    # Only pass api_key if explicitly provided (e.g., from UI)
+    # Otherwise, let LiteLLM read from environment automatically
+    if api_key:
+        completion_kwargs["api_key"] = api_key
+
     # Add api_base if provided
     if api_base:
         completion_kwargs["api_base"] = api_base
-    
+
     print(f"🚀 LiteLLM completion - Model: {model}, API Base: {api_base or 'default'}")
-    
+
     return completion(**completion_kwargs)
 
 

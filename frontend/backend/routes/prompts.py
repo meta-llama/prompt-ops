@@ -12,7 +12,6 @@ from config import (
     ENHANCE_SYSTEM_MESSAGE,
     METRIC_MAPPING,
     MODEL_MAPPING,
-    OPENROUTER_API_KEY,
     STRATEGY_MAPPING,
 )
 from fastapi import APIRouter, HTTPException
@@ -53,28 +52,28 @@ async def enhance_prompt_with_openrouter(
     request: PromptRequest, system_message: str, operation_name: str = "processing"
 ):
     """
-    Shared function to enhance prompts using any OpenAI-compatible API via LiteLLM.
+    Enhance prompts using LiteLLM (supports any provider via model prefix).
+    LiteLLM reads API keys from environment unless explicitly provided.
     """
     config = request.config or {}
 
-    # Get API configuration from request or use defaults
-    api_key = config.get("apiKey") or config.get("openrouterApiKey") or OPENROUTER_API_KEY
-    api_base = config.get("apiBaseUrl")  # Optional - uses provider default if not set
-    model = config.get("model", "meta-llama/llama-3.3-70b-instruct")
-    
+    # Get API configuration from request
+    api_key = config.get("apiKey") or config.get("openrouterApiKey")
+    api_base = config.get("apiBaseUrl")
+    model = config.get("model")
+
     # Handle legacy MODEL_MAPPING if friendly name provided
     if model in MODEL_MAPPING:
         model = MODEL_MAPPING[model]
-    
-    if not api_key:
-        raise HTTPException(
-            status_code=400,
-            detail="API key missing. Supply via UI or set OPENROUTER_API_KEY environment variable.",
-        )
+
+    # If user provides an API key, we'll pass it to litellm
+    # Otherwise, litellm will read from environment automatically based on model prefix
 
     try:
-        print(f"🎯 Enhance endpoint - Model: {model}, API Base: {api_base or 'default'}")
-        
+        print(
+            f"🎯 Enhance endpoint - Model: {model}, API Base: {api_base or 'default'}"
+        )
+
         # Use LiteLLM for completion
         response = create_llm_completion(
             model=model,
@@ -98,12 +97,79 @@ async def enhance_prompt_with_openrouter(
         )
 
 
+async def enhance_prompt_with_litellm(
+    request: PromptRequest, system_message: str, operation_name: str = "processing"
+):
+    """
+    Enhance prompts using LiteLLM with automatic provider detection.
+
+    LiteLLM will automatically detect the provider from the model name and
+    fetch the appropriate API key from environment variables:
+    - openrouter/* -> OPENROUTER_API_KEY
+    - openai/* -> OPENAI_API_KEY
+    - anthropic/* -> ANTHROPIC_API_KEY
+    - together_ai/* -> TOGETHER_API_KEY
+    - meta-llama/* -> LLAMA_API_KEY
+    - etc.
+    """
+    from litellm import completion
+
+    config = request.config or {}
+
+    # Get model from config
+    model = config.get("model")
+    api_base = config.get("apiBaseUrl")  # Optional custom base URL
+
+    # Handle legacy MODEL_MAPPING if friendly name provided
+    if model in MODEL_MAPPING:
+        model = MODEL_MAPPING[model]
+
+    if not model:
+        raise HTTPException(
+            status_code=400,
+            detail="Model not specified in request config.",
+        )
+
+    try:
+        print(
+            f"🎯 LiteLLM Enhance - Model: {model}, API Base: {api_base or 'auto-detected'}"
+        )
+
+        # Build completion kwargs - let LiteLLM handle API key from env
+        completion_kwargs = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": request.prompt},
+            ],
+            "temperature": 0.7,
+        }
+
+        # Only add api_base if explicitly provided
+        if api_base:
+            completion_kwargs["api_base"] = api_base
+
+        # Log the full request payload
+        print(f"📤 LiteLLM Request Payload: {completion_kwargs}")
+
+        # LiteLLM auto-detects provider from model name and fetches API key from env
+        response = completion(**completion_kwargs)
+
+        enhanced_prompt = response.choices[0].message.content.strip()
+        return {"optimizedPrompt": enhanced_prompt}
+
+    except Exception as e:
+        print(f"Error in {operation_name}: {e}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500, detail=f"Error {operation_name} prompt: {str(e)}"
+        )
+
+
 @router.post("/api/enhance-prompt", response_model=PromptResponse)
 async def enhance_prompt(request: PromptRequest):
-    """Enhance prompt using OpenRouter."""
-    return await enhance_prompt_with_openrouter(
-        request, ENHANCE_SYSTEM_MESSAGE, "enhance"
-    )
+    """Enhance prompt using LiteLLM with automatic provider detection."""
+    return await enhance_prompt_with_litellm(request, ENHANCE_SYSTEM_MESSAGE, "enhance")
 
 
 @router.post("/api/migrate-prompt", response_model=PromptResponse)
@@ -197,7 +263,7 @@ async def migrate_prompt(request: PromptRequest):
         model_configurations = config.get("modelConfigurations", [])
         target_model_config = None
         optimizer_model_config = None
-        
+
         # Variables to store final model names
         final_task_model_name = task_model_name
         final_proposer_model_name = proposer_model_name
@@ -232,9 +298,17 @@ async def migrate_prompt(request: PromptRequest):
         # Instantiate components
         try:
             # Only prepend "openrouter/" if the model name doesn't already have a provider prefix
-            task_model_full = final_task_model_name if "/" in final_task_model_name else f"openrouter/{final_task_model_name}"
-            proposer_model_full = final_proposer_model_name if "/" in final_proposer_model_name else f"openrouter/{final_proposer_model_name}"
-            
+            task_model_full = (
+                final_task_model_name
+                if "/" in final_task_model_name
+                else f"openrouter/{final_task_model_name}"
+            )
+            proposer_model_full = (
+                final_proposer_model_name
+                if "/" in final_proposer_model_name
+                else f"openrouter/{final_proposer_model_name}"
+            )
+
             task_model = setup_model(
                 model_name=task_model_full,
                 api_key=api_key,

@@ -145,5 +145,4 @@ ENHANCE_SYSTEM_MESSAGE = """
             By following this structured approach, you will be able to provide accurate and informative responses to the given input, demonstrating your ability to think critically and solve complex problems."""
 
 # Environment settings
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploaded_datasets")

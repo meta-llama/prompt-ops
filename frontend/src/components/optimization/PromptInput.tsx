@@ -433,6 +433,19 @@ export const PromptInput = () => {
                 className={`w-full h-28 p-0 text-xl text-facebook-text bg-transparent placeholder:text-facebook-text/50 border-none outline-none resize-none leading-relaxed ${isOptimizing ? 'opacity-75' : ''}`}
               />
 
+              {/* Model name input */}
+              <div className="mt-4">
+                <Label className="text-sm text-facebook-text/80 mb-1.5">Model Name</Label>
+                <input
+                  type="text"
+                  value={enhanceSettings.model}
+                  onChange={(e) => setEnhanceSettings({ ...enhanceSettings, model: e.target.value })}
+                  placeholder="e.g., Llama-4-Maverick-17B-128E-Instruct-FP8"
+                  className="w-full px-3 py-2 text-sm border border-facebook-border rounded-lg focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                  disabled={isOptimizing}
+                />
+              </div>
+
               {/* Collapsible settings panel */}
               <div className="mt-4 border-t border-facebook-border/30 pt-4">
                 <button
