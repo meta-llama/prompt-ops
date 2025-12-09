@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional
 
 from config import (
     DATASET_ADAPTER_MAPPING,
-    ENHANCE_SYSTEM_MESSAGE,
+    ENHANCE_SYSTEM_PROMPT,
     FAIL_ON_ERROR,
     METRIC_MAPPING,
     MODEL_MAPPING,
@@ -170,7 +170,7 @@ async def enhance_prompt_with_litellm(
 @router.post("/api/enhance-prompt", response_model=PromptResponse)
 async def enhance_prompt(request: PromptRequest):
     """Enhance prompt using LiteLLM with automatic provider detection."""
-    return await enhance_prompt_with_litellm(request, ENHANCE_SYSTEM_MESSAGE, "enhance")
+    return await enhance_prompt_with_litellm(request, ENHANCE_SYSTEM_PROMPT, "enhance")
 
 
 @router.post("/api/migrate-prompt", response_model=PromptResponse)
@@ -191,7 +191,7 @@ async def migrate_prompt(request: PromptRequest):
             )
         # Fall back to OpenRouter for prompt migration
         return await enhance_prompt_with_openrouter(
-            request, ENHANCE_SYSTEM_MESSAGE, "fallback_migrate"
+            request, ENHANCE_SYSTEM_PROMPT, "fallback_migrate"
         )
 
     try:
@@ -392,7 +392,7 @@ async def migrate_prompt(request: PromptRequest):
                 )
             print("Falling back to OpenRouter for prompt migration")
             return await enhance_prompt_with_openrouter(
-                request, ENHANCE_SYSTEM_MESSAGE, "fallback_migrate"
+                request, ENHANCE_SYSTEM_PROMPT, "fallback_migrate"
             )
 
     except Exception as exc:
