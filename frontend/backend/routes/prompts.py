@@ -18,7 +18,6 @@ from config import (
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from utils import (
-    create_llm_completion,
     get_uploaded_datasets,
     load_class_dynamically,
 )
@@ -49,77 +48,22 @@ class PromptResponse(BaseModel):
     optimizedPrompt: str
 
 
-async def enhance_prompt_with_openrouter(
-    request: PromptRequest, system_message: str, operation_name: str = "processing"
-):
+@router.post("/api/enhance-prompt", response_model=PromptResponse)
+async def enhance_prompt(request: PromptRequest):
     """
-    Enhance prompts using LiteLLM (supports any provider via model prefix).
-    LiteLLM reads API keys from environment unless explicitly provided.
-    """
-    config = request.config or {}
+    Enhance prompt using LiteLLM with automatic provider detection.
 
-    # Get API configuration from request
-    api_key = config.get("apiKey") or config.get("openrouterApiKey")
-    api_base = config.get("apiBaseUrl")
-    model = config.get("model")
-
-    # Handle legacy MODEL_MAPPING if friendly name provided
-    if model in MODEL_MAPPING:
-        model = MODEL_MAPPING[model]
-
-    # If user provides an API key, we'll pass it to litellm
-    # Otherwise, litellm will read from environment automatically based on model prefix
-
-    try:
-        print(
-            f"🎯 Enhance endpoint - Model: {model}, API Base: {api_base or 'default'}"
-        )
-
-        # Use LiteLLM for completion
-        response = create_llm_completion(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": request.prompt},
-            ],
-            api_key=api_key,
-            api_base=api_base,
-            temperature=0.7,
-        )
-
-        enhanced_prompt = response.choices[0].message.content.strip()
-        return {"optimizedPrompt": enhanced_prompt}
-
-    except Exception as e:
-        print(f"Error in {operation_name}: {e}")
-        traceback.print_exc()
-        raise HTTPException(
-            status_code=500, detail=f"Error {operation_name} prompt: {str(e)}"
-        )
-
-
-async def enhance_prompt_with_litellm(
-    request: PromptRequest, system_message: str, operation_name: str = "processing"
-):
-    """
-    Enhance prompts using LiteLLM with automatic provider detection.
-
-    LiteLLM will automatically detect the provider from the model name and
-    fetch the appropriate API key from environment variables:
+    LiteLLM detects the provider from the model name and fetches API key from env:
     - openrouter/* -> OPENROUTER_API_KEY
     - openai/* -> OPENAI_API_KEY
     - anthropic/* -> ANTHROPIC_API_KEY
     - together_ai/* -> TOGETHER_API_KEY
-    - meta-llama/* -> LLAMA_API_KEY
-    - etc.
     """
     from litellm import completion
 
     config = request.config or {}
-
-    # Get model from config
     model = config.get("model")
-    api_base = config.get("apiBaseUrl")  # Optional custom base URL
+    api_base = config.get("apiBaseUrl")
 
     # Handle legacy MODEL_MAPPING if friendly name provided
     if model in MODEL_MAPPING:
@@ -127,50 +71,31 @@ async def enhance_prompt_with_litellm(
 
     if not model:
         raise HTTPException(
-            status_code=400,
-            detail="Model not specified in request config.",
+            status_code=400, detail="Model not specified in request config."
         )
 
     try:
-        print(
-            f"🎯 LiteLLM Enhance - Model: {model}, API Base: {api_base or 'auto-detected'}"
-        )
+        print(f"🎯 Enhance - Model: {model}, API Base: {api_base or 'auto-detected'}")
 
-        # Build completion kwargs - let LiteLLM handle API key from env
         completion_kwargs = {
             "model": model,
             "messages": [
-                {"role": "system", "content": system_message},
+                {"role": "system", "content": ENHANCE_SYSTEM_PROMPT},
                 {"role": "user", "content": request.prompt},
             ],
             "temperature": 0.7,
         }
-
-        # Only add api_base if explicitly provided
         if api_base:
             completion_kwargs["api_base"] = api_base
 
-        # Log the full request payload
-        print(f"📤 LiteLLM Request Payload: {completion_kwargs}")
-
-        # LiteLLM auto-detects provider from model name and fetches API key from env
         response = completion(**completion_kwargs)
-
         enhanced_prompt = response.choices[0].message.content.strip()
         return {"optimizedPrompt": enhanced_prompt}
 
     except Exception as e:
-        print(f"Error in {operation_name}: {e}")
+        print(f"Error enhancing prompt: {e}")
         traceback.print_exc()
-        raise HTTPException(
-            status_code=500, detail=f"Error {operation_name} prompt: {str(e)}"
-        )
-
-
-@router.post("/api/enhance-prompt", response_model=PromptResponse)
-async def enhance_prompt(request: PromptRequest):
-    """Enhance prompt using LiteLLM with automatic provider detection."""
-    return await enhance_prompt_with_litellm(request, ENHANCE_SYSTEM_PROMPT, "enhance")
+        raise HTTPException(status_code=500, detail=f"Error enhancing prompt: {str(e)}")
 
 
 @router.post("/api/migrate-prompt", response_model=PromptResponse)
@@ -189,10 +114,9 @@ async def migrate_prompt(request: PromptRequest):
                 status_code=500,
                 detail="llama-prompt-ops is not available. Cannot proceed with strict mode enabled.",
             )
-        # Fall back to OpenRouter for prompt migration
-        return await enhance_prompt_with_openrouter(
-            request, ENHANCE_SYSTEM_PROMPT, "fallback_migrate"
-        )
+        else:
+            # Fall back to simple enhancement
+            return await enhance_prompt(request)
 
     try:
 
@@ -390,10 +314,9 @@ async def migrate_prompt(request: PromptRequest):
                     status_code=500,
                     detail=f"Optimization failed: {str(component_error)}",
                 )
-            print("Falling back to OpenRouter for prompt migration")
-            return await enhance_prompt_with_openrouter(
-                request, ENHANCE_SYSTEM_PROMPT, "fallback_migrate"
-            )
+            else:
+                print("Falling back to simple enhancement")
+                return await enhance_prompt(request)
 
     except Exception as exc:
         print(f"Unexpected error in migrate_prompt: {exc}")
