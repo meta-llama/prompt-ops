@@ -11,6 +11,12 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Server ports (can be overridden via environment variables)
+BACKEND_PORT=${BACKEND_PORT:-8001}
+FRONTEND_PORT=${FRONTEND_PORT:-8080}
+BACKEND_URL=${BACKEND_URL:-http://localhost:$BACKEND_PORT}
+FRONTEND_URL=${FRONTEND_URL:-http://localhost:$FRONTEND_PORT}
+
 # Function to print colored output
 print_color() {
     printf "${1}${2}${NC}\n"
@@ -101,21 +107,21 @@ EOF
 fi
 
 # Check if ports are available
-if ! check_port 8000; then
-    print_color $RED "❌ Port 8000 is already in use. Please free it or kill existing processes:"
+if ! check_port $BACKEND_PORT; then
+    print_color $RED "❌ Port $BACKEND_PORT is already in use. Please free it or kill existing processes:"
     print_color $YELLOW "   pkill -f uvicorn"
     exit 1
 fi
 
-if ! check_port 8080; then
-    print_color $RED "❌ Port 8080 is already in use. Please free it or kill existing processes:"
+if ! check_port $FRONTEND_PORT; then
+    print_color $RED "❌ Port $FRONTEND_PORT is already in use. Please free it or kill existing processes:"
     print_color $YELLOW "   pkill -f vite"
     exit 1
 fi
 
 # Start the FastAPI backend
 print_color $GREEN "Starting backend (FastAPI)..."
-python -m uvicorn main:app --reload --port 8000 &
+python -m uvicorn main:app --reload --port $BACKEND_PORT &
 BACKEND_PID=$!
 
 # Wait a moment for backend to start
@@ -131,9 +137,9 @@ FRONTEND_PID=$!
 
 # Keep script running
 print_color $GREEN "Development servers running:"
-print_color $GREEN "  Frontend: http://localhost:8080"
-print_color $GREEN "  Backend:  http://localhost:8000"
-print_color $GREEN "  API Docs: http://localhost:8000/docs"
+print_color $GREEN "  Frontend: $FRONTEND_URL"
+print_color $GREEN "  Backend:  $BACKEND_URL"
+print_color $GREEN "  API Docs: $BACKEND_URL/docs"
 print_color $YELLOW "Press Ctrl+C to stop all servers."
 
 # Wait for processes

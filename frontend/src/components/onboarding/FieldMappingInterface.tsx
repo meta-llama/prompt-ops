@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { apiUrl } from "@/lib/config";
 import {
   ArrowRight,
   CheckCircle,
@@ -185,7 +186,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
       setError(null);
 
       const response = await fetch(
-        `http://localhost:8000/api/datasets/analyze/${filename}`,
+        apiUrl(`/api/datasets/analyze/${filename}`),
         {
           method: "POST",
           headers: {
@@ -235,7 +236,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
       setPreviewLoading(true);
 
       const response = await fetch(
-        "http://localhost:8000/api/datasets/preview-transformation",
+        apiUrl("/api/datasets/preview-transformation"),
         {
           method: "POST",
           headers: {

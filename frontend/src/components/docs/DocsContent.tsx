@@ -6,6 +6,7 @@ import rehypeSlug from 'rehype-slug';
 import { Copy, Check, ExternalLink, Clock, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DocItem } from './DocsTab';
+import { apiUrl } from '@/lib/config';
 import 'highlight.js/styles/github.css';
 
 interface DocsContentProps {
@@ -25,7 +26,7 @@ export const DocsContent: React.FC<DocsContentProps> = ({ doc }) => {
 
       try {
         // Fetch content from the backend docs endpoint
-        const response = await fetch(`http://localhost:8000/docs/${doc.path}`);
+        const response = await fetch(apiUrl(`/docs/${doc.path}`));
         if (!response.ok) {
           throw new Error(`Failed to load ${doc.title}`);
         }

@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { AppContext } from '../../context/AppContext';
+import { apiUrl } from '@/lib/config';
 import { PromptInput } from '../optimization/PromptInput';
 import { DocsTab } from '../docs/DocsTab';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,7 @@ export const MainContent = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/projects');
+        const response = await fetch(apiUrl('/api/projects'));
         const data = await response.json();
         if (data.success) {
           setProjects(data.projects);
@@ -74,7 +75,7 @@ export const MainContent = () => {
                 {projects.length} {projects.length === 1 ? 'project' : 'projects'}
               </Badge>
             </div>
-            
+
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {projects.map((project) => (
                 <div

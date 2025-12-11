@@ -23,10 +23,10 @@ pip install -r requirements.txt
 
 Start the FastAPI server with:
 ```bash
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8001
 ```
 
-The API will be available at http://localhost:8000
+The API will be available at http://localhost:8001
 
 ## API Endpoints
 

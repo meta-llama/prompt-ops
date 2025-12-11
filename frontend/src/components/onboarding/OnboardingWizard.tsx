@@ -21,6 +21,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { apiUrl, wsUrl } from "@/lib/config";
 import { UseCaseSelector } from "./UseCaseSelector";
 import { FieldMappingInterface } from "./FieldMappingInterface";
 import { MetricsSelector } from "./MetricsSelector";
@@ -212,7 +213,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       };
 
       const projectName = generateProjectName();
-      const response = await fetch("http://localhost:8000/create-project", {
+      const response = await fetch(apiUrl("/create-project"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -261,7 +262,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     setOptimizationResult(null);
 
     // Create WebSocket connection
-    const ws = new WebSocket(`ws://localhost:8000/ws/optimize/${projectCreationResult.actualProjectName}`);
+    const ws = new WebSocket(wsUrl(`/ws/optimize/${projectCreationResult.actualProjectName}`));
     setWebsocket(ws);
 
     ws.onopen = () => {
@@ -432,7 +433,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       formDataObj.append("file", file);
 
       const response = await fetch(
-        "http://localhost:8000/api/datasets/upload",
+        apiUrl("/api/datasets/upload"),
         {
           method: "POST",
           body: formDataObj,

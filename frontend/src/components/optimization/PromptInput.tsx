@@ -12,6 +12,7 @@ import {
 import { ArrowUp, FileJson, Loader2, Plus, Trash2, Upload, Zap, X, Settings, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { AppContext } from '../../context/AppContext';
+import { apiUrl } from '@/lib/config';
 import { Badge } from '@/components/ui/badge';
 import { OptimizationProgress, OptimizationStep } from './OptimizationProgress';
 import { OptimizationResults } from './OptimizationResults';
@@ -88,7 +89,7 @@ export const PromptInput = () => {
 
   const fetchUploadedDatasets = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/datasets');
+      const response = await fetch(apiUrl('/api/datasets'));
       if (response.ok) {
         const data = await response.json();
         setUploadedDatasets(data.datasets || []);
@@ -145,7 +146,7 @@ export const PromptInput = () => {
     formData.append('file', file);
 
     try {
-      const response = await fetch('http://localhost:8000/api/datasets/upload', {
+      const response = await fetch(apiUrl('/api/datasets/upload'), {
         method: 'POST',
         body: formData,
       });
@@ -174,7 +175,7 @@ export const PromptInput = () => {
 
   const handleDatasetDelete = async (filename: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/datasets/${filename}`, {
+      const response = await fetch(apiUrl(`/api/datasets/${filename}`), {
         method: 'DELETE',
       });
 
@@ -193,7 +194,7 @@ export const PromptInput = () => {
     setIsLoadingDemo(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/quick-start-demo', {
+      const response = await fetch(apiUrl('/api/quick-start-demo'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -370,7 +371,7 @@ export const PromptInput = () => {
             }
           };
 
-      const response = await fetch(`http://localhost:8000/api/${endpoint}`, {
+      const response = await fetch(apiUrl(`/api/${endpoint}`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

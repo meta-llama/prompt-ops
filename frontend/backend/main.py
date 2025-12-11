@@ -11,6 +11,8 @@ from typing import Any, Dict
 
 # Import configuration and utilities
 from config import (
+    BACKEND_HOST,
+    BACKEND_PORT,
     DATASET_ADAPTER_MAPPING,
     DEBUG_MODE,
     DEFAULT_MODEL,
@@ -299,4 +301,4 @@ async def get_docs_structure():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host=BACKEND_HOST, port=BACKEND_PORT, reload=True)

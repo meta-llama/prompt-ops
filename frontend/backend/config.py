@@ -149,6 +149,10 @@ ENHANCE_SYSTEM_PROMPT = """
 # ==============================================================================
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploaded_datasets")
 
+# Server settings
+BACKEND_HOST = os.getenv("BACKEND_HOST", "0.0.0.0")
+BACKEND_PORT = int(os.getenv("BACKEND_PORT", "8001"))
+
 # Behavior
 FAIL_ON_ERROR = (
     False  # If True, raise errors instead of falling back on optimization failure

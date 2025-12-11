@@ -80,7 +80,7 @@ npm run dev
 
 The application will be available at:
 - **Frontend**: http://localhost:8080
-- **Backend API**: http://localhost:8000
+- **Backend API**: http://localhost:8001
 
 ### First Run
 
