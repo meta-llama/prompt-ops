@@ -75,6 +75,9 @@ async def enhance_prompt(request: PromptRequest):
         )
 
     try:
+        import time
+
+        start_time = time.monotonic()
         print(f"🎯 Enhance - Model: {model}, API Base: {api_base or 'auto-detected'}")
 
         completion_kwargs = {
@@ -89,12 +92,14 @@ async def enhance_prompt(request: PromptRequest):
             completion_kwargs["api_base"] = api_base
 
         response = completion(**completion_kwargs)
+        print(
+            f"✅ Enhance response received in {time.monotonic() - start_time:.2f} seconds"
+        )
         enhanced_prompt = response.choices[0].message.content.strip()
         return {"optimizedPrompt": enhanced_prompt}
 
     except Exception as e:
         print(f"Error enhancing prompt: {e}")
-        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error enhancing prompt: {str(e)}")
 
 

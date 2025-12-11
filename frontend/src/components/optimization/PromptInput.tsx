@@ -277,6 +277,28 @@ export const PromptInput = () => {
     setCurrentStep(0);
   };
 
+  // Add ref to store the AbortController
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Cleanup on unmount and handle page close
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // Also abort on component unmount
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   const handleOptimizePrompt = async () => {
     if (!prompt.trim() || isOptimizing) return;
 
@@ -291,6 +313,9 @@ export const PromptInput = () => {
         return;
       }
     }
+
+    // Create new AbortController for this request
+    abortControllerRef.current = new AbortController();
 
     // Lock the mode selection when optimization starts
     setIsModeLocked(true);
@@ -319,7 +344,7 @@ export const PromptInput = () => {
 
     try {
       // Start the simulation
-      await simulateSteps();
+      //await simulateSteps();
 
       // Connect to FastAPI backend with the appropriate endpoint based on mode
       const endpoint = activeMode === 'enhance' ? 'enhance-prompt' : 'migrate-prompt';
@@ -351,6 +376,7 @@ export const PromptInput = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
+        signal: abortControllerRef.current.signal,  // <-- Add the abort signal
       });
 
       if (!response.ok) {
@@ -363,15 +389,33 @@ export const PromptInput = () => {
       // Show results instead of updating the prompt directly
       setShowResults(true);
     } catch (error) {
-      console.error('Error optimizing prompt:', error);
-      toast({
-        title: "Optimization Failed",
-        description: error instanceof Error ? error.message : "An unexpected error occurred during optimization. Please check your configuration and try again.",
-        variant: "destructive",
-      });
+      // Don't show error toast if it was a user-initiated abort
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('Optimization cancelled by user');
+        toast({
+          title: "Optimization Cancelled",
+          description: "The optimization was cancelled.",
+        });
+      } else {
+        console.error('Error optimizing prompt:', error);
+        toast({
+          title: "Optimization Failed",
+          description: error instanceof Error ? error.message : "An unexpected error occurred during optimization. Please check your configuration and try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsOptimizing(false);
       setCurrentStep(0);
+      setIsModeLocked(false);  // Unlock mode on cancel too
+      abortControllerRef.current = null;
+    }
+  };
+
+  // Add a cancel function
+  const handleCancelOptimization = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
   };
 
@@ -416,9 +460,19 @@ export const PromptInput = () => {
           </div>
 
           <h3 className="text-2xl font-semibold mb-2 text-facebook-text">Optimizing Prompt...</h3>
-          <p className="text-facebook-text/70 mb-8">This may take several minutes. Please don't close this window.</p>
+          <p className="text-facebook-text/70 mb-8">This may take several minutes.</p>
 
           <OptimizationProgress steps={optimizationSteps} />
+
+          {/* Cancel button */}
+          <div className="flex justify-center mt-6">
+            <button
+              onClick={handleCancelOptimization}
+              className="bg-facebook-gray hover:bg-facebook-border text-facebook-text border border-facebook-border px-6 py-2 rounded-xl font-medium transition-all duration-300"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       ) : (
         <>
@@ -430,138 +484,120 @@ export const PromptInput = () => {
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Your prompt..."
                 disabled={isOptimizing}
-                className={`w-full h-28 p-0 text-xl text-facebook-text bg-transparent placeholder:text-facebook-text/50 border-none outline-none resize-none leading-relaxed ${isOptimizing ? 'opacity-75' : ''}`}
+                className={`w-full h-28 p-4 text-xl text-facebook-text bg-facebook-white/50 placeholder:text-facebook-text/50 border border-facebook-border rounded-xl focus:ring-2 focus:ring-facebook-blue focus:border-transparent resize-none leading-relaxed ${isOptimizing ? 'opacity-75' : ''}`}
               />
 
-              {/* Model name input */}
-              <div className="mt-4">
-                <Label className="text-sm text-facebook-text/80 mb-1.5">Model Name</Label>
-                <input
-                  type="text"
-                  value={enhanceSettings.model}
-                  onChange={(e) => setEnhanceSettings({ ...enhanceSettings, model: e.target.value })}
-                  placeholder="e.g., Llama-4-Maverick-17B-128E-Instruct-FP8"
-                  className="w-full px-3 py-2 text-sm border border-facebook-border rounded-lg focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
-                  disabled={isOptimizing}
-                />
-              </div>
-
-              {/* Collapsible settings panel */}
+              {/* API Settings panel - always visible, not collapsible */}
               <div className="mt-4 border-t border-facebook-border/30 pt-4">
-                <button
-                  onClick={() => setShowEnhanceSettings(!showEnhanceSettings)}
-                  className="flex items-center gap-2 text-sm text-facebook-text/70 hover:text-facebook-text transition-colors"
-                >
+                <div className="flex items-center gap-2 text-sm text-facebook-text/70 mb-4">
                   <Settings size={16} />
-                  <span>API Settings</span>
-                  {showEnhanceSettings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                  {(enhanceSettings.apiBaseUrl || enhanceSettings.apiKey || enhanceSettings.model) && (
-                    <Badge variant="secondary" className="ml-2 text-xs">Configured</Badge>
-                  )}
-                </button>
+                  <span className="font-medium">Model Configuration</span>
+                </div>
 
-                {showEnhanceSettings && (
-                  <div className="mt-4 space-y-4 p-4 bg-gray-50 rounded-lg">
-                    <div className="text-xs text-facebook-text/60 mb-3">
-                      Leave fields empty to use backend defaults from .env file
+                <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                  {/* Model name input - REQUIRED */}
+                  <div>
+                    <Label className="text-sm text-facebook-text/80 mb-1.5">
+                      Model Name <span className="text-red-500">*</span>
+                    </Label>
+                    <input
+                      type="text"
+                      value={enhanceSettings.model}
+                      onChange={(e) => setEnhanceSettings({ ...enhanceSettings, model: e.target.value })}
+                      placeholder="e.g., openrouter/meta-llama/llama-4-maverick"
+                      className="w-full px-3 py-2 text-sm border border-facebook-border rounded-lg focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                      disabled={isOptimizing}
+                      required
+                    />
+                    <div className="text-xs text-facebook-text/50 mt-1">
+                      Use LiteLLM format: <code className="bg-gray-200 px-1 rounded">provider/model-name</code> (e.g., <code className="bg-gray-200 px-1 rounded">openrouter/meta-llama/llama-3.3-70b-instruct</code>)
                     </div>
+                  </div>
 
-                    {/* API Base URL */}
-                    <div>
-                      <Label className="text-sm text-facebook-text/80 mb-1.5">API Base URL</Label>
-                      <input
-                        type="text"
-                        value={enhanceSettings.apiBaseUrl}
-                        onChange={(e) => setEnhanceSettings({ ...enhanceSettings, apiBaseUrl: e.target.value })}
-                        placeholder="e.g., https://api.llama.com/compat/v1"
-                        className="w-full px-3 py-2 text-sm border border-facebook-border rounded-lg focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
-                        disabled={isOptimizing}
-                      />
-                      <div className="text-xs text-facebook-text/50 mt-1">
-                        The base URL for your API endpoint
-                      </div>
-                    </div>
+                  {/* Optional settings divider */}
+                  <div className="border-t border-facebook-border/30 pt-4 mt-4">
+                    <button
+                      onClick={() => setShowEnhanceSettings(!showEnhanceSettings)}
+                      className="flex items-center gap-2 text-sm text-facebook-text/70 hover:text-facebook-text transition-colors"
+                    >
+                      {showEnhanceSettings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      <span>Advanced Settings (optional)</span>
+                      {(enhanceSettings.apiBaseUrl || enhanceSettings.apiKey) && (
+                        <Badge variant="secondary" className="ml-2 text-xs">Configured</Badge>
+                      )}
+                    </button>
+                    <p className="text-xs text-facebook-text/50 mt-1">
+                      Only needed for custom providers that LiteLLM doesn't auto-detect
+                    </p>
+                  </div>
 
-                    {/* API Format */}
-                    <div>
-                      <Label className="text-sm text-facebook-text/80 mb-1.5">API Format</Label>
-                      <select
-                        value={enhanceSettings.apiFormat}
-                        onChange={(e) => setEnhanceSettings({ ...enhanceSettings, apiFormat: e.target.value })}
-                        className="w-full px-3 py-2 text-sm border border-facebook-border rounded-lg focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
-                        disabled={true}
-                      >
-                        <option value="openai">OpenAI-compatible</option>
-                      </select>
-                      <div className="text-xs text-facebook-text/50 mt-1">
-                        Most APIs are OpenAI-compatible
-                      </div>
-                    </div>
-
-                    {/* API Key input */}
-                    <div>
-                      <Label className="text-sm text-facebook-text/80 mb-1.5">API Key</Label>
-                      <div className="relative">
+                  {showEnhanceSettings && (
+                    <div className="space-y-4 pt-2">
+                      {/* API Base URL */}
+                      <div>
+                        <Label className="text-sm text-facebook-text/80 mb-1.5">API Base URL</Label>
                         <input
-                          type={showApiKey ? "text" : "password"}
-                          value={enhanceSettings.apiKey}
-                          onChange={(e) => setEnhanceSettings({ ...enhanceSettings, apiKey: e.target.value })}
-                          placeholder="Your API key"
-                          className="w-full px-3 py-2 pr-10 text-sm border border-facebook-border rounded-lg focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                          type="text"
+                          value={enhanceSettings.apiBaseUrl}
+                          onChange={(e) => setEnhanceSettings({ ...enhanceSettings, apiBaseUrl: e.target.value })}
+                          placeholder="e.g., https://api.llama.com/compat/v1"
+                          className="w-full px-3 py-2 text-sm border border-facebook-border rounded-lg focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
                           disabled={isOptimizing}
                         />
+                        <div className="text-xs text-facebook-text/50 mt-1">
+                          Override the API endpoint for self-hosted or custom providers
+                        </div>
+                      </div>
+
+                      {/* API Key input */}
+                      <div>
+                        <Label className="text-sm text-facebook-text/80 mb-1.5">API Key</Label>
+                        <div className="relative">
+                          <input
+                            type={showApiKey ? "text" : "password"}
+                            value={enhanceSettings.apiKey}
+                            onChange={(e) => setEnhanceSettings({ ...enhanceSettings, apiKey: e.target.value })}
+                            placeholder="Your API key (if not set in environment)"
+                            className="w-full px-3 py-2 pr-10 text-sm border border-facebook-border rounded-lg focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                            disabled={isOptimizing}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowApiKey(!showApiKey)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-facebook-text/50 hover:text-facebook-text"
+                          >
+                            {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                        <div className="text-xs text-facebook-text/50 mt-1">
+                          Override the API key (usually set via environment variable)
+                        </div>
+                      </div>
+
+                      {/* Clear settings button */}
+                      {(enhanceSettings.apiBaseUrl || enhanceSettings.apiKey) && (
                         <button
-                          type="button"
-                          onClick={() => setShowApiKey(!showApiKey)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-facebook-text/50 hover:text-facebook-text"
+                          onClick={() => {
+                            setEnhanceSettings({ ...enhanceSettings, apiBaseUrl: '', apiKey: '' });
+                            localStorage.setItem('enhanceSettings', JSON.stringify({ ...enhanceSettings, apiBaseUrl: '', apiKey: '' }));
+                          }}
+                          className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1"
                         >
-                          {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                          <X size={14} />
+                          Clear advanced settings
                         </button>
-                      </div>
-                      <div className="text-xs text-facebook-text/50 mt-1">
-                        Required if not set in backend .env
-                      </div>
+                      )}
                     </div>
-
-                    {/* Model name input */}
-                    <div>
-                      <Label className="text-sm text-facebook-text/80 mb-1.5">Model Name</Label>
-                      <input
-                        type="text"
-                        value={enhanceSettings.model}
-                        onChange={(e) => setEnhanceSettings({ ...enhanceSettings, model: e.target.value })}
-                        placeholder="e.g., Llama-4-Maverick-17B-128E-Instruct-FP8"
-                        className="w-full px-3 py-2 text-sm border border-facebook-border rounded-lg focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
-                        disabled={isOptimizing}
-                      />
-                      <div className="text-xs text-facebook-text/50 mt-1">
-                        The exact model name as expected by your API
-                      </div>
-                    </div>
-
-                    {/* Clear settings button */}
-                    {(enhanceSettings.apiBaseUrl || enhanceSettings.apiKey || enhanceSettings.model) && (
-                      <button
-                        onClick={() => {
-                          setEnhanceSettings({ apiBaseUrl: '', apiFormat: 'openai', apiKey: '', model: '' });
-                          localStorage.removeItem('enhanceSettings');
-                        }}
-                        className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1"
-                      >
-                        <X size={14} />
-                        Clear all settings
-                      </button>
-                    )}
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center justify-end mt-6">
                 <div className="relative group">
                   <button
                     onClick={handleOptimizePrompt}
-                    disabled={isOptimizing || !prompt.trim()}
-                    className={`bg-facebook-blue hover:bg-facebook-blue-dark text-white p-3 rounded-xl shadow-lg hover:shadow-facebook-blue/25 transition-all duration-300 transform ${!isOptimizing && prompt.trim() ? 'hover:scale-110 hover:-translate-y-1' : 'opacity-75 cursor-not-allowed'}`}
+                    disabled={isOptimizing || !prompt.trim() || !enhanceSettings.model.trim()}
+                    className={`bg-facebook-blue hover:bg-facebook-blue-dark text-white p-3 rounded-xl shadow-lg hover:shadow-facebook-blue/25 transition-all duration-300 transform ${!isOptimizing && prompt.trim() && enhanceSettings.model.trim() ? 'hover:scale-110 hover:-translate-y-1' : 'opacity-75 cursor-not-allowed'}`}
                   >
                     {isOptimizing ? <Loader2 size={20} className="animate-spin" /> : <ArrowUp size={20} />}
                   </button>

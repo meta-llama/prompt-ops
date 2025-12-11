@@ -64,21 +64,21 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = ({
       {/* Content container */}
       <div className="border border-facebook-border bg-white/60 backdrop-blur-sm rounded-xl p-6 mb-8 h-[70vh] overflow-y-auto relative">
         {/* Before content */}
-        <div
-          className={`whitespace-pre-wrap text-facebook-text text-lg leading-relaxed transition-opacity duration-300 absolute inset-6 ${
+        <textarea
+          readOnly
+          value={originalPrompt}
+          className={`whitespace-pre-wrap text-facebook-text text-lg leading-relaxed transition-opacity duration-300 absolute inset-6 bg-transparent border-none outline-none resize-none w-[calc(100%-3rem)] h-[calc(100%-3rem)] ${
             activeTab === 'before' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
           }`}
-        >
-          {originalPrompt}
-        </div>
+        />
         {/* After content */}
-        <div
-          className={`whitespace-pre-wrap text-facebook-text text-lg leading-relaxed transition-opacity duration-300 absolute inset-6 ${
+        <textarea
+          readOnly
+          value={optimizedPrompt}
+          className={`whitespace-pre-wrap text-facebook-text text-lg leading-relaxed transition-opacity duration-300 absolute inset-6 bg-transparent border-none outline-none resize-none w-[calc(100%-3rem)] h-[calc(100%-3rem)] ${
             activeTab === 'after' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
           }`}
-        >
-          {optimizedPrompt}
-        </div>
+        />
       </div>
 
       {/* Copy button */}
