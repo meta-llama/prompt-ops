@@ -21,6 +21,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { apiUrl, wsUrl } from "@/lib/config";
 import { UseCaseSelector } from "./UseCaseSelector";
 import { FieldMappingInterface } from "./FieldMappingInterface";
@@ -96,7 +97,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       case "anthropic":
         return <Shield className="w-5 h-5 text-orange-600" />;
       case "openai":
-        return <Brain className="w-5 h-5 text-green-600" />;
+        return <Brain className="w-5 h-5 text-meta-teal" />;
       case "vllm":
       case "ollama":
         return <Server className="w-5 h-5 text-gray-600" />;
@@ -138,13 +139,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return {
             icon: <Target className="w-3 h-3" />,
             label: "Target",
-            className: "bg-green-100 text-green-800 border-green-200",
+            className: "bg-meta-teal/10 text-meta-teal-800 border-meta-teal/30",
           };
         case "optimizer":
           return {
             icon: <Brain className="w-3 h-3" />,
             label: "Optimizer",
-            className: "bg-purple-100 text-purple-800 border-purple-200",
+            className: "bg-meta-purple/10 text-meta-purple-800 border-meta-purple/30",
           };
         case "both":
           return {
@@ -155,7 +156,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               </div>
             ),
             label: "Target + Optimizer",
-            className: "bg-blue-100 text-blue-800 border-blue-200",
+            className: "bg-meta-blue/10 text-meta-blue border-meta-blue/30",
           };
         default:
           return {
@@ -170,7 +171,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
     return (
       <div
-        className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium border ${config.className}`}
+        className={`inline-flex items-center space-x-1 px-2 py-1 rounded-md text-xs font-medium border ${config.className}`}
       >
         {config.icon}
         <span>{config.label}</span>
@@ -478,63 +479,56 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   }) => (
     <button
       onClick={() => toggleSection(id)}
-      className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-facebook-blue/5 to-facebook-blue-light/5 rounded-xl border border-facebook-border hover:border-facebook-blue/30 transition-all duration-200"
+      className="w-full flex items-center justify-between p-4 bg-meta-gray-100 rounded-xl border border-meta-gray-300 hover:border-meta-blue/30 transition-all duration-200"
     >
       <div className="flex items-center space-x-3">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
           status === 'complete'
-            ? 'bg-green-100 text-green-600'
+            ? 'bg-meta-teal/10 text-meta-teal-800'
             : status === 'incomplete'
-            ? 'bg-yellow-100 text-yellow-600'
-            : 'bg-facebook-blue/10 text-facebook-blue'
+            ? 'bg-meta-orange/10 text-meta-orange-800'
+            : 'bg-meta-blue/10 text-meta-blue'
         }`}>
           {status === 'complete' ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
         </div>
-        <h3 className="text-lg font-bold text-facebook-text">{title}</h3>
+        <h3 className="text-lg font-bold text-meta-gray">{title}</h3>
         {status === 'complete' && (
-          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-            Complete
-          </span>
+          <Badge variant="success">Complete</Badge>
         )}
         {status === 'incomplete' && (
-          <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium">
-            In Progress
-          </span>
+          <Badge variant="warning">In Progress</Badge>
         )}
       </div>
       {collapsedSections[id] ? (
-        <ChevronDown className="w-5 h-5 text-facebook-text/50" />
+        <ChevronDown className="w-5 h-5 text-meta-gray/50" />
       ) : (
-        <ChevronUp className="w-5 h-5 text-facebook-text/50" />
+        <ChevronUp className="w-5 h-5 text-meta-gray/50" />
       )}
     </button>
   );
 
   const renderRequirementsHeader = () => (
     <div className="text-center mb-8 pt-4">
-      <h1 className="text-4xl md:text-5xl font-black text-facebook-text mb-4 tracking-tight">
-        Prompt
-        <span className="bg-gradient-to-r from-facebook-blue via-facebook-blue-light to-facebook-blue-dark bg-clip-text text-transparent">
-          {" "}Optimization
-        </span>
+      <h1 className="text-2xl md:text-3xl font-normal text-meta-gray mb-4 tracking-tight">
+        Prompt Optimization
       </h1>
-      <p className="text-facebook-text/70 text-lg max-w-2xl mx-auto">
+      <p className="text-meta-gray/70 text-lg max-w-2xl mx-auto">
         Complete the form below to configure and optimize your prompt. Fill out each section, then click "Create & Optimize" at the bottom.
       </p>
 
       {/* Quick requirements reminder */}
       <div className="flex flex-wrap justify-center gap-4 mt-6">
-        <div className="flex items-center space-x-2 bg-facebook-blue/10 px-4 py-2 rounded-full">
-          <FileText className="w-4 h-4 text-facebook-blue" />
-          <span className="text-sm text-facebook-text/80">Your Prompt</span>
+        <div className="flex items-center space-x-2 bg-meta-blue/10 px-4 py-2 rounded-md">
+          <FileText className="w-4 h-4 text-meta-blue" />
+          <span className="text-sm text-meta-gray/80">Your Prompt</span>
         </div>
-        <div className="flex items-center space-x-2 bg-facebook-blue/10 px-4 py-2 rounded-full">
-          <Database className="w-4 h-4 text-facebook-blue" />
-          <span className="text-sm text-facebook-text/80">Dataset (JSON)</span>
+        <div className="flex items-center space-x-2 bg-meta-blue/10 px-4 py-2 rounded-md">
+          <Database className="w-4 h-4 text-meta-blue" />
+          <span className="text-sm text-meta-gray/80">Dataset (JSON)</span>
         </div>
-        <div className="flex items-center space-x-2 bg-facebook-blue/10 px-4 py-2 rounded-full">
-          <Target className="w-4 h-4 text-facebook-blue" />
-          <span className="text-sm text-facebook-text/80">Success Metrics</span>
+        <div className="flex items-center space-x-2 bg-meta-blue/10 px-4 py-2 rounded-md">
+          <Target className="w-4 h-4 text-meta-blue" />
+          <span className="text-sm text-meta-gray/80">Success Metrics</span>
         </div>
       </div>
     </div>
@@ -546,24 +540,24 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
       {!collapsedSections.prompt && (
         <div className="pl-4 space-y-4">
-          <p className="text-facebook-text/70 text-sm">
+          <p className="text-meta-gray/70 text-sm">
             Enter the prompt you want to optimize. This is the instruction or system prompt that guides AI behavior.
           </p>
 
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-facebook-text">
+            <label className="block text-sm font-medium text-meta-gray">
               Current Prompt
             </label>
             <textarea
               value={formData.prompt}
               onChange={(e) => updateFormData("prompt", e.target.value)}
               placeholder="Enter your prompt here..."
-              className="w-full h-32 p-4 border border-facebook-border rounded-xl focus:ring-2 focus:ring-facebook-blue focus:border-transparent resize-none bg-facebook-white/50 text-facebook-text placeholder-facebook-text/50"
+              className="w-full h-32 p-4 border border-meta-gray-300 rounded-xl focus:ring-2 focus:ring-meta-blue focus:border-transparent resize-none bg-white/50 text-meta-gray placeholder-meta-gray/50"
             />
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-medium text-facebook-text/70">
+            <p className="text-sm font-medium text-meta-gray/70">
               Quick Examples:
             </p>
             <div className="flex flex-wrap gap-2">
@@ -576,7 +570,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <button
                   key={example}
                   onClick={() => updateFormData("prompt", example)}
-                  className="text-xs bg-facebook-blue/10 hover:bg-facebook-blue/20 text-facebook-blue px-3 py-1.5 rounded-full border border-facebook-blue/30 transition-colors duration-200"
+                  className="text-xs bg-meta-blue/10 hover:bg-meta-blue/20 text-meta-blue px-3 py-1.5 rounded-full border border-meta-blue/30 transition-colors duration-200"
                 >
                   {example}
                 </button>
@@ -594,7 +588,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
       {!collapsedSections.usecase && (
         <div className="pl-4 space-y-4">
-          <p className="text-facebook-text/70 text-sm">
+          <p className="text-meta-gray/70 text-sm">
             Choose the type that best matches your project to get relevant options for field mapping and metrics.
           </p>
 
@@ -613,36 +607,36 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
       {!collapsedSections.dataset && (
         <div className="pl-4 space-y-4">
-          <p className="text-facebook-text/70 text-sm">
+          <p className="text-meta-gray/70 text-sm">
             Upload a JSON file containing your evaluation examples.
           </p>
 
           <div
             className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
               formData.datasetPath
-                ? "border-green-400 bg-green-50/80"
+                ? "border-meta-teal bg-meta-teal/5"
                 : uploadError
-                ? "border-red-400 bg-red-50/80"
-                : "border-facebook-border bg-white/50 hover:border-facebook-blue"
+                ? "border-meta-pink-800 bg-meta-pink/5"
+                : "border-meta-gray-300 bg-white/50 hover:border-meta-blue"
             }`}
           >
             {uploadLoading ? (
               <div className="space-y-3">
-                <div className="w-12 h-12 bg-facebook-blue/10 rounded-full flex items-center justify-center mx-auto">
-                  <div className="w-6 h-6 border-2 border-facebook-blue border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-12 h-12 bg-meta-blue/10 rounded-full flex items-center justify-center mx-auto">
+                  <div className="w-6 h-6 border-2 border-meta-blue border-t-transparent rounded-full animate-spin"></div>
                 </div>
-                <p className="text-facebook-text">Uploading dataset...</p>
+                <p className="text-meta-gray">Uploading dataset...</p>
               </div>
             ) : formData.datasetPath ? (
               <div className="space-y-3">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
+                <div className="w-12 h-12 bg-meta-teal/10 rounded-full flex items-center justify-center mx-auto">
+                  <CheckCircle className="w-6 h-6 text-meta-teal" />
                 </div>
                 <div>
-                  <p className="font-semibold text-facebook-text">
+                  <p className="font-semibold text-meta-gray">
                     {formData.datasetPath}
                   </p>
-                  <p className="text-sm text-facebook-text/70">
+                  <p className="text-sm text-meta-gray/70">
                     {formData.uploadedFile
                       ? (formData.uploadedFile.size / 1024).toFixed(2)
                       : "0"}{" "}
@@ -662,13 +656,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               </div>
             ) : (
               <div className="space-y-3">
-                <Database className="w-10 h-10 text-facebook-text/40 mx-auto" />
+                <Database className="w-10 h-10 text-meta-gray/40 mx-auto" />
                 <div>
                   <label htmlFor="file-upload" className="cursor-pointer">
-                    <span className="text-facebook-blue hover:underline font-semibold">
+                    <span className="text-meta-blue hover:underline font-semibold">
                       Click to upload
                     </span>
-                    <span className="text-facebook-text/70"> or drag and drop</span>
+                    <span className="text-meta-gray/70"> or drag and drop</span>
                   </label>
                   <input
                     id="file-upload"
@@ -683,7 +677,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     }}
                   />
                 </div>
-                <p className="text-xs text-facebook-text/60">
+                <p className="text-xs text-meta-gray/60">
                   JSON files only, max 10MB
                 </p>
                 {uploadError && (
@@ -697,11 +691,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           {/* Dataset format helper */}
           {formData.useCase && formData.useCase !== "custom" && (
-            <div className="bg-facebook-blue/5 border border-facebook-blue/20 rounded-xl p-4">
-              <p className="text-xs font-semibold text-facebook-text mb-2">
+            <div className="bg-meta-blue/5 border border-meta-blue/20 rounded-xl p-4">
+              <p className="text-xs font-semibold text-meta-gray mb-2">
                 Expected format for {formData.useCase.toUpperCase()}:
               </p>
-              <pre className="text-xs bg-white/90 p-3 rounded-lg border border-facebook-border overflow-x-auto text-facebook-text/80">
+              <pre className="text-xs bg-white/90 p-3 rounded-lg border border-meta-gray-300 overflow-x-auto text-meta-gray/80">
                 {formData.useCase === "qa"
                   ? JSON.stringify(
                       [
@@ -749,7 +743,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               existingMappings={formData.fieldMappings}
             />
           ) : (
-            <div className="text-center py-8 text-facebook-text/50">
+            <div className="text-center py-8 text-meta-gray/50">
               <ArrowRight className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p>Upload a dataset first to configure field mappings</p>
             </div>
@@ -859,7 +853,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   return (
     <div className="w-full">
       {/* Main Form Container */}
-      <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-facebook-border p-6 md:p-8">
+      <div className="bg-white rounded-3xl border border-meta-gray-300/50 p-6 md:p-8">
         {/* Header */}
         {renderRequirementsHeader()}
 
@@ -875,10 +869,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         </div>
 
         {/* Action Section */}
-        <div className="mt-10 pt-8 border-t border-facebook-border">
+        <div className="mt-10 pt-8 border-t border-meta-gray-300">
           {/* Form Validation Summary */}
           {!isFormValid() && !projectCreationResult && (
-            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+            <div className="mb-6 p-4 bg-meta-orange/5 border border-meta-orange/30 rounded-xl">
               <div className="flex items-start space-x-3">
                 <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
                 <div>
@@ -904,12 +898,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           {projectCreationResult && (
             <div className={`mb-6 p-4 rounded-xl border ${
               projectCreationResult.success
-                ? 'bg-green-50 border-green-200'
-                : 'bg-red-50 border-red-200'
+                ? 'bg-meta-teal/5 border-meta-teal/30'
+                : 'bg-meta-pink/5 border-meta-pink-800/30'
             }`}>
               <div className="flex items-center space-x-3 mb-3">
                 {projectCreationResult.success ? (
-                  <CheckCircle className="w-6 h-6 text-green-600" />
+                  <CheckCircle className="w-6 h-6 text-meta-teal" />
                 ) : (
                   <AlertCircle className="w-6 h-6 text-red-600" />
                 )}
@@ -920,11 +914,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
               {projectCreationResult.success ? (
                 <div className="space-y-3">
-                  <p className="text-green-700">{projectCreationResult.message}</p>
+                  <p className="text-meta-teal-800">{projectCreationResult.message}</p>
 
                   {projectCreationResult.actualProjectName !== projectCreationResult.requestedProjectName && (
-                    <div className="bg-blue-50 p-3 rounded border border-blue-200">
-                      <p className="text-sm font-medium text-blue-800 mb-1">Project Name Updated:</p>
+                    <div className="bg-meta-blue/5 p-3 rounded border border-meta-blue/30">
+                      <p className="text-sm font-medium text-meta-blue mb-1">Project Name Updated:</p>
                       <p className="text-sm text-blue-700">
                         A project with the name "{projectCreationResult.requestedProjectName}" already existed,
                         so your project was created as "{projectCreationResult.actualProjectName}" instead.
@@ -949,31 +943,31 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           {optimizing && (
             <div className="mb-6 space-y-4">
               <div className="text-center">
-                <h3 className="text-xl font-bold text-facebook-text mb-2">
+                <h3 className="text-xl font-bold text-meta-gray mb-2">
                   🚀 Optimizing Your Prompt...
                 </h3>
-                <p className="text-facebook-text/70">
+                <p className="text-meta-gray/70">
                   This may take a few minutes. Real-time progress is shown below.
                 </p>
               </div>
 
               {/* Progress Bar */}
-              <div className="bg-white p-4 rounded-xl border border-facebook-border shadow-sm">
+              <div className="bg-white p-4 rounded-xl border border-meta-gray-300 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-facebook-text">
+                  <span className="text-sm font-medium text-meta-gray">
                     {optimizationProgress.phase || "Initializing..."}
                   </span>
-                  <span className="text-sm text-facebook-text/70">
+                  <span className="text-sm text-meta-gray/70">
                     {Math.round(optimizationProgress.progress)}%
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
-                    className="bg-facebook-blue h-2 rounded-full transition-all duration-300"
+                    className="bg-meta-blue h-2 rounded-full transition-all duration-300"
                     style={{ width: `${optimizationProgress.progress}%` }}
                   ></div>
                 </div>
-                <p className="text-sm text-facebook-text/70 mt-2">
+                <p className="text-sm text-meta-gray/70 mt-2">
                   {optimizationProgress.message}
                 </p>
               </div>
@@ -983,8 +977,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-white font-medium">Live Optimization Logs</h4>
                   <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-green-400 text-sm">Live</span>
+                    <div className="w-2 h-2 bg-meta-teal rounded-full animate-pulse"></div>
+                    <span className="text-meta-teal text-sm">Live</span>
                   </div>
                 </div>
                 <div className="space-y-1 font-mono text-sm">
@@ -1016,10 +1010,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           {optimizationResult && (
             <div className="mb-6">
               {optimizationResult.success ? (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-6">
+                <div className="bg-meta-teal/5 border border-meta-teal/30 rounded-xl p-6">
                   <div className="flex items-center space-x-3 mb-4">
-                    <CheckCircle className="w-8 h-8 text-green-600" />
-                    <h3 className="text-xl font-bold text-green-800">
+                    <CheckCircle className="w-8 h-8 text-meta-teal" />
+                    <h3 className="text-xl font-bold text-meta-teal-800">
                       🎉 {optimizationResult.message || "Optimization Complete!"}
                     </h3>
                   </div>
@@ -1039,10 +1033,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
                     <div className="bg-white rounded-lg p-4 border border-green-200">
                       <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
-                        <Zap className="w-4 h-4 mr-2 text-green-600" />
+                        <Zap className="w-4 h-4 mr-2 text-meta-teal" />
                         Optimized Prompt
                       </h4>
-                      <div className="bg-green-50 rounded p-3 max-h-48 overflow-y-auto">
+                      <div className="bg-meta-teal/5 rounded p-3 max-h-48 overflow-y-auto">
                         <pre className="text-sm text-gray-700 whitespace-pre-wrap">
                           {optimizationResult.optimizedPrompt}
                         </pre>
@@ -1050,8 +1044,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     </div>
                   </div>
 
-                  <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-sm text-blue-800">
+                  <div className="mt-4 p-3 bg-meta-blue/5 rounded-lg border border-meta-blue/30">
+                    <p className="text-sm text-meta-blue">
                       <strong>Next Steps:</strong> Your optimized prompt has been saved to the project directory.
                       You can now use this improved prompt in your applications!
                     </p>
@@ -1076,27 +1070,29 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <Button
                   onClick={handleCreateProject}
                   disabled={!isFormValid() || creatingProject}
-                  className="bg-gradient-to-r from-facebook-blue via-facebook-blue-light to-facebook-blue-dark hover:opacity-90 text-white px-8 py-4 rounded-2xl text-lg font-bold shadow-lg shadow-facebook-blue/25 transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  variant="filled"
+                  size="large"
                 >
                   {creatingProject ? (
                     <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                       Creating Project...
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     </>
                   ) : (
                     <>
-                      <Settings className="w-5 h-5 mr-2" />
                       Create & Configure Project
+                      <Settings />
                     </>
                   )}
                 </Button>
               ) : (
                 <Button
                   onClick={handleComplete}
-                  className="bg-gradient-to-r from-green-500 to-green-600 hover:opacity-90 text-white px-8 py-4 rounded-2xl text-lg font-bold shadow-lg shadow-green-500/25 transform hover:scale-105 transition-all duration-300"
+                  variant="filledTeal"
+                  size="large"
                 >
-                  <Zap className="w-5 h-5 mr-2" />
                   Start Optimization
+                  <Zap />
                 </Button>
               )}
             </div>
@@ -1111,8 +1107,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   setOptimizationResult(null);
                   setOptimizationLogs([]);
                 }}
-                variant="outline"
-                className="border-facebook-border text-facebook-text hover:bg-facebook-white rounded-xl px-6 py-3 font-semibold"
+                variant="outlined"
+                size="medium"
               >
                 Start New Optimization
               </Button>

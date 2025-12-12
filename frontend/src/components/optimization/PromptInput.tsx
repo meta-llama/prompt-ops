@@ -437,31 +437,31 @@ export const PromptInput = () => {
                 setShowResults(false);
                 setIsModeLocked(false); // Unlock mode selection when starting new
               }}
-              className="bg-facebook-gray hover:bg-facebook-border text-facebook-text border border-facebook-border px-8 py-3 rounded-xl font-medium transition-all duration-300 shadow-lg transform hover:scale-105"
+              className="bg-white hover:bg-meta-gray-100 text-meta-gray border border-meta-gray-300 px-8 py-3 rounded-full font-medium transition-colors"
             >
               Start New
             </button>
           </div>
         </div>
       ) : isOptimizing ? (
-        <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-facebook-border text-center">
-          <h2 className="text-3xl font-bold mb-2 text-facebook-text">Run Optimization</h2>
-          <p className="text-facebook-text/70 mb-8">Ready to optimize your prompt for Llama models. This process typically takes 5-10 minutes.</p>
+        <div className="bg-white rounded-3xl p-8 border border-meta-gray-300/50 text-center">
+          <h2 className="text-3xl font-bold mb-2 text-meta-gray">Run Optimization</h2>
+          <p className="text-meta-gray/70 mb-8">Ready to optimize your prompt for Llama models. This process typically takes 5-10 minutes.</p>
 
           <div className="flex justify-center mb-8">
             <div className="w-20 h-20">
               <div className="w-full h-full rounded-full animate-spin"
                 style={{
-                  background: 'conic-gradient(from 0deg, transparent, hsl(var(--facebook-blue) / 0) 10%, hsl(var(--facebook-blue) / 0.2) 20%, hsl(var(--facebook-blue) / 0.4) 30%, hsl(var(--facebook-blue) / 0.8) 40%, hsl(var(--facebook-blue)) 50%, hsl(var(--facebook-blue) / 0) 60%)',
+                  background: 'conic-gradient(from 0deg, transparent, hsl(var(--meta-blue) / 0) 10%, hsl(var(--meta-blue) / 0.2) 20%, hsl(var(--meta-blue) / 0.4) 30%, hsl(var(--meta-blue) / 0.8) 40%, hsl(var(--meta-blue)) 50%, hsl(var(--meta-blue) / 0) 60%)',
                   borderRadius: '50%',
-                  boxShadow: '0 0 20px hsl(var(--facebook-blue) / 0.3)'
+                  boxShadow: '0 0 20px hsl(var(--meta-blue) / 0.3)'
                 }}>
               </div>
             </div>
           </div>
 
-          <h3 className="text-2xl font-semibold mb-2 text-facebook-text">Optimizing Prompt...</h3>
-          <p className="text-facebook-text/70 mb-8">This may take several minutes.</p>
+          <h3 className="text-2xl font-semibold mb-2 text-meta-gray">Optimizing Prompt...</h3>
+          <p className="text-meta-gray/70 mb-8">This may take several minutes.</p>
 
           <OptimizationProgress steps={optimizationSteps} />
 
@@ -469,7 +469,7 @@ export const PromptInput = () => {
           <div className="flex justify-center mt-6">
             <button
               onClick={handleCancelOptimization}
-              className="bg-facebook-gray hover:bg-facebook-border text-facebook-text border border-facebook-border px-6 py-2 rounded-xl font-medium transition-all duration-300"
+              className="bg-meta-gray-100 hover:bg-meta-gray-300 text-meta-gray border border-meta-gray-300 px-6 py-2 rounded-full font-medium transition-colors"
             >
               Cancel
             </button>
@@ -479,18 +479,28 @@ export const PromptInput = () => {
         <>
           {/* Prompt input - only show in enhance mode */}
           {activeMode === 'enhance' && (
-            <div className="relative bg-white/90 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-facebook-border mb-8">
+            <div className="relative bg-white rounded-3xl p-6 md:p-8 border border-meta-gray-300/50 mb-8">
+              {/* Header */}
+              <div className="text-center mb-8 pt-4">
+                <h1 className="text-2xl md:text-3xl font-normal text-meta-gray mb-4 tracking-tight">
+                  Prompt Enhancement
+                </h1>
+                <p className="text-meta-gray/70 text-lg max-w-2xl mx-auto">
+                  Enter your prompt below and configure the model to use. Click "Enhance Prompt" to improve it with AI assistance.
+                </p>
+              </div>
+
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Your prompt..."
                 disabled={isOptimizing}
-                className={`w-full h-28 p-4 text-xl text-facebook-text bg-facebook-white/50 placeholder:text-facebook-text/50 border border-facebook-border rounded-xl focus:ring-2 focus:ring-facebook-blue focus:border-transparent resize-none leading-relaxed ${isOptimizing ? 'opacity-75' : ''}`}
+                className={`w-full h-28 p-4 text-xl text-meta-gray bg-white/50 placeholder:text-meta-gray/50 border border-meta-gray-300 rounded-xl focus:ring-2 focus:ring-meta-blue focus:border-transparent resize-none leading-relaxed ${isOptimizing ? 'opacity-75' : ''}`}
               />
 
               {/* API Settings panel - always visible, not collapsible */}
-              <div className="mt-4 border-t border-facebook-border/30 pt-4">
-                <div className="flex items-center gap-2 text-sm text-facebook-text/70 mb-4">
+              <div className="mt-4 border-t border-meta-gray-300/30 pt-4">
+                <div className="flex items-center gap-2 text-sm text-meta-gray/70 mb-4">
                   <Settings size={16} />
                   <span className="font-medium">Model Configuration</span>
                 </div>
@@ -498,7 +508,7 @@ export const PromptInput = () => {
                 <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
                   {/* Model name input - REQUIRED */}
                   <div>
-                    <Label className="text-sm text-facebook-text/80 mb-1.5">
+                    <Label className="text-sm text-meta-gray/80 mb-1.5">
                       Model Name <span className="text-red-500">*</span>
                     </Label>
                     <input
@@ -506,28 +516,28 @@ export const PromptInput = () => {
                       value={enhanceSettings.model}
                       onChange={(e) => setEnhanceSettings({ ...enhanceSettings, model: e.target.value })}
                       placeholder="e.g., openrouter/meta-llama/llama-4-maverick"
-                      className="w-full px-3 py-2 text-sm border border-facebook-border rounded-lg focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                      className="w-full px-3 py-2 text-sm border border-meta-gray-300 rounded-lg focus:ring-2 focus:ring-meta-blue focus:border-transparent"
                       disabled={isOptimizing}
                       required
                     />
-                    <div className="text-xs text-facebook-text/50 mt-1">
+                    <div className="text-xs text-meta-gray/50 mt-1">
                       Use LiteLLM format: <code className="bg-gray-200 px-1 rounded">provider/model-name</code> (e.g., <code className="bg-gray-200 px-1 rounded">openrouter/meta-llama/llama-3.3-70b-instruct</code>)
                     </div>
                   </div>
 
                   {/* Optional settings divider */}
-                  <div className="border-t border-facebook-border/30 pt-4 mt-4">
+                  <div className="border-t border-meta-gray-300/30 pt-4 mt-4">
                     <button
                       onClick={() => setShowEnhanceSettings(!showEnhanceSettings)}
-                      className="flex items-center gap-2 text-sm text-facebook-text/70 hover:text-facebook-text transition-colors"
+                      className="flex items-center gap-2 text-sm text-meta-gray/70 hover:text-meta-gray transition-colors"
                     >
                       {showEnhanceSettings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       <span>Advanced Settings (optional)</span>
                       {(enhanceSettings.apiBaseUrl || enhanceSettings.apiKey) && (
-                        <Badge variant="secondary" className="ml-2 text-xs">Configured</Badge>
+                        <Badge variant="success" className="ml-2">Configured</Badge>
                       )}
                     </button>
-                    <p className="text-xs text-facebook-text/50 mt-1">
+                    <p className="text-xs text-meta-gray/50 mt-1">
                       Only needed for custom providers that LiteLLM doesn't auto-detect
                     </p>
                   </div>
@@ -536,41 +546,41 @@ export const PromptInput = () => {
                     <div className="space-y-4 pt-2">
                       {/* API Base URL */}
                       <div>
-                        <Label className="text-sm text-facebook-text/80 mb-1.5">API Base URL</Label>
+                        <Label className="text-sm text-meta-gray/80 mb-1.5">API Base URL</Label>
                         <input
                           type="text"
                           value={enhanceSettings.apiBaseUrl}
                           onChange={(e) => setEnhanceSettings({ ...enhanceSettings, apiBaseUrl: e.target.value })}
                           placeholder="e.g., https://api.llama.com/compat/v1"
-                          className="w-full px-3 py-2 text-sm border border-facebook-border rounded-lg focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                          className="w-full px-3 py-2 text-sm border border-meta-gray-300 rounded-lg focus:ring-2 focus:ring-meta-blue focus:border-transparent"
                           disabled={isOptimizing}
                         />
-                        <div className="text-xs text-facebook-text/50 mt-1">
+                        <div className="text-xs text-meta-gray/50 mt-1">
                           Override the API endpoint for self-hosted or custom providers
                         </div>
                       </div>
 
                       {/* API Key input */}
                       <div>
-                        <Label className="text-sm text-facebook-text/80 mb-1.5">API Key</Label>
+                        <Label className="text-sm text-meta-gray/80 mb-1.5">API Key</Label>
                         <div className="relative">
                           <input
                             type={showApiKey ? "text" : "password"}
                             value={enhanceSettings.apiKey}
                             onChange={(e) => setEnhanceSettings({ ...enhanceSettings, apiKey: e.target.value })}
                             placeholder="Your API key (if not set in environment)"
-                            className="w-full px-3 py-2 pr-10 text-sm border border-facebook-border rounded-lg focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                            className="w-full px-3 py-2 pr-10 text-sm border border-meta-gray-300 rounded-lg focus:ring-2 focus:ring-meta-blue focus:border-transparent"
                             disabled={isOptimizing}
                           />
                           <button
                             type="button"
                             onClick={() => setShowApiKey(!showApiKey)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-facebook-text/50 hover:text-facebook-text"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-meta-gray/50 hover:text-meta-gray"
                           >
                             {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
                         </div>
-                        <div className="text-xs text-facebook-text/50 mt-1">
+                        <div className="text-xs text-meta-gray/50 mt-1">
                           Override the API key (usually set via environment variable)
                         </div>
                       </div>
@@ -593,59 +603,66 @@ export const PromptInput = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end mt-6">
-                <div className="relative group">
-                  <button
-                    onClick={handleOptimizePrompt}
-                    disabled={isOptimizing || !prompt.trim() || !enhanceSettings.model.trim()}
-                    className={`bg-facebook-blue hover:bg-facebook-blue-dark text-white p-3 rounded-xl shadow-lg hover:shadow-facebook-blue/25 transition-all duration-300 transform ${!isOptimizing && prompt.trim() && enhanceSettings.model.trim() ? 'hover:scale-110 hover:-translate-y-1' : 'opacity-75 cursor-not-allowed'}`}
-                  >
-                    {isOptimizing ? <Loader2 size={20} className="animate-spin" /> : <ArrowUp size={20} />}
-                  </button>
-                </div>
+              <div className="flex items-center justify-center mt-6">
+                <Button
+                  onClick={handleOptimizePrompt}
+                  disabled={isOptimizing || !prompt.trim() || !enhanceSettings.model.trim()}
+                  variant="filled"
+                  size="large"
+                >
+                  {isOptimizing ? (
+                    <>
+                      Enhancing...
+                      <Loader2 className="animate-spin" />
+                    </>
+                  ) : (
+                    <>
+                      Enhance Prompt
+                      <ArrowUp />
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           )}
 
           {/* Onboarding wizard - always rendered but hidden when not in migrate mode or when completed */}
           <div className={activeMode === 'migrate' && showWizard ? 'block' : 'hidden'}>
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <OnboardingWizard
-                activeMode={activeMode as "migrate" | "enhance"}
-                onComplete={handleWizardComplete}
-              />
-            </div>
+            <OnboardingWizard
+              activeMode={activeMode as "migrate" | "enhance"}
+              onComplete={handleWizardComplete}
+            />
           </div>
 
           {/* Configuration summary - shown after wizard completion */}
           {activeMode === 'migrate' && wizardCompleted && !showWizard && (
-            <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-facebook-border p-6 max-w-4xl mx-auto">
+            <div className="bg-white rounded-3xl border border-meta-gray-300/50 p-6 max-w-4xl mx-auto">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-2xl font-bold text-facebook-text">Configuration Summary</h3>
+                <h3 className="text-2xl font-bold text-meta-gray">Configuration Summary</h3>
                 <Button
                   onClick={() => setShowWizard(true)}
-                  variant="outline"
-                  className="text-facebook-blue border-facebook-blue hover:bg-facebook-blue hover:text-white"
+                  variant="outlined"
+                  size="medium"
                 >
                   Reconfigure
                 </Button>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <span className="font-medium text-facebook-text/70">Dataset Adapter:</span>
-                  <p className="text-facebook-text">{config.datasetAdapter || 'Not selected'}</p>
+                  <span className="font-medium text-meta-gray/70">Dataset Adapter:</span>
+                  <p className="text-meta-gray">{config.datasetAdapter || 'Not selected'}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-facebook-text/70">Metrics:</span>
-                  <p className="text-facebook-text">{config.metrics}</p>
+                  <span className="font-medium text-meta-gray/70">Metrics:</span>
+                  <p className="text-meta-gray">{config.metrics}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-facebook-text/70">Optimizer:</span>
-                  <p className="text-facebook-text">{config.strategy}</p>
+                  <span className="font-medium text-meta-gray/70">Optimizer:</span>
+                  <p className="text-meta-gray">{config.strategy}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-facebook-text/70">Model:</span>
-                  <p className="text-facebook-text">{config.model}</p>
+                  <span className="font-medium text-meta-gray/70">Model:</span>
+                  <p className="text-meta-gray">{config.model}</p>
                 </div>
               </div>
             </div>
@@ -668,23 +685,22 @@ export const PromptInput = () => {
           <div className="space-y-6">
             {/* Current Dataset Section */}
             {uploadedDatasets.length > 0 && (
-              <div className="border border-green-200 bg-green-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-green-800 mb-2">Current Dataset</h3>
+              <div className="border border-meta-teal/30 bg-meta-teal/5 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-meta-teal-800 mb-2">Current Dataset</h3>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <FileJson className="w-5 h-5 mr-2 text-green-700" />
+                    <FileJson className="w-5 h-5 mr-2 text-meta-teal" />
                     <div>
-                      <span className="font-medium text-green-800">{uploadedDatasets[0].filename}</span>
-                      <span className="text-sm text-green-700 ml-2">
+                      <span className="font-medium text-meta-teal-800">{uploadedDatasets[0].filename}</span>
+                      <span className="text-sm text-meta-teal-800 ml-2">
                         ({uploadedDatasets[0].total_records} records)
                       </span>
                     </div>
                   </div>
                   <Button
-                    size="sm"
-                    variant="outline"
+                    size="medium"
+                    variant="outlinedDestructive"
                     onClick={() => handleDatasetDelete(uploadedDatasets[0].filename)}
-                    className="text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200"
                   >
                     <Trash2 className="w-4 h-4 mr-1" />
                     Remove
@@ -694,9 +710,9 @@ export const PromptInput = () => {
                 {/* Dataset Preview */}
                 {uploadedDatasets[0].preview && uploadedDatasets[0].preview.length > 0 && (
                   <div className="mt-4">
-                    <h4 className="text-sm font-semibold text-green-800 mb-2">Preview:</h4>
-                    <div className="bg-white border border-green-200 rounded-md p-3 max-h-40 overflow-y-auto">
-                      <pre className="text-xs text-green-900 whitespace-pre-wrap">
+                    <h4 className="text-sm font-semibold text-meta-teal-800 mb-2">Preview:</h4>
+                    <div className="bg-white border border-meta-teal/30 rounded-md p-3 max-h-40 overflow-y-auto">
+                      <pre className="text-xs text-meta-gray whitespace-pre-wrap">
                         {JSON.stringify(uploadedDatasets[0].preview[0], null, 2)}
                       </pre>
                     </div>
@@ -724,19 +740,19 @@ export const PromptInput = () => {
                   className={`w-full ${
                     uploadedDatasets.length > 0
                       ? "bg-white hover:bg-gray-50 text-gray-700 border border-gray-300"
-                      : "bg-white hover:bg-facebook-gray text-facebook-text border-2 border-dashed border-facebook-border"
+                      : "bg-white hover:bg-meta-gray-100 text-meta-gray border-2 border-dashed border-meta-gray-300"
                   }`}
                   disabled={isUploadingDataset}
                 >
                   {isUploadingDataset ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Uploading...
+                      <Loader2 className="w-4 h-4 ml-2 animate-spin" />
                     </>
                   ) : (
                     <>
-                      <Upload className="w-4 h-4 mr-2" />
                       {uploadedDatasets.length > 0 ? "Choose New Dataset" : "Choose JSON File"}
+                      <Upload className="w-4 h-4 ml-2" />
                     </>
                   )}
                 </Button>

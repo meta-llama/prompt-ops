@@ -6,91 +6,91 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 240 10% 3.9%;
+    /* Backgrounds: Meta Gray 100 for subtle off-white */
+    --background: 210 27% 96%;        /* Meta Gray 100 #F1F4F7 */
+    --foreground: 204 30% 16%;        /* Meta Gray #1c2b33 */
 
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;                /* White for cards */
+    --card-foreground: 204 30% 16%;   /* Meta Gray */
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    --popover-foreground: 204 30% 16%;
 
-    --primary: 221 83% 53%;  /* Facebook Blue #1877F2 */
+    /* Primary: Meta Blue */
+    --primary: 213 100% 44%;          /* Meta Blue #0064E0 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 214 32% 91%;
-    --secondary-foreground: 221 83% 53%;
+    /* Secondary: Light gray for subtle backgrounds */
+    --secondary: 210 27% 96%;         /* Meta Gray 100 */
+    --secondary-foreground: 204 30% 16%;
 
-    --muted: 210 40% 95%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted: slightly darker gray for less emphasis */
+    --muted: 210 27% 96%;             /* Meta Gray 100 */
+    --muted-foreground: 203 19% 47%;  /* Meta Gray 600 #67788A */
 
-    --accent: 214 32% 91%;
-    --accent-foreground: 221 83% 53%;
+    /* Accent: Meta Teal for highlights */
+    --accent: 172 100% 41%;           /* Meta Teal #00D2BE */
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221 83% 53%;
+    /* Borders: Meta Gray 300 */
+    --border: 210 14% 82%;            /* Meta Gray 300 #CBD2D9 */
+    --input: 210 14% 82%;
+    --ring: 213 100% 44%;             /* Meta Blue for focus rings */
 
     --radius: 0.5rem;
 
+    /* Sidebar */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 240 10% 3.9%;
-    --sidebar-primary: 221 83% 53%;  /* Facebook Blue */
+    --sidebar-foreground: 204 30% 16%;
+    --sidebar-primary: 213 100% 44%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 214 32% 91%;
-    --sidebar-accent-foreground: 221 83% 53%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 221 83% 53%;
-
-    /* Facebook-specific color variables */
-    --facebook-blue: 221 83% 53%;     /* #1877F2 */
-    --facebook-blue-light: 221 83% 63%; /* Lighter variant */
-    --facebook-blue-dark: 221 83% 43%;  /* Darker variant */
-    --facebook-gray: 240 9% 89%;       /* Light gray backgrounds */
-    --facebook-text: 240 10% 3.9%;     /* Near black text */
-    --facebook-border: 220 13% 91%;    /* Subtle borders */
+    --sidebar-accent: 210 27% 96%;
+    --sidebar-accent-foreground: 213 100% 44%;
+    --sidebar-border: 210 14% 82%;
+    --sidebar-ring: 213 100% 44%;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    /* Dark mode uses Meta Gray palette */
+    --background: 204 30% 16%;        /* Meta Gray #1c2b33 */
+    --foreground: 210 27% 96%;        /* Meta Gray 100 */
 
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
+    --card: 203 24% 20%;              /* Meta Gray 900 #283943 */
+    --card-foreground: 210 27% 96%;
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 203 24% 20%;
+    --popover-foreground: 210 27% 96%;
 
-    --primary: 221 83% 53%;  /* Facebook Blue stays consistent */
+    --primary: 213 100% 44%;          /* Meta Blue */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 203 20% 26%;         /* Meta Gray 800 #344854 */
+    --secondary-foreground: 210 27% 96%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 203 20% 26%;
+    --muted-foreground: 203 19% 47%;  /* Meta Gray 600 */
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 172 100% 41%;           /* Meta Teal */
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 221 83% 53%;
+    --border: 203 20% 26%;            /* Meta Gray 800 */
+    --input: 203 20% 26%;
+    --ring: 213 100% 44%;             /* Meta Blue */
 
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 221 83% 53%;
+    --sidebar-background: 204 30% 12%;
+    --sidebar-foreground: 210 27% 96%;
+    --sidebar-primary: 213 100% 44%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 221 83% 53%;
+    --sidebar-accent: 203 20% 26%;
+    --sidebar-accent-foreground: 210 27% 96%;
+    --sidebar-border: 203 20% 26%;
+    --sidebar-ring: 213 100% 44%;
   }
 }
 

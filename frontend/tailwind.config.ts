@@ -62,14 +62,53 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// Facebook/Meta specific colors
-				facebook: {
-					blue: 'hsl(var(--facebook-blue))',
-					'blue-light': 'hsl(var(--facebook-blue-light))',
-					'blue-dark': 'hsl(var(--facebook-blue-dark))',
-					gray: 'hsl(var(--facebook-gray))',
-					text: 'hsl(var(--facebook-text))',
-					border: 'hsl(var(--facebook-border))'
+				// Meta brand colors
+				meta: {
+					// Primary blue
+					blue: {
+						DEFAULT: '#0064E0',
+						800: '#004bb9',
+						1000: '#000a50',
+					},
+					// Accent: Teal (highlights, success states)
+					teal: {
+						DEFAULT: '#00D2BE',
+						700: '#009b9b',
+						800: '#00787D',
+						900: '#00414b',
+					},
+					// Accent: Purple (features, special elements)
+					purple: {
+						DEFAULT: '#8773FF',
+						800: '#6441D2',
+						900: '#280578',
+						1000: '#0a005a',
+					},
+					// Accent: Pink (notifications, badges)
+					pink: {
+						DEFAULT: '#FA7DC8',
+						800: '#B43C8C',
+						900: '#640055',
+					},
+					// Accent: Orange (warnings, experimental)
+					orange: {
+						DEFAULT: '#FA8719',
+						800: '#A0460A',
+					},
+					// Accent: Cyan
+					cyan: {
+						700: '#0096c8',
+						800: '#0073aa',
+					},
+					// Grays - the backbone of the UI
+					gray: {
+						DEFAULT: '#1c2b33',
+						900: '#283943',
+						800: '#344854',
+						600: '#67788A',
+						300: '#CBD2D9',
+						100: '#F1F4F7',
+					},
 				}
 			},
 			borderRadius: {

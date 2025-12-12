@@ -43,7 +43,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({
                   "relative flex items-center justify-center",
                   "w-10 h-10 rounded-full border-2",
                   "transition-all duration-300",
-                  isStepComplete(index) && "bg-green-500 border-green-500",
+                  isStepComplete(index) && "bg-meta-teal border-meta-teal",
                   isStepActive(index) && "bg-orange-400 border-orange-400",
                   !isStepComplete(index) && !isStepActive(index) && "bg-white border-gray-300"
                 )}
@@ -85,7 +85,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({
               <div
                 className={cn(
                   "w-0.5 h-8 ml-5",
-                  isStepComplete(index) ? "bg-green-500" : "bg-gray-300",
+                  isStepComplete(index) ? "bg-meta-teal" : "bg-meta-gray-300",
                   "transition-colors duration-300"
                 )}
               />
@@ -115,8 +115,8 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({
                 "relative flex items-center justify-center",
                 "w-8 h-8 rounded-full border-2 mb-2",
                 "transition-all duration-300 shrink-0",
-                isStepComplete(index) && "bg-green-500 border-green-500",
-                isStepActive(index) && "bg-facebook-blue border-facebook-blue",
+                isStepComplete(index) && "bg-meta-teal border-meta-teal",
+                isStepActive(index) && "bg-meta-blue border-meta-blue",
                 !isStepComplete(index) && !isStepActive(index) && "bg-white border-gray-300"
               )}
             >
@@ -141,8 +141,8 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({
                   "text-xs font-medium leading-tight",
                   "break-words hyphens-auto",
                   isStepComplete(index) || isStepActive(index)
-                    ? "text-facebook-text"
-                    : "text-facebook-gray"
+                    ? "text-meta-gray"
+                    : "text-meta-gray-300"
                 )}
                 style={{ wordBreak: 'break-word' }}
               >
@@ -156,7 +156,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({
             <div
               className={cn(
                 "h-0.5 mt-4 mx-1 flex-1 min-w-[12px] max-w-[24px]",
-                isStepComplete(index) ? "bg-green-500" : "bg-gray-300",
+                isStepComplete(index) ? "bg-meta-teal" : "bg-meta-gray-300",
                 "transition-colors duration-300"
               )}
             />

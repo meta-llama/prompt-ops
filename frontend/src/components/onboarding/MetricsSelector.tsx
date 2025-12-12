@@ -12,6 +12,7 @@ import {
   AlertCircle,
   HelpCircle,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 // Helper components for complex parameter types
 const ArrayInput: React.FC<{
@@ -48,7 +49,7 @@ const ArrayInput: React.FC<{
       value={inputValue}
       onChange={handleChange}
       placeholder={placeholder}
-      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-meta-blue focus:border-transparent"
     />
   );
 };
@@ -94,7 +95,7 @@ const FieldMappingInput: React.FC<{
       value={inputValue}
       onChange={handleChange}
       placeholder={placeholder}
-      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-meta-blue focus:border-transparent"
     />
   );
 };
@@ -542,7 +543,7 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
         className={cn(
           "border rounded-xl p-6 transition-all duration-200",
           isSelected
-            ? "border-facebook-blue bg-facebook-blue/5"
+            ? "border-meta-blue bg-meta-blue/5"
             : "border-gray-300 hover:border-gray-400"
         )}
       >
@@ -554,8 +555,8 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
               className={cn(
                 "w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 transition-colors",
                 isSelected
-                  ? "border-facebook-blue bg-facebook-blue"
-                  : "border-gray-300 hover:border-facebook-blue"
+                  ? "border-meta-blue bg-meta-blue"
+                  : "border-gray-300 hover:border-meta-blue"
               )}
             >
               {isSelected && <Check className="w-3 h-3 text-white" />}
@@ -568,13 +569,11 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
                   {metric.name}
                 </h3>
                 {isRecommended && (
-                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                    Recommended
-                  </span>
+                  <Badge variant="success">Recommended</Badge>
                 )}
                 <span
                   className={cn(
-                    "text-xs px-2 py-1 rounded-full",
+                    "text-xs px-2 py-1 rounded-md",
                     typeInfo.color
                   )}
                 >
@@ -689,7 +688,7 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
                             e.target.checked
                           )
                         }
-                        className="rounded border-gray-300 text-facebook-blue focus:ring-facebook-blue"
+                        className="rounded border-gray-300 text-meta-blue focus:ring-meta-blue"
                       />
                       <span className="ml-2 text-sm text-gray-600">
                         {configurations[metric.id]?.[paramName] ?? param.default
@@ -709,7 +708,7 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
                           e.target.value
                         )
                       }
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-meta-blue focus:border-transparent"
                     >
                       {param.options?.map((option) => (
                         <option key={option} value={option}>
@@ -755,7 +754,7 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
                             : e.target.value
                         )
                       }
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-meta-blue focus:border-transparent"
                     />
                   )}
                 </div>

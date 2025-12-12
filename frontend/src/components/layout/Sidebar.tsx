@@ -19,13 +19,13 @@ export const Sidebar = () => {
   };
 
   return (
-    <nav className="relative z-10 w-full px-8 py-6 bg-white/80 backdrop-blur-sm border-b border-facebook-border">
+    <nav className="relative z-10 w-full px-8 py-6 bg-white border-b border-meta-gray-300/50">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo/Brand */}
         <div className="flex items-center gap-3">
           <Link
             to="/"
-            className="text-facebook-text font-bold text-2xl tracking-tight hover:text-facebook-blue transition-colors duration-200 cursor-pointer"
+            className="text-meta-gray font-bold text-2xl tracking-tight hover:text-meta-blue transition-colors duration-200 cursor-pointer"
           >
             llama-prompt-ops
           </Link>
@@ -52,7 +52,7 @@ export const Sidebar = () => {
                   href={item.path}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium transition-all duration-200 text-facebook-text/70 hover:text-facebook-blue hover:bg-facebook-gray/50"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium transition-all duration-200 text-meta-gray/70 hover:text-meta-blue hover:bg-meta-gray-100/50"
                 >
                   {navContent}
                 </a>
@@ -67,8 +67,8 @@ export const Sidebar = () => {
                   onClick={() => handleNavClick(item)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium transition-all duration-200 ${
                     isActive
-                      ? 'text-white bg-facebook-blue shadow-sm'
-                      : 'text-facebook-text/70 hover:text-facebook-blue hover:bg-facebook-gray/50'
+                      ? 'text-white bg-meta-blue shadow-sm'
+                      : 'text-meta-gray/70 hover:text-meta-blue hover:bg-meta-gray-100/50'
                   }`}
                 >
                   {navContent}
@@ -82,8 +82,8 @@ export const Sidebar = () => {
                 onClick={() => handleNavClick(item)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium transition-all duration-200 ${
                   isActive
-                    ? 'text-white bg-facebook-blue shadow-sm'
-                    : 'text-facebook-text/70 hover:text-facebook-blue hover:bg-facebook-gray/50'
+                    ? 'text-white bg-meta-blue shadow-sm'
+                    : 'text-meta-gray/70 hover:text-meta-blue hover:bg-meta-gray-100/50'
                 }`}
               >
                 {navContent}

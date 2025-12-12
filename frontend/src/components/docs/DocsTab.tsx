@@ -133,12 +133,12 @@ export const DocsTab = () => {
     <div className="max-w-7xl mx-auto h-full">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-black text-facebook-text mb-4 tracking-tight">
+        <h1 className="text-2xl md:text-3xl font-normal text-meta-gray mb-4 tracking-tight">
           Documentation
         </h1>
-        <p className="text-lg text-facebook-text/70 max-w-8xl">
+        <p className="text-lg text-meta-gray/70 max-w-8xl">
           Comprehensive guides, API references, and examples to help you get the most out of llama-prompt-ops.
-          <span className="inline-block ml-2 px-2 py-1 bg-facebook-blue/10 text-facebook-blue text-sm rounded-full font-medium">
+          <span className="inline-block ml-2 px-2 py-1 bg-meta-blue/10 text-meta-blue text-sm rounded-md font-medium">
             💬 Ask AI for help (Cmd+J)
           </span>
         </p>
@@ -147,12 +147,12 @@ export const DocsTab = () => {
       {/* Search Bar */}
       <div className="mb-8">
         <div className="relative max-w-lg">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-facebook-text/50" />
+          <Search className="absolute left-3 top-3 h-4 w-4 text-meta-gray/50" />
           <Input
             placeholder="Search documentation..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-12 text-lg border-facebook-border focus:border-facebook-blue focus:ring-facebook-blue/20"
+            className="pl-10 h-12 text-lg border-meta-gray-300 focus:border-meta-blue focus:ring-meta-blue/20"
           />
         </div>
       </div>
@@ -191,11 +191,11 @@ const DocsOverview = ({ docs, onSelectDoc }: { docs: DocItem[], onSelectDoc: (do
   return (
     <div className="space-y-8">
       <div className="text-center py-8">
-        <Book className="w-16 h-16 text-facebook-blue/20 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-facebook-text mb-2">
+        <Book className="w-16 h-16 text-meta-blue/20 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-meta-gray mb-2">
           Welcome to the Documentation
         </h2>
-        <p className="text-facebook-text/70">
+        <p className="text-meta-gray/70">
           Select a document from the sidebar or browse by category below.
         </p>
       </div>
@@ -206,13 +206,13 @@ const DocsOverview = ({ docs, onSelectDoc }: { docs: DocItem[], onSelectDoc: (do
           return (
             <div
               key={category}
-              className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-facebook-border hover:shadow-xl transition-all duration-300"
+              className="bg-white rounded-3xl p-6 border border-meta-gray-300/50 hover:border-meta-blue/30 transition-colors"
             >
-              <h3 className="text-xl font-bold text-facebook-text mb-4 flex items-center gap-2">
-                {category === 'Basics' && <Book className="w-5 h-5 text-facebook-blue" />}
-                {category === 'Guides' && <FileText className="w-5 h-5 text-facebook-blue" />}
-                {category === 'Intermediate' && <Settings className="w-5 h-5 text-facebook-blue" />}
-                {category === 'Advanced' && <Code className="w-5 h-5 text-facebook-blue" />}
+              <h3 className="text-xl font-bold text-meta-gray mb-4 flex items-center gap-2">
+                {category === 'Basics' && <Book className="w-5 h-5 text-meta-blue" />}
+                {category === 'Guides' && <FileText className="w-5 h-5 text-meta-blue" />}
+                {category === 'Intermediate' && <Settings className="w-5 h-5 text-meta-blue" />}
+                {category === 'Advanced' && <Code className="w-5 h-5 text-meta-blue" />}
                 {category}
               </h3>
               <div className="space-y-3">
@@ -220,20 +220,20 @@ const DocsOverview = ({ docs, onSelectDoc }: { docs: DocItem[], onSelectDoc: (do
                   <button
                     key={doc.id}
                     onClick={() => onSelectDoc(doc)}
-                    className="w-full text-left p-3 rounded-lg hover:bg-facebook-gray/20 transition-all duration-200 group"
+                    className="w-full text-left p-3 rounded-lg hover:bg-meta-gray-100/20 transition-all duration-200 group"
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium text-facebook-text group-hover:text-facebook-blue transition-colors">
+                        <h4 className="font-medium text-meta-gray group-hover:text-meta-blue transition-colors">
                           {doc.title}
                         </h4>
                         {doc.description && (
-                          <p className="text-sm text-facebook-text/60 mt-1">
+                          <p className="text-sm text-meta-gray/60 mt-1">
                             {doc.description}
                           </p>
                         )}
                       </div>
-                      <ChevronRight className="w-4 h-4 text-facebook-text/40 group-hover:text-facebook-blue transition-colors" />
+                      <ChevronRight className="w-4 h-4 text-meta-gray/40 group-hover:text-meta-blue transition-colors" />
                     </div>
                   </button>
                 ))}

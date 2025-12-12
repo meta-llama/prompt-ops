@@ -97,14 +97,14 @@ To get started with ${doc.title.toLowerCase()}, follow these steps:
 
   if (loading) {
     return (
-      <div className="h-full bg-white/80 backdrop-blur-sm rounded-2xl border border-facebook-border shadow-lg p-8">
+      <div className="h-full bg-white rounded-3xl border border-meta-gray-300/50 p-8">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-facebook-gray/20 rounded-lg w-3/4"></div>
-          <div className="h-4 bg-facebook-gray/20 rounded-lg w-1/2"></div>
+          <div className="h-8 bg-meta-gray-100/20 rounded-lg w-3/4"></div>
+          <div className="h-4 bg-meta-gray-100/20 rounded-lg w-1/2"></div>
           <div className="space-y-2">
-            <div className="h-4 bg-facebook-gray/20 rounded-lg"></div>
-            <div className="h-4 bg-facebook-gray/20 rounded-lg w-5/6"></div>
-            <div className="h-4 bg-facebook-gray/20 rounded-lg w-4/6"></div>
+            <div className="h-4 bg-meta-gray-100/20 rounded-lg"></div>
+            <div className="h-4 bg-meta-gray-100/20 rounded-lg w-5/6"></div>
+            <div className="h-4 bg-meta-gray-100/20 rounded-lg w-4/6"></div>
           </div>
         </div>
       </div>
@@ -113,16 +113,16 @@ To get started with ${doc.title.toLowerCase()}, follow these steps:
 
   if (error) {
     return (
-      <div className="h-full bg-white/80 backdrop-blur-sm rounded-2xl border border-facebook-border shadow-lg p-8">
+      <div className="h-full bg-white rounded-3xl border border-meta-gray-300/50 p-8">
         <div className="text-center py-12">
-          <FileText className="w-16 h-16 text-facebook-text/20 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-facebook-text mb-2">
+          <FileText className="w-16 h-16 text-meta-gray/20 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-meta-gray mb-2">
             Content Not Available
           </h3>
-          <p className="text-facebook-text/70 mb-4">
+          <p className="text-meta-gray/70 mb-4">
             {error}
           </p>
-          <p className="text-sm text-facebook-text/50">
+          <p className="text-sm text-meta-gray/50">
             This is a demo version. In a real implementation, the content would be loaded from the actual markdown files.
           </p>
         </div>
@@ -131,16 +131,16 @@ To get started with ${doc.title.toLowerCase()}, follow these steps:
   }
 
   return (
-    <div className="h-full bg-white/80 backdrop-blur-sm rounded-2xl border border-facebook-border shadow-lg overflow-hidden flex flex-col">
+    <div className="h-full bg-white rounded-3xl border border-meta-gray-300/50 overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-facebook-border">
+      <div className="flex items-center justify-between p-6 border-b border-meta-gray-300">
         <div className="flex items-center gap-3">
-          {doc.icon && <doc.icon className="w-6 h-6 text-facebook-blue" />}
+          {doc.icon && <doc.icon className="w-6 h-6 text-meta-blue" />}
           <div>
-            <h1 className="text-2xl font-bold text-facebook-text">
+            <h1 className="text-2xl font-bold text-meta-gray">
               {doc.title}
             </h1>
-            <p className="text-sm text-facebook-text/60">
+            <p className="text-sm text-meta-gray/60">
               {doc.category} • {doc.path}
             </p>
           </div>
@@ -151,10 +151,10 @@ To get started with ${doc.title.toLowerCase()}, follow these steps:
             onClick={handleCopy}
             variant="ghost"
             size="sm"
-            className="hover:bg-facebook-gray/20"
+            className="hover:bg-meta-gray-100/20"
           >
             {copySuccess ? (
-              <Check className="w-4 h-4 text-green-600" />
+              <Check className="w-4 h-4 text-meta-teal" />
             ) : (
               <Copy className="w-4 h-4" />
             )}
@@ -171,20 +171,20 @@ To get started with ${doc.title.toLowerCase()}, follow these steps:
             components={{
               // Custom components for better styling
               h1: ({node, ...props}) => (
-                <h1 className="text-3xl font-bold text-facebook-text mb-4 pb-2 border-b border-facebook-border" {...props} />
+                <h1 className="text-3xl font-bold text-meta-gray mb-4 pb-2 border-b border-meta-gray-300" {...props} />
               ),
               h2: ({node, ...props}) => (
-                <h2 className="text-2xl font-bold text-facebook-text mb-3 mt-8" {...props} />
+                <h2 className="text-2xl font-bold text-meta-gray mb-3 mt-8" {...props} />
               ),
               h3: ({node, ...props}) => (
-                <h3 className="text-xl font-bold text-facebook-text mb-2 mt-6" {...props} />
+                <h3 className="text-xl font-bold text-meta-gray mb-2 mt-6" {...props} />
               ),
               p: ({node, ...props}) => (
-                <p className="text-facebook-text/80 mb-4 leading-relaxed" {...props} />
+                <p className="text-meta-gray/80 mb-4 leading-relaxed" {...props} />
               ),
               a: ({node, ...props}) => (
                 <a
-                  className="text-facebook-blue hover:text-facebook-blue-dark underline decoration-facebook-blue/30 hover:decoration-facebook-blue transition-colors"
+                  className="text-meta-blue hover:text-meta-blue-800 underline decoration-meta-blue/30 hover:decoration-meta-blue transition-colors"
                   {...props}
                 />
               ),
@@ -195,36 +195,36 @@ To get started with ${doc.title.toLowerCase()}, follow these steps:
                     {children}
                   </code>
                 ) : (
-                  <code className="bg-facebook-gray/20 text-facebook-text px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
+                  <code className="bg-meta-gray-100/20 text-meta-gray px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
                     {children}
                   </code>
                 );
               },
               pre: ({node, ...props}) => (
-                <pre className="bg-facebook-gray/10 border border-facebook-border rounded-lg p-4 overflow-x-auto mb-4" {...props} />
+                <pre className="bg-meta-gray-100/10 border border-meta-gray-300 rounded-lg p-4 overflow-x-auto mb-4" {...props} />
               ),
               blockquote: ({node, ...props}) => (
-                <blockquote className="border-l-4 border-facebook-blue pl-4 italic text-facebook-text/70 my-4" {...props} />
+                <blockquote className="border-l-4 border-meta-blue pl-4 italic text-meta-gray/70 my-4" {...props} />
               ),
               ul: ({node, ...props}) => (
-                <ul className="list-disc list-inside mb-4 text-facebook-text/80 space-y-1" {...props} />
+                <ul className="list-disc list-inside mb-4 text-meta-gray/80 space-y-1" {...props} />
               ),
               ol: ({node, ...props}) => (
-                <ol className="list-decimal list-inside mb-4 text-facebook-text/80 space-y-1" {...props} />
+                <ol className="list-decimal list-inside mb-4 text-meta-gray/80 space-y-1" {...props} />
               ),
               li: ({node, ...props}) => (
                 <li className="leading-relaxed" {...props} />
               ),
               table: ({node, ...props}) => (
                 <div className="overflow-x-auto mb-4">
-                  <table className="min-w-full border-collapse border border-facebook-border" {...props} />
+                  <table className="min-w-full border-collapse border border-meta-gray-300" {...props} />
                 </div>
               ),
               th: ({node, ...props}) => (
-                <th className="border border-facebook-border px-4 py-2 bg-facebook-gray/20 text-facebook-text font-medium text-left" {...props} />
+                <th className="border border-meta-gray-300 px-4 py-2 bg-meta-gray-100/20 text-meta-gray font-medium text-left" {...props} />
               ),
               td: ({node, ...props}) => (
-                <td className="border border-facebook-border px-4 py-2 text-facebook-text/80" {...props} />
+                <td className="border border-meta-gray-300 px-4 py-2 text-meta-gray/80" {...props} />
               ),
             }}
           >

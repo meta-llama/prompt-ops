@@ -127,7 +127,7 @@ const CustomFieldMapping: React.FC<{
           onChange={(e) => setLocalTargetField(e.target.value)}
           onBlur={handleTargetFieldBlur}
           onKeyPress={handleKeyPress}
-          className="flex-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+          className="flex-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-meta-blue focus:border-transparent"
         />
         <button
           onClick={onRemove}
@@ -140,7 +140,7 @@ const CustomFieldMapping: React.FC<{
       <select
         value={sourceField || ""}
         onChange={(e) => onSourceFieldChange(targetField, e.target.value)}
-        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-meta-blue focus:border-transparent"
       >
         <option value="">Select source field...</option>
         {availableFields.map((field) => (
@@ -318,7 +318,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
   return (
     <div className={cn("space-y-6", className)}>
       {/* Header */}
-      <div className="bg-white/90 backdrop-blur-xl rounded-xl p-6 shadow-xl">
+      <div className="bg-white rounded-2xl p-6 border border-meta-gray-300/50">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Field Mapping</h2>
         <p className="text-gray-600 mb-4">
           To evaluate your dataset correctly, map your dataset's fields to the required fields below.
@@ -337,7 +337,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
       {/* Field Mapping */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Required/Custom Fields */}
-        <div className="bg-white/90 backdrop-blur-xl rounded-xl p-6 shadow-xl max-h-[600px] overflow-y-auto">
+        <div className="bg-white rounded-2xl p-6 border border-meta-gray-300/50 max-h-[600px] overflow-y-auto">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             {useCase === "custom" ? "Custom Field Mappings" : "Required Fields"}
           </h3>
@@ -390,7 +390,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
                     setMappings(newMappings);
                     onMappingUpdate(newMappings);
                   }}
-                  className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-facebook-blue hover:text-facebook-blue transition-colors"
+                  className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-meta-blue hover:text-meta-blue transition-colors"
                 >
                   + Add Field Mapping
                 </button>
@@ -404,7 +404,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
                   className={cn(
                     "p-4 border-2 border-dashed rounded-lg",
                     mappings[requiredField] && mappings[requiredField] !== ""
-                      ? "border-green-500 bg-green-50/30"
+                      ? "border-meta-teal bg-meta-teal/10"
                       : "border-red-500 bg-red-50/30"
                   )}
                 >
@@ -422,7 +422,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
                     onChange={(e) =>
                       handleMappingChange(requiredField, e.target.value)
                     }
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-meta-blue focus:border-transparent"
                   >
                     <option value="">Select field...</option>
                     {analysis.fields.map((field) => (
@@ -433,7 +433,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
                   </select>
 
                   {mappings[requiredField] && (
-                    <div className="mt-2 flex items-center text-sm text-green-600">
+                    <div className="mt-2 flex items-center text-sm text-meta-teal">
                       <CheckCircle className="w-4 h-4 mr-1" />
                       Mapped to: {mappings[requiredField]}
                     </div>
@@ -444,7 +444,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
           )}
         </div>
 
-        <div className="bg-white/90 backdrop-blur-xl rounded-xl p-6 shadow-xl max-h-[600px] flex flex-col">
+        <div className="bg-white rounded-2xl p-6 border border-meta-gray-300/50 max-h-[600px] flex flex-col">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Detected Fields
           </h3>
@@ -474,7 +474,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
                       <span
                         className={cn(
                           "text-xs font-medium",
-                          field.coverage >= 0.9 ? "text-green-600" :
+                          field.coverage >= 0.9 ? "text-meta-teal" :
                           field.coverage >= 0.7 ? "text-yellow-600" : "text-red-600"
                         )}
                       >
@@ -507,7 +507,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
 
       {/* Preview Section */}
       {showPreview && previewData && (
-        <div className="bg-white/90 backdrop-blur-xl rounded-xl p-6 shadow-xl">
+        <div className="bg-white rounded-2xl p-6 border border-meta-gray-300/50">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Preview Transformation
           </h3>
@@ -545,8 +545,8 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
             onClick={handlePreview}
             disabled={previewLoading}
             className={cn(
-              "flex items-center space-x-2 px-6 py-2 border border-facebook-blue text-facebook-blue rounded-lg",
-              "hover:bg-facebook-blue hover:text-white transition-colors",
+              "flex items-center space-x-2 px-6 py-2 border border-meta-blue text-meta-blue rounded-full",
+              "hover:bg-meta-blue hover:text-white transition-colors",
               "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
           >

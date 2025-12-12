@@ -121,15 +121,15 @@ export const UseCaseSelector: React.FC<UseCaseSelectorProps> = ({
             className={cn(
               "relative p-6 rounded-xl border-2",
               "text-left transition-all duration-200",
-              "hover:shadow-lg hover:-translate-y-1",
+              "hover:border-meta-blue/30",
               selectedUseCase === useCase.id
-                ? "border-facebook-blue bg-facebook-blue/5"
+                ? "border-meta-blue bg-meta-blue/5"
                 : "border-gray-300 bg-white hover:border-gray-400"
             )}
           >
             {/* Selection indicator */}
             {selectedUseCase === useCase.id && (
-              <div className="absolute top-3 right-3 w-6 h-6 bg-facebook-blue rounded-full flex items-center justify-center">
+              <div className="absolute top-3 right-3 w-6 h-6 bg-meta-blue rounded-full flex items-center justify-center">
                 <Check className="w-4 h-4 text-white" />
               </div>
             )}
@@ -138,7 +138,7 @@ export const UseCaseSelector: React.FC<UseCaseSelectorProps> = ({
             <div className={cn(
               "w-12 h-12 rounded-lg flex items-center justify-center mb-4",
               selectedUseCase === useCase.id
-                ? "bg-facebook-blue text-white"
+                ? "bg-meta-blue text-white"
                 : "bg-gray-100 text-gray-600"
             )}>
               {useCase.icon}
@@ -159,7 +159,7 @@ export const UseCaseSelector: React.FC<UseCaseSelectorProps> = ({
               </p>
               {useCase.examples.slice(0, 4).map((example, index) => (
                 <p key={index} className="text-xs text-gray-700 flex items-center">
-                  <span className="w-1 h-1 bg-facebook-blue rounded-full mr-2 flex-shrink-0"></span>
+                  <span className="w-1 h-1 bg-meta-blue rounded-full mr-2 flex-shrink-0"></span>
                   {example}
                 </p>
               ))}
