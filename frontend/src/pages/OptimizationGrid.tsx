@@ -288,10 +288,6 @@ const OptimizationGrid = () => {
 
   return (
     <div className="min-h-screen w-full bg-background relative overflow-hidden">
-      {/* Background styling */}
-      <div className="absolute inset-0 bg-meta-gray-100/50"></div>
-      <div className="absolute inset-0 opacity-[0.02] bg-[radial-gradient(circle_at_50%_50%,hsl(var(--meta-gray))_1px,transparent_1px)] bg-[length:24px_24px]"></div>
-
       {/* Navigation */}
       <Sidebar />
 
@@ -301,7 +297,7 @@ const OptimizationGrid = () => {
           {/* Header */}
           <div className="text-center mb-6">
             <div className="flex items-center justify-center gap-4 mb-4">
-              <h1 className="text-2xl md:text-3xl font-normal text-meta-gray tracking-tight">
+              <h1 className="text-2xl md:text-3xl font-normal text-foreground tracking-tight">
                 Optimize your prompt
               </h1>
               {/* Testing Toggle Button */}
@@ -313,14 +309,14 @@ const OptimizationGrid = () => {
                 {isFormValid() ? "Clear All" : "Fill All"}
               </Button>
             </div>
-            <p className="text-sm text-meta-gray/60">
+            <p className="text-sm text-muted-foreground">
               Configure your optimization workflow visually
             </p>
           </div>
 
           {/* Mode Selector - Matching MainContent style */}
           <div className="flex justify-center mb-6">
-            <div className="bg-white p-1 rounded-xl shadow-lg border border-meta-gray-300 relative">
+            <div className="bg-panel p-1 rounded-xl shadow-lg border border-border relative">
               <div className="grid grid-cols-2 gap-1 relative">
                 {/* Sliding indicator */}
                 <div
@@ -336,8 +332,8 @@ const OptimizationGrid = () => {
                   variant="ghost"
                   className={`relative w-full px-8 py-3 text-lg font-medium z-10 transition-all duration-300 rounded-lg hover:bg-transparent ${
                     activeMode === "migrate"
-                      ? "text-white hover:text-white"
-                      : "text-meta-gray hover:text-meta-gray"
+                      ? "text-white hover:text-white dark:text-meta-gray-900 dark:hover:text-meta-gray-900"
+                      : "text-foreground hover:text-foreground"
                   }`}
                 >
                   Optimize
@@ -348,8 +344,8 @@ const OptimizationGrid = () => {
                   variant="ghost"
                   className={`relative w-full px-8 py-3 text-lg font-medium z-10 transition-all duration-300 rounded-lg hover:bg-transparent ${
                     activeMode === "enhance"
-                      ? "text-white hover:text-white"
-                      : "text-meta-gray hover:text-meta-gray"
+                      ? "text-white hover:text-white dark:text-meta-gray-900 dark:hover:text-meta-gray-900"
+                      : "text-foreground hover:text-foreground"
                   }`}
                 >
                   Enhance
@@ -465,8 +461,9 @@ const OptimizationGrid = () => {
             {isFormValid() ? (
               <Button
                 onClick={handleStartOptimization}
-                className="w-full h-12 text-lg font-medium text-white bg-meta-blue hover:bg-meta-blue-800 transition-colors rounded-full"
-                size="lg"
+                variant="filled"
+                className="w-full h-12 text-lg font-medium rounded-full"
+                size="large"
               >
                 <Play className="w-6 h-6 mr-2" />
                 Optimize
@@ -475,15 +472,16 @@ const OptimizationGrid = () => {
               <Button
                 onClick={handleStartOptimization}
                 disabled={true}
-                className="w-full h-12 text-lg font-medium text-white bg-meta-gray-300 opacity-50 cursor-not-allowed rounded-xl"
-                size="lg"
+                variant="filled"
+                className="w-full h-12 text-lg font-medium rounded-xl"
+                size="large"
               >
                 <Play className="w-6 h-6 mr-2" />
                 Optimize
               </Button>
             )}
             {!isFormValid() && (
-              <p className="text-sm text-meta-gray/60 text-center mt-2">
+              <p className="text-sm text-muted-foreground text-center mt-2">
                 Complete all required fields to start optimization
               </p>
             )}

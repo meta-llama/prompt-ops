@@ -444,9 +444,9 @@ export const PromptInput = () => {
           </div>
         </div>
       ) : isOptimizing ? (
-        <div className="bg-white rounded-3xl p-8 border border-meta-gray-300/50 text-center">
-          <h2 className="text-3xl font-bold mb-2 text-meta-gray">Run Optimization</h2>
-          <p className="text-meta-gray/70 mb-8">Ready to optimize your prompt for Llama models. This process typically takes 5-10 minutes.</p>
+        <div className="bg-panel rounded-3xl p-8 border border-border text-center">
+          <h2 className="text-3xl font-bold mb-2 text-foreground">Run Optimization</h2>
+          <p className="text-muted-foreground mb-8">Ready to optimize your prompt for Llama models. This process typically takes 5-10 minutes.</p>
 
           <div className="flex justify-center mb-8">
             <div className="w-20 h-20">
@@ -460,8 +460,8 @@ export const PromptInput = () => {
             </div>
           </div>
 
-          <h3 className="text-2xl font-semibold mb-2 text-meta-gray">Optimizing Prompt...</h3>
-          <p className="text-meta-gray/70 mb-8">This may take several minutes.</p>
+          <h3 className="text-2xl font-semibold mb-2 text-foreground">Optimizing Prompt...</h3>
+          <p className="text-muted-foreground mb-8">This may take several minutes.</p>
 
           <OptimizationProgress steps={optimizationSteps} />
 
@@ -469,7 +469,7 @@ export const PromptInput = () => {
           <div className="flex justify-center mt-6">
             <button
               onClick={handleCancelOptimization}
-              className="bg-meta-gray-100 hover:bg-meta-gray-300 text-meta-gray border border-meta-gray-300 px-6 py-2 rounded-full font-medium transition-colors"
+              className="bg-muted hover:bg-muted/80 text-foreground border border-border px-6 py-2 rounded-full font-medium transition-colors"
             >
               Cancel
             </button>
@@ -479,13 +479,13 @@ export const PromptInput = () => {
         <>
           {/* Prompt input - only show in enhance mode */}
           {activeMode === 'enhance' && (
-            <div className="relative bg-white rounded-3xl p-6 md:p-8 border border-meta-gray-300/50 mb-8">
+            <div className="relative bg-panel rounded-3xl p-6 md:p-8 border border-border mb-8">
               {/* Header */}
               <div className="text-center mb-8 pt-4">
-                <h1 className="text-2xl md:text-3xl font-normal text-meta-gray mb-4 tracking-tight">
+                <h1 className="text-2xl md:text-3xl font-normal text-foreground mb-4 tracking-tight">
                   Prompt Enhancement
                 </h1>
-                <p className="text-meta-gray/70 text-lg max-w-2xl mx-auto">
+                <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
                   Enter your prompt below and configure the model to use. Click "Enhance Prompt" to improve it with AI assistance.
                 </p>
               </div>
@@ -495,41 +495,41 @@ export const PromptInput = () => {
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Your prompt..."
                 disabled={isOptimizing}
-                className={`w-full h-28 p-4 text-xl text-meta-gray bg-white/50 placeholder:text-meta-gray/50 border border-meta-gray-300 rounded-xl focus:ring-2 focus:ring-meta-blue focus:border-transparent resize-none leading-relaxed ${isOptimizing ? 'opacity-75' : ''}`}
+                className={`w-full h-28 p-4 text-xl text-foreground bg-background placeholder:text-muted-foreground border border-border rounded-xl focus:ring-2 focus:ring-ring focus:border-transparent resize-none leading-relaxed ${isOptimizing ? 'opacity-75' : ''}`}
               />
 
               {/* API Settings panel - always visible, not collapsible */}
-              <div className="mt-4 border-t border-meta-gray-300/30 pt-4">
-                <div className="flex items-center gap-2 text-sm text-meta-gray/70 mb-4">
+              <div className="mt-4 border-t border-border pt-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
                   <Settings size={16} />
                   <span className="font-medium">Model Configuration</span>
                 </div>
 
-                <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                <div className="space-y-4 p-4 bg-muted rounded-lg">
                   {/* Model name input - REQUIRED */}
                   <div>
-                    <Label className="text-sm text-meta-gray/80 mb-1.5">
-                      Model Name <span className="text-red-500">*</span>
+                    <Label className="text-sm text-foreground/80 mb-1.5">
+                      Model Name <span className="text-red-500 dark:text-red-400">*</span>
                     </Label>
                     <input
                       type="text"
                       value={enhanceSettings.model}
                       onChange={(e) => setEnhanceSettings({ ...enhanceSettings, model: e.target.value })}
                       placeholder="e.g., openrouter/meta-llama/llama-4-maverick"
-                      className="w-full px-3 py-2 text-sm border border-meta-gray-300 rounded-lg focus:ring-2 focus:ring-meta-blue focus:border-transparent"
+                      className="w-full px-3 py-2 text-sm border border-border bg-panel text-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
                       disabled={isOptimizing}
                       required
                     />
-                    <div className="text-xs text-meta-gray/50 mt-1">
-                      Use LiteLLM format: <code className="bg-gray-200 px-1 rounded">provider/model-name</code> (e.g., <code className="bg-gray-200 px-1 rounded">openrouter/meta-llama/llama-3.3-70b-instruct</code>)
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Use LiteLLM format: <code className="bg-muted px-1 rounded">provider/model-name</code> (e.g., <code className="bg-muted px-1 rounded">openrouter/meta-llama/llama-3.3-70b-instruct</code>)
                     </div>
                   </div>
 
                   {/* Optional settings divider */}
-                  <div className="border-t border-meta-gray-300/30 pt-4 mt-4">
+                  <div className="border-t border-border pt-4 mt-4">
                     <button
                       onClick={() => setShowEnhanceSettings(!showEnhanceSettings)}
-                      className="flex items-center gap-2 text-sm text-meta-gray/70 hover:text-meta-gray transition-colors"
+                      className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                     >
                       {showEnhanceSettings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       <span>Advanced Settings (optional)</span>
@@ -537,7 +537,7 @@ export const PromptInput = () => {
                         <Badge variant="success" className="ml-2">Configured</Badge>
                       )}
                     </button>
-                    <p className="text-xs text-meta-gray/50 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       Only needed for custom providers that LiteLLM doesn't auto-detect
                     </p>
                   </div>
@@ -546,41 +546,41 @@ export const PromptInput = () => {
                     <div className="space-y-4 pt-2">
                       {/* API Base URL */}
                       <div>
-                        <Label className="text-sm text-meta-gray/80 mb-1.5">API Base URL</Label>
+                        <Label className="text-sm text-foreground/80 mb-1.5">API Base URL</Label>
                         <input
                           type="text"
                           value={enhanceSettings.apiBaseUrl}
                           onChange={(e) => setEnhanceSettings({ ...enhanceSettings, apiBaseUrl: e.target.value })}
                           placeholder="e.g., https://api.llama.com/compat/v1"
-                          className="w-full px-3 py-2 text-sm border border-meta-gray-300 rounded-lg focus:ring-2 focus:ring-meta-blue focus:border-transparent"
+                          className="w-full px-3 py-2 text-sm border border-border bg-panel text-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
                           disabled={isOptimizing}
                         />
-                        <div className="text-xs text-meta-gray/50 mt-1">
+                        <div className="text-xs text-muted-foreground mt-1">
                           Override the API endpoint for self-hosted or custom providers
                         </div>
                       </div>
 
                       {/* API Key input */}
                       <div>
-                        <Label className="text-sm text-meta-gray/80 mb-1.5">API Key</Label>
+                        <Label className="text-sm text-foreground/80 mb-1.5">API Key</Label>
                         <div className="relative">
                           <input
                             type={showApiKey ? "text" : "password"}
                             value={enhanceSettings.apiKey}
                             onChange={(e) => setEnhanceSettings({ ...enhanceSettings, apiKey: e.target.value })}
                             placeholder="Your API key (if not set in environment)"
-                            className="w-full px-3 py-2 pr-10 text-sm border border-meta-gray-300 rounded-lg focus:ring-2 focus:ring-meta-blue focus:border-transparent"
+                            className="w-full px-3 py-2 pr-10 text-sm border border-border bg-panel text-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
                             disabled={isOptimizing}
                           />
                           <button
                             type="button"
                             onClick={() => setShowApiKey(!showApiKey)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-meta-gray/50 hover:text-meta-gray"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                           >
                             {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
                         </div>
-                        <div className="text-xs text-meta-gray/50 mt-1">
+                        <div className="text-xs text-muted-foreground mt-1">
                           Override the API key (usually set via environment variable)
                         </div>
                       </div>
@@ -592,7 +592,7 @@ export const PromptInput = () => {
                             setEnhanceSettings({ ...enhanceSettings, apiBaseUrl: '', apiKey: '' });
                             localStorage.setItem('enhanceSettings', JSON.stringify({ ...enhanceSettings, apiBaseUrl: '', apiKey: '' }));
                           }}
-                          className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1"
+                          className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 flex items-center gap-1"
                         >
                           <X size={14} />
                           Clear advanced settings
@@ -636,9 +636,9 @@ export const PromptInput = () => {
 
           {/* Configuration summary - shown after wizard completion */}
           {activeMode === 'migrate' && wizardCompleted && !showWizard && (
-            <div className="bg-white rounded-3xl border border-meta-gray-300/50 p-6 max-w-4xl mx-auto">
+            <div className="bg-panel rounded-3xl border border-border p-6 max-w-4xl mx-auto">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-2xl font-bold text-meta-gray">Configuration Summary</h3>
+                <h3 className="text-2xl font-bold text-foreground">Configuration Summary</h3>
                 <Button
                   onClick={() => setShowWizard(true)}
                   variant="outlined"
@@ -649,20 +649,20 @@ export const PromptInput = () => {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <span className="font-medium text-meta-gray/70">Dataset Adapter:</span>
-                  <p className="text-meta-gray">{config.datasetAdapter || 'Not selected'}</p>
+                  <span className="font-medium text-muted-foreground">Dataset Adapter:</span>
+                  <p className="text-foreground">{config.datasetAdapter || 'Not selected'}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-meta-gray/70">Metrics:</span>
-                  <p className="text-meta-gray">{config.metrics}</p>
+                  <span className="font-medium text-muted-foreground">Metrics:</span>
+                  <p className="text-foreground">{config.metrics}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-meta-gray/70">Optimizer:</span>
-                  <p className="text-meta-gray">{config.strategy}</p>
+                  <span className="font-medium text-muted-foreground">Optimizer:</span>
+                  <p className="text-foreground">{config.strategy}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-meta-gray/70">Model:</span>
-                  <p className="text-meta-gray">{config.model}</p>
+                  <span className="font-medium text-muted-foreground">Model:</span>
+                  <p className="text-foreground">{config.model}</p>
                 </div>
               </div>
             </div>

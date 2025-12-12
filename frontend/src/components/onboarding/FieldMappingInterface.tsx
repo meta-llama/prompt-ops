@@ -118,7 +118,7 @@ const CustomFieldMapping: React.FC<{
   };
 
   return (
-    <div className="p-4 border border-gray-300 rounded-lg">
+    <div className="p-4 border border-border rounded-lg">
       <div className="flex items-center space-x-3 mb-2">
         <input
           type="text"
@@ -127,7 +127,7 @@ const CustomFieldMapping: React.FC<{
           onChange={(e) => setLocalTargetField(e.target.value)}
           onBlur={handleTargetFieldBlur}
           onKeyPress={handleKeyPress}
-          className="flex-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-meta-blue focus:border-transparent"
+          className="flex-1 p-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-transparent bg-input text-foreground"
         />
         <button
           onClick={onRemove}
@@ -140,7 +140,7 @@ const CustomFieldMapping: React.FC<{
       <select
         value={sourceField || ""}
         onChange={(e) => onSourceFieldChange(targetField, e.target.value)}
-        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-meta-blue focus:border-transparent"
+        className="w-full p-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-transparent bg-input text-foreground"
       >
         <option value="">Select source field...</option>
         {availableFields.map((field) => (
@@ -283,7 +283,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2" />
-          <p className="text-gray-600">Analyzing dataset...</p>
+          <p className="text-muted-foreground">Analyzing dataset...</p>
         </div>
       </div>
     );
@@ -310,7 +310,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
   if (!analysis) {
     return (
       <div className="p-6 text-center">
-        <p className="text-gray-600">No analysis data available</p>
+        <p className="text-muted-foreground">No analysis data available</p>
       </div>
     );
   }
@@ -318,14 +318,14 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
   return (
     <div className={cn("space-y-6", className)}>
       {/* Header */}
-      <div className="bg-white rounded-2xl p-6 border border-meta-gray-300/50">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Field Mapping</h2>
-        <p className="text-gray-600 mb-4">
+      <div className="bg-card rounded-2xl p-6 border border-border">
+        <h2 className="text-2xl md:text-3xl font-normal text-foreground mb-4 tracking-tight">Field Mapping</h2>
+        <p className="text-muted-foreground text-lg mb-4">
           To evaluate your dataset correctly, map your dataset's fields to the required fields below.
-          Check the <span className="font-medium">Completeness</span> percentages to ensure your selected fields have sufficient data coverage.
+          Check the <span className="font-medium text-foreground">Completeness</span> percentages to ensure your selected fields have sufficient data coverage.
         </p>
 
-        <div className="flex items-center space-x-4 text-sm text-gray-500">
+        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
           <span>Dataset: {filename}</span>
           <span>•</span>
           <span>{analysis.total_records} records</span>
@@ -337,14 +337,14 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
       {/* Field Mapping */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Required/Custom Fields */}
-        <div className="bg-white rounded-2xl p-6 border border-meta-gray-300/50 max-h-[600px] overflow-y-auto">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-card rounded-2xl p-6 border border-border max-h-[600px] overflow-y-auto">
+          <h3 className="text-lg font-semibold text-foreground mb-4">
             {useCase === "custom" ? "Custom Field Mappings" : "Required Fields"}
           </h3>
 
           {useCase === "custom" ? (
             <div className="space-y-4">
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-muted-foreground mb-4">
                 Create custom field mappings for your dataset. Add as many
                 mappings as needed for your use case.
               </p>
@@ -390,7 +390,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
                     setMappings(newMappings);
                     onMappingUpdate(newMappings);
                   }}
-                  className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-meta-blue hover:text-meta-blue transition-colors"
+                  className="w-full p-3 border-2 border-dashed border-border rounded-lg text-muted-foreground hover:border-meta-blue dark:hover:border-meta-blue-light hover:text-meta-blue dark:hover:text-meta-blue-light transition-colors"
                 >
                   + Add Field Mapping
                 </button>
@@ -409,10 +409,10 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
                   )}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-gray-900">
+                    <span className="font-medium text-foreground">
                       {requiredField}
                     </span>
-                    <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
+                    <span className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded">
                       Required
                     </span>
                   </div>
@@ -422,7 +422,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
                     onChange={(e) =>
                       handleMappingChange(requiredField, e.target.value)
                     }
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-meta-blue focus:border-transparent"
+                    className="w-full p-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-transparent bg-input text-foreground"
                   >
                     <option value="">Select field...</option>
                     {analysis.fields.map((field) => (
@@ -444,23 +444,23 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
           )}
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-meta-gray-300/50 max-h-[600px] flex flex-col">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-card rounded-2xl p-6 border border-border max-h-[600px] flex flex-col">
+          <h3 className="text-lg font-semibold text-foreground mb-4">
             Detected Fields
           </h3>
           <div className="space-y-3 overflow-y-auto flex-1">
             {analysis.fields.map((field, index) => (
               <div
                 key={index}
-                className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                className="p-3 border border-border rounded-lg hover:bg-muted"
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-2">
                     {getFieldIcon(field.type)}
-                    <span className="font-medium text-gray-900">
+                    <span className="font-medium text-foreground">
                       {field.name}
                     </span>
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
                       {field.type}
                     </span>
                   </div>
@@ -470,7 +470,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
                       className="flex items-center space-x-1"
                       title={`${field.populated_count} out of ${field.total_count} records have this field populated with data`}
                     >
-                      <span className="text-xs text-gray-500">Completeness:</span>
+                      <span className="text-xs text-muted-foreground">Completeness:</span>
                       <span
                         className={cn(
                           "text-xs font-medium",
@@ -485,12 +485,12 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
                 </div>
 
                 {field.samples.length > 0 && (
-                  <div className="text-xs text-gray-500 space-y-1">
+                  <div className="text-xs text-muted-foreground space-y-1">
                     <div>Sample values:</div>
                     {field.samples.slice(0, 2).map((sample, i) => (
                       <div
                         key={i}
-                        className="bg-gray-50 p-1 rounded text-xs font-mono"
+                        className="bg-muted p-1 rounded text-xs font-mono text-foreground"
                       >
                         {typeof sample === "string"
                           ? `"${sample}"`
@@ -507,29 +507,29 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
 
       {/* Preview Section */}
       {showPreview && previewData && (
-        <div className="bg-white rounded-2xl p-6 border border-meta-gray-300/50">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-card rounded-2xl p-6 border border-border">
+          <h3 className="text-lg font-semibold text-foreground mb-4">
             Preview Transformation
           </h3>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2">
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">
                 Original Data
               </h4>
-              <div className="bg-gray-50 p-3 rounded-lg max-h-64 overflow-y-auto">
-                <pre className="text-xs text-gray-600">
+              <div className="bg-muted p-3 rounded-lg max-h-64 overflow-y-auto">
+                <pre className="text-xs text-muted-foreground">
                   {JSON.stringify(previewData.original_data[0], null, 2)}
                 </pre>
               </div>
             </div>
 
             <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2">
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">
                 Transformed Data
               </h4>
-              <div className="bg-gray-50 p-3 rounded-lg max-h-64 overflow-y-auto">
-                <pre className="text-xs text-gray-600">
+              <div className="bg-muted p-3 rounded-lg max-h-64 overflow-y-auto">
+                <pre className="text-xs text-muted-foreground">
                   {JSON.stringify(previewData.transformed_data[0], null, 2)}
                 </pre>
               </div>

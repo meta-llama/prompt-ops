@@ -479,19 +479,19 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   }) => (
     <button
       onClick={() => toggleSection(id)}
-      className="w-full flex items-center justify-between p-4 bg-meta-gray-100 rounded-xl border border-meta-gray-300 hover:border-meta-blue/30 transition-all duration-200"
+      className="w-full flex items-center justify-between p-4 bg-muted rounded-xl border border-border hover:border-meta-blue/30 transition-all duration-200"
     >
       <div className="flex items-center space-x-3">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
           status === 'complete'
-            ? 'bg-meta-teal/10 text-meta-teal-800'
+            ? 'bg-meta-teal/10 text-meta-teal'
             : status === 'incomplete'
-            ? 'bg-meta-orange/10 text-meta-orange-800'
+            ? 'bg-meta-orange/10 text-meta-orange'
             : 'bg-meta-blue/10 text-meta-blue'
         }`}>
           {status === 'complete' ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
         </div>
-        <h3 className="text-lg font-bold text-meta-gray">{title}</h3>
+        <h3 className="text-lg font-bold text-foreground">{title}</h3>
         {status === 'complete' && (
           <Badge variant="success">Complete</Badge>
         )}
@@ -500,19 +500,19 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         )}
       </div>
       {collapsedSections[id] ? (
-        <ChevronDown className="w-5 h-5 text-meta-gray/50" />
+        <ChevronDown className="w-5 h-5 text-muted-foreground" />
       ) : (
-        <ChevronUp className="w-5 h-5 text-meta-gray/50" />
+        <ChevronUp className="w-5 h-5 text-muted-foreground" />
       )}
     </button>
   );
 
   const renderRequirementsHeader = () => (
     <div className="text-center mb-8 pt-4">
-      <h1 className="text-2xl md:text-3xl font-normal text-meta-gray mb-4 tracking-tight">
+      <h1 className="text-2xl md:text-3xl font-normal text-foreground mb-4 tracking-tight">
         Prompt Optimization
       </h1>
-      <p className="text-meta-gray/70 text-lg max-w-2xl mx-auto">
+      <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
         Complete the form below to configure and optimize your prompt. Fill out each section, then click "Create & Optimize" at the bottom.
       </p>
 
@@ -520,15 +520,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       <div className="flex flex-wrap justify-center gap-4 mt-6">
         <div className="flex items-center space-x-2 bg-meta-blue/10 px-4 py-2 rounded-md">
           <FileText className="w-4 h-4 text-meta-blue" />
-          <span className="text-sm text-meta-gray/80">Your Prompt</span>
+          <span className="text-sm text-foreground/80">Your Prompt</span>
         </div>
         <div className="flex items-center space-x-2 bg-meta-blue/10 px-4 py-2 rounded-md">
           <Database className="w-4 h-4 text-meta-blue" />
-          <span className="text-sm text-meta-gray/80">Dataset (JSON)</span>
+          <span className="text-sm text-foreground/80">Dataset (JSON)</span>
         </div>
         <div className="flex items-center space-x-2 bg-meta-blue/10 px-4 py-2 rounded-md">
           <Target className="w-4 h-4 text-meta-blue" />
-          <span className="text-sm text-meta-gray/80">Success Metrics</span>
+          <span className="text-sm text-foreground/80">Success Metrics</span>
         </div>
       </div>
     </div>
@@ -540,24 +540,24 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
       {!collapsedSections.prompt && (
         <div className="pl-4 space-y-4">
-          <p className="text-meta-gray/70 text-sm">
+          <p className="text-muted-foreground text-sm">
             Enter the prompt you want to optimize. This is the instruction or system prompt that guides AI behavior.
           </p>
 
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-meta-gray">
+            <label className="block text-sm font-medium text-foreground">
               Current Prompt
             </label>
             <textarea
               value={formData.prompt}
               onChange={(e) => updateFormData("prompt", e.target.value)}
               placeholder="Enter your prompt here..."
-              className="w-full h-32 p-4 border border-meta-gray-300 rounded-xl focus:ring-2 focus:ring-meta-blue focus:border-transparent resize-none bg-white/50 text-meta-gray placeholder-meta-gray/50"
+              className="w-full h-32 p-4 border border-border rounded-xl focus:ring-2 focus:ring-ring focus:border-transparent resize-none bg-panel text-foreground placeholder:text-muted-foreground"
             />
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-medium text-meta-gray/70">
+            <p className="text-sm font-medium text-muted-foreground">
               Quick Examples:
             </p>
             <div className="flex flex-wrap gap-2">
@@ -588,7 +588,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
       {!collapsedSections.usecase && (
         <div className="pl-4 space-y-4">
-          <p className="text-meta-gray/70 text-sm">
+          <p className="text-muted-foreground text-sm">
             Choose the type that best matches your project to get relevant options for field mapping and metrics.
           </p>
 
@@ -607,7 +607,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
       {!collapsedSections.dataset && (
         <div className="pl-4 space-y-4">
-          <p className="text-meta-gray/70 text-sm">
+          <p className="text-muted-foreground text-sm">
             Upload a JSON file containing your evaluation examples.
           </p>
 
@@ -616,8 +616,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               formData.datasetPath
                 ? "border-meta-teal bg-meta-teal/5"
                 : uploadError
-                ? "border-meta-pink-800 bg-meta-pink/5"
-                : "border-meta-gray-300 bg-white/50 hover:border-meta-blue"
+                ? "border-red-500 bg-red-500/5 dark:border-red-400 dark:bg-red-400/5"
+                : "border-border bg-panel hover:border-meta-blue"
             }`}
           >
             {uploadLoading ? (
@@ -625,7 +625,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <div className="w-12 h-12 bg-meta-blue/10 rounded-full flex items-center justify-center mx-auto">
                   <div className="w-6 h-6 border-2 border-meta-blue border-t-transparent rounded-full animate-spin"></div>
                 </div>
-                <p className="text-meta-gray">Uploading dataset...</p>
+                <p className="text-foreground">Uploading dataset...</p>
               </div>
             ) : formData.datasetPath ? (
               <div className="space-y-3">
@@ -633,10 +633,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   <CheckCircle className="w-6 h-6 text-meta-teal" />
                 </div>
                 <div>
-                  <p className="font-semibold text-meta-gray">
+                  <p className="font-semibold text-foreground">
                     {formData.datasetPath}
                   </p>
-                  <p className="text-sm text-meta-gray/70">
+                  <p className="text-sm text-muted-foreground">
                     {formData.uploadedFile
                       ? (formData.uploadedFile.size / 1024).toFixed(2)
                       : "0"}{" "}
@@ -649,20 +649,20 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     updateFormData("uploadedFile", null);
                     setUploadError(null);
                   }}
-                  className="text-sm text-red-600 hover:underline"
+                  className="text-sm text-red-600 hover:underline dark:text-red-400"
                 >
                   Remove file
                 </button>
               </div>
             ) : (
               <div className="space-y-3">
-                <Database className="w-10 h-10 text-meta-gray/40 mx-auto" />
+                <Database className="w-10 h-10 text-muted-foreground/50 mx-auto" />
                 <div>
                   <label htmlFor="file-upload" className="cursor-pointer">
                     <span className="text-meta-blue hover:underline font-semibold">
                       Click to upload
                     </span>
-                    <span className="text-meta-gray/70"> or drag and drop</span>
+                    <span className="text-muted-foreground"> or drag and drop</span>
                   </label>
                   <input
                     id="file-upload"
@@ -677,11 +677,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     }}
                   />
                 </div>
-                <p className="text-xs text-meta-gray/60">
+                <p className="text-xs text-muted-foreground">
                   JSON files only, max 10MB
                 </p>
                 {uploadError && (
-                  <p className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                  <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400 p-2 rounded">
                     {uploadError}
                   </p>
                 )}
@@ -692,10 +692,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           {/* Dataset format helper */}
           {formData.useCase && formData.useCase !== "custom" && (
             <div className="bg-meta-blue/5 border border-meta-blue/20 rounded-xl p-4">
-              <p className="text-xs font-semibold text-meta-gray mb-2">
+              <p className="text-xs font-semibold text-foreground mb-2">
                 Expected format for {formData.useCase.toUpperCase()}:
               </p>
-              <pre className="text-xs bg-white/90 p-3 rounded-lg border border-meta-gray-300 overflow-x-auto text-meta-gray/80">
+              <pre className="text-xs bg-panel p-3 rounded-lg border border-border overflow-x-auto text-muted-foreground">
                 {formData.useCase === "qa"
                   ? JSON.stringify(
                       [
@@ -743,7 +743,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               existingMappings={formData.fieldMappings}
             />
           ) : (
-            <div className="text-center py-8 text-meta-gray/50">
+            <div className="text-center py-8 text-muted-foreground">
               <ArrowRight className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p>Upload a dataset first to configure field mappings</p>
             </div>
@@ -853,7 +853,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   return (
     <div className="w-full">
       {/* Main Form Container */}
-      <div className="bg-white rounded-3xl border border-meta-gray-300/50 p-6 md:p-8">
+      <div className="bg-panel rounded-3xl border border-border p-6 md:p-8">
         {/* Header */}
         {renderRequirementsHeader()}
 
@@ -869,15 +869,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         </div>
 
         {/* Action Section */}
-        <div className="mt-10 pt-8 border-t border-meta-gray-300">
+        <div className="mt-10 pt-8 border-t border-border">
           {/* Form Validation Summary */}
           {!isFormValid() && !projectCreationResult && (
             <div className="mb-6 p-4 bg-meta-orange/5 border border-meta-orange/30 rounded-xl">
               <div className="flex items-start space-x-3">
-                <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                <AlertCircle className="w-5 h-5 text-meta-orange mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="font-medium text-yellow-800">Complete all sections to continue</p>
-                  <ul className="mt-2 text-sm text-yellow-700 space-y-1">
+                  <p className="font-medium text-meta-orange-text">Complete all sections to continue</p>
+                  <ul className="mt-2 text-sm text-meta-orange-text/80 space-y-1">
                     {formData.prompt.trim() === "" && <li>• Enter your prompt</li>}
                     {formData.useCase === "" && <li>• Select a use case</li>}
                     {formData.datasetPath === "" && <li>• Upload a dataset</li>}
@@ -899,42 +899,42 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             <div className={`mb-6 p-4 rounded-xl border ${
               projectCreationResult.success
                 ? 'bg-meta-teal/5 border-meta-teal/30'
-                : 'bg-meta-pink/5 border-meta-pink-800/30'
+                : 'bg-red-500/5 border-red-500/30 dark:bg-red-400/5 dark:border-red-400/30'
             }`}>
               <div className="flex items-center space-x-3 mb-3">
                 {projectCreationResult.success ? (
                   <CheckCircle className="w-6 h-6 text-meta-teal" />
                 ) : (
-                  <AlertCircle className="w-6 h-6 text-red-600" />
+                  <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
                 )}
-                <h3 className="font-bold text-lg">
+                <h3 className="font-bold text-lg text-foreground">
                   {projectCreationResult.success ? 'Project Created Successfully!' : 'Project Creation Failed'}
                 </h3>
               </div>
 
               {projectCreationResult.success ? (
                 <div className="space-y-3">
-                  <p className="text-meta-teal-800">{projectCreationResult.message}</p>
+                  <p className="text-meta-teal">{projectCreationResult.message}</p>
 
                   {projectCreationResult.actualProjectName !== projectCreationResult.requestedProjectName && (
                     <div className="bg-meta-blue/5 p-3 rounded border border-meta-blue/30">
                       <p className="text-sm font-medium text-meta-blue mb-1">Project Name Updated:</p>
-                      <p className="text-sm text-blue-700">
+                      <p className="text-sm text-meta-blue/80">
                         A project with the name "{projectCreationResult.requestedProjectName}" already existed,
                         so your project was created as "{projectCreationResult.actualProjectName}" instead.
                       </p>
                     </div>
                   )}
 
-                  <div className="bg-white p-3 rounded border">
-                    <p className="text-sm font-medium text-gray-700 mb-1">Project Location:</p>
-                    <p className="text-sm font-mono text-gray-600 bg-gray-50 p-2 rounded">
+                  <div className="bg-panel p-3 rounded border border-border">
+                    <p className="text-sm font-medium text-foreground mb-1">Project Location:</p>
+                    <p className="text-sm font-mono text-muted-foreground bg-muted p-2 rounded">
                       {projectCreationResult.projectPath}
                     </p>
                   </div>
                 </div>
               ) : (
-                <p className="text-red-700">{projectCreationResult.error}</p>
+                <p className="text-red-600 dark:text-red-400">{projectCreationResult.error}</p>
               )}
             </div>
           )}
@@ -943,31 +943,31 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           {optimizing && (
             <div className="mb-6 space-y-4">
               <div className="text-center">
-                <h3 className="text-xl font-bold text-meta-gray mb-2">
+                <h3 className="text-xl font-bold text-foreground mb-2">
                   🚀 Optimizing Your Prompt...
                 </h3>
-                <p className="text-meta-gray/70">
+                <p className="text-muted-foreground">
                   This may take a few minutes. Real-time progress is shown below.
                 </p>
               </div>
 
               {/* Progress Bar */}
-              <div className="bg-white p-4 rounded-xl border border-meta-gray-300 shadow-sm">
+              <div className="bg-panel p-4 rounded-xl border border-border shadow-sm">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-meta-gray">
+                  <span className="text-sm font-medium text-foreground">
                     {optimizationProgress.phase || "Initializing..."}
                   </span>
-                  <span className="text-sm text-meta-gray/70">
+                  <span className="text-sm text-muted-foreground">
                     {Math.round(optimizationProgress.progress)}%
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-muted rounded-full h-2">
                   <div
                     className="bg-meta-blue h-2 rounded-full transition-all duration-300"
                     style={{ width: `${optimizationProgress.progress}%` }}
                   ></div>
                 </div>
-                <p className="text-sm text-meta-gray/70 mt-2">
+                <p className="text-sm text-muted-foreground mt-2">
                   {optimizationProgress.message}
                 </p>
               </div>

@@ -9,18 +9,19 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Filled variants - solid background, white text, darker on hover
-        filled: "bg-meta-blue text-white hover:bg-meta-blue-800",
-        filledTeal: "bg-meta-teal text-white hover:bg-meta-teal-800",
-        filledDestructive: "bg-red-500 text-white hover:bg-red-600",
+        // Filled variants - solid background with appropriate contrast
+        // Light: dark bg + white text | Dark: bright bg + dark text
+        filled: "bg-meta-blue text-white hover:bg-meta-blue-hover dark:text-meta-gray-900",
+        filledTeal: "bg-meta-teal text-white hover:bg-meta-teal-hover dark:text-meta-gray-900",
+        filledDestructive: "bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500",
 
-        // Outlined variants - border with matching text, darker border on hover
-        outlined: "border-2 border-meta-blue text-meta-blue bg-transparent hover:border-meta-blue-800 hover:text-meta-blue-800",
-        outlinedGray: "border-2 border-meta-gray-300 text-meta-gray bg-transparent hover:border-meta-gray-600 hover:text-meta-gray",
-        outlinedDestructive: "border-2 border-red-500 text-red-500 bg-transparent hover:border-red-600 hover:text-red-600",
+        // Outlined variants - border with matching text (CSS vars handle the color flip)
+        outlined: "border-2 border-meta-blue text-meta-blue bg-transparent hover:bg-meta-blue/10",
+        outlinedGray: "border-2 border-border text-foreground bg-transparent hover:bg-muted",
+        outlinedDestructive: "border-2 border-red-500 text-red-500 bg-transparent hover:bg-red-500/10 dark:border-red-400 dark:text-red-400",
 
-        // Ghost variant - no background or border, just text
-        ghost: "text-meta-gray hover:bg-meta-gray-100 hover:text-meta-gray",
+        // Ghost variant - uses semantic colors for dark mode
+        ghost: "text-foreground hover:bg-muted",
 
         // Link variant
         link: "text-meta-blue underline-offset-4 hover:underline",

@@ -51,6 +51,22 @@
     --sidebar-accent-foreground: 213 100% 44%;
     --sidebar-border: 210 14% 82%;
     --sidebar-ring: 213 100% 44%;
+
+    /* Meta brand colors as CSS variables for dark mode support */
+    --meta-blue: 213 100% 44%;           /* #0064E0 */
+    --meta-blue-hover: 213 100% 36%;     /* #004bb9 - darker for hover */
+    --meta-teal: 172 100% 41%;           /* #00D2BE */
+    --meta-teal-hover: 180 100% 30%;     /* #009b9b */
+    --meta-purple: 249 100% 73%;         /* #8773FF */
+    --meta-purple-text: 260 60% 45%;     /* Darker for text on light bg */
+    --meta-orange: 28 96% 54%;           /* #FA8719 */
+    --meta-orange-text: 28 80% 34%;      /* Darker for text on light bg */
+    --meta-pink: 330 94% 74%;            /* #FA7DC8 */
+
+    /* Panel/card backgrounds */
+    --panel: 0 0% 100%;                  /* White panels */
+    --panel-hover: 210 27% 98%;          /* Slight gray on hover */
+    --panel-muted: 210 27% 96%;          /* meta-gray-100 */
   }
 
   .dark {
@@ -91,6 +107,22 @@
     --sidebar-accent-foreground: 210 27% 96%;
     --sidebar-border: 203 20% 26%;
     --sidebar-ring: 213 100% 44%;
+
+    /* Inverted brand colors - lighter/brighter on dark backgrounds */
+    --meta-blue: 213 100% 60%;           /* Brighter blue */
+    --meta-blue-hover: 213 100% 70%;     /* Even brighter for hover */
+    --meta-teal: 172 100% 45%;           /* Brighter teal */
+    --meta-teal-hover: 172 100% 55%;
+    --meta-purple: 249 100% 78%;         /* Brighter purple */
+    --meta-purple-text: 249 100% 78%;    /* Same for dark mode */
+    --meta-orange: 28 96% 62%;           /* Brighter orange */
+    --meta-orange-text: 28 96% 62%;      /* Same for dark mode */
+    --meta-pink: 330 94% 78%;            /* Brighter pink */
+
+    /* Panel/card backgrounds - elevated from bg */
+    --panel: 203 24% 20%;                /* meta-gray-900 */
+    --panel-hover: 203 24% 24%;          /* Slightly lighter on hover */
+    --panel-muted: 203 20% 26%;          /* meta-gray-800 */
   }
 }
 

@@ -62,37 +62,48 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// Meta brand colors
+				// Panel backgrounds (dark mode aware via CSS vars)
+				panel: {
+					DEFAULT: 'hsl(var(--panel))',
+					hover: 'hsl(var(--panel-hover))',
+					muted: 'hsl(var(--panel-muted))',
+				},
+				// Meta brand colors (dark mode aware via CSS vars)
 				meta: {
-					// Primary blue
+					// Primary blue - uses CSS variable for dark mode
 					blue: {
-						DEFAULT: '#0064E0',
+						DEFAULT: 'hsl(var(--meta-blue))',
+						hover: 'hsl(var(--meta-blue-hover))',
+						// Static variants for specific use cases
 						800: '#004bb9',
 						1000: '#000a50',
 					},
 					// Accent: Teal (highlights, success states)
 					teal: {
-						DEFAULT: '#00D2BE',
+						DEFAULT: 'hsl(var(--meta-teal))',
+						hover: 'hsl(var(--meta-teal-hover))',
 						700: '#009b9b',
 						800: '#00787D',
 						900: '#00414b',
 					},
 					// Accent: Purple (features, special elements)
 					purple: {
-						DEFAULT: '#8773FF',
+						DEFAULT: 'hsl(var(--meta-purple))',
+						text: 'hsl(var(--meta-purple-text))',
 						800: '#6441D2',
 						900: '#280578',
 						1000: '#0a005a',
 					},
 					// Accent: Pink (notifications, badges)
 					pink: {
-						DEFAULT: '#FA7DC8',
+						DEFAULT: 'hsl(var(--meta-pink))',
 						800: '#B43C8C',
 						900: '#640055',
 					},
 					// Accent: Orange (warnings, experimental)
 					orange: {
-						DEFAULT: '#FA8719',
+						DEFAULT: 'hsl(var(--meta-orange))',
+						text: 'hsl(var(--meta-orange-text))',
 						800: '#A0460A',
 					},
 					// Accent: Cyan
@@ -100,7 +111,7 @@ export default {
 						700: '#0096c8',
 						800: '#0073aa',
 					},
-					// Grays - the backbone of the UI
+					// Grays - static values, use foreground/muted for dark mode aware
 					gray: {
 						DEFAULT: '#1c2b33',
 						900: '#283943',

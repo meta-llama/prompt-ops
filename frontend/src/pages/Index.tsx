@@ -20,9 +20,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen w-full bg-background relative overflow-hidden">
-      {/* Clean background */}
-      <div className="absolute inset-0 bg-meta-gray-100/50"></div>
-
       {/* Top Navigation */}
       <Sidebar />
 

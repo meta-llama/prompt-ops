@@ -105,10 +105,10 @@ export const UseCaseSelector: React.FC<UseCaseSelectorProps> = ({
   return (
     <div className={cn("space-y-4", className)}>
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <h3 className="text-lg font-semibold text-foreground mb-2">
           Select Your Use Case
         </h3>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-muted-foreground mb-4">
           Choose the type that best matches your project to get relevant options in the next steps
         </p>
       </div>
@@ -121,16 +121,16 @@ export const UseCaseSelector: React.FC<UseCaseSelectorProps> = ({
             className={cn(
               "relative p-6 rounded-xl border-2",
               "text-left transition-all duration-200",
-              "hover:border-meta-blue/30",
+              "hover:border-meta-blue/30 dark:hover:border-meta-blue-light/30",
               selectedUseCase === useCase.id
-                ? "border-meta-blue bg-meta-blue/5"
-                : "border-gray-300 bg-white hover:border-gray-400"
+                ? "border-meta-blue dark:border-meta-blue-light bg-meta-blue/5 dark:bg-meta-blue/10"
+                : "border-border bg-card hover:border-muted-foreground/50"
             )}
           >
             {/* Selection indicator */}
             {selectedUseCase === useCase.id && (
-              <div className="absolute top-3 right-3 w-6 h-6 bg-meta-blue rounded-full flex items-center justify-center">
-                <Check className="w-4 h-4 text-white" />
+              <div className="absolute top-3 right-3 w-6 h-6 bg-meta-blue dark:bg-meta-blue-light rounded-full flex items-center justify-center">
+                <Check className="w-4 h-4 text-white dark:text-meta-gray-900" />
               </div>
             )}
 
@@ -138,33 +138,33 @@ export const UseCaseSelector: React.FC<UseCaseSelectorProps> = ({
             <div className={cn(
               "w-12 h-12 rounded-lg flex items-center justify-center mb-4",
               selectedUseCase === useCase.id
-                ? "bg-meta-blue text-white"
-                : "bg-gray-100 text-gray-600"
+                ? "bg-meta-blue dark:bg-meta-blue-light text-white dark:text-meta-gray-900"
+                : "bg-muted text-muted-foreground"
             )}>
               {useCase.icon}
             </div>
 
             {/* Content */}
-            <h4 className="font-semibold text-gray-900 mb-2">
+            <h4 className="font-semibold text-foreground mb-2">
               {useCase.title}
             </h4>
-            <p className="text-sm text-gray-700 mb-3">
+            <p className="text-sm text-muted-foreground mb-3">
               {useCase.description}
             </p>
 
             {/* Use case examples */}
             <div className="space-y-1">
-              <p className="text-xs font-medium text-gray-600 mb-2">
+              <p className="text-xs font-medium text-muted-foreground mb-2">
                 Common applications:
               </p>
               {useCase.examples.slice(0, 4).map((example, index) => (
-                <p key={index} className="text-xs text-gray-700 flex items-center">
-                  <span className="w-1 h-1 bg-meta-blue rounded-full mr-2 flex-shrink-0"></span>
+                <p key={index} className="text-xs text-muted-foreground flex items-center">
+                  <span className="w-1 h-1 bg-meta-blue dark:bg-meta-blue-light rounded-full mr-2 flex-shrink-0"></span>
                   {example}
                 </p>
               ))}
               {useCase.examples.length > 4 && (
-                <p className="text-xs text-gray-500 italic">
+                <p className="text-xs text-muted-foreground/70 italic">
                   +{useCase.examples.length - 4} more...
                 </p>
               )}
@@ -175,11 +175,11 @@ export const UseCaseSelector: React.FC<UseCaseSelectorProps> = ({
 
       {/* Expected Format Section */}
       {selectedUseCase && useCases.find(uc => uc.id === selectedUseCase)?.expectedFormat && (
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <h4 className="text-sm font-semibold text-gray-900 mb-3">
+        <div className="mt-4 p-4 bg-muted rounded-lg border border-border">
+          <h4 className="text-sm font-semibold text-foreground mb-3">
             {useCases.find(uc => uc.id === selectedUseCase)?.expectedFormat?.title}
           </h4>
-          <pre className="text-xs text-gray-700 bg-white p-3 rounded border overflow-x-auto">
+          <pre className="text-xs text-muted-foreground bg-card p-3 rounded border border-border overflow-x-auto">
             <code>{useCases.find(uc => uc.id === selectedUseCase)?.expectedFormat?.structure}</code>
           </pre>
         </div>
@@ -189,9 +189,9 @@ export const UseCaseSelector: React.FC<UseCaseSelectorProps> = ({
       {selectedUseCase && (
         <div className={cn(
           "mt-4 p-4 rounded-lg",
-          "bg-blue-50 border border-blue-200"
+          "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
         )}>
-          <p className="text-sm">
+          <p className="text-sm text-blue-800 dark:text-blue-200">
             {selectedUseCase === 'custom'
               ? "You'll configure all settings manually in the following steps based on your specific requirements."
               : `Perfect! We'll show you the most relevant options for ${

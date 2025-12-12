@@ -18,7 +18,7 @@ const DiffView: React.FC<{
   const diffResult = useMemo(() => diffWords(original, optimized), [original, optimized]);
 
   return (
-    <div className="whitespace-pre-wrap text-meta-gray text-base leading-relaxed font-mono">
+    <div className="whitespace-pre-wrap text-foreground text-base leading-relaxed font-mono">
       {diffResult.map((part, index) => {
         // For the "original" side, show removed parts highlighted, skip added parts
         if (showOriginal) {
@@ -27,7 +27,7 @@ const DiffView: React.FC<{
             return (
               <span
                 key={index}
-                className="bg-red-100 text-red-800 px-0.5 rounded line-through decoration-red-400"
+                className="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 px-0.5 rounded line-through decoration-red-400"
               >
                 {part.value}
               </span>
@@ -42,7 +42,7 @@ const DiffView: React.FC<{
           return (
             <span
               key={index}
-              className="bg-emerald-100 text-emerald-800 px-0.5 rounded"
+              className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 px-0.5 rounded"
             >
               {part.value}
             </span>
@@ -62,13 +62,13 @@ const UnifiedDiffView: React.FC<{ original: string; optimized: string }> = ({
   const diffResult = useMemo(() => diffWords(original, optimized), [original, optimized]);
 
   return (
-    <div className="whitespace-pre-wrap text-meta-gray text-base leading-relaxed font-mono">
+    <div className="whitespace-pre-wrap text-foreground text-base leading-relaxed font-mono">
       {diffResult.map((part, index) => {
         if (part.removed) {
           return (
             <span
               key={index}
-              className="bg-red-100 text-red-800 px-0.5 rounded line-through decoration-red-400"
+              className="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 px-0.5 rounded line-through decoration-red-400"
             >
               {part.value}
             </span>
@@ -78,7 +78,7 @@ const UnifiedDiffView: React.FC<{ original: string; optimized: string }> = ({
           return (
             <span
               key={index}
-              className="bg-emerald-100 text-emerald-800 px-0.5 rounded"
+              className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 px-0.5 rounded"
             >
               {part.value}
             </span>
@@ -117,33 +117,33 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = ({
   }, [originalPrompt, optimizedPrompt]);
 
   return (
-    <div className="bg-white rounded-3xl p-8 border border-meta-gray-300/50">
+    <div className="bg-panel rounded-3xl p-8 border border-border">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-normal text-meta-gray">Results</h2>
+        <h2 className="text-2xl font-normal text-foreground">Results</h2>
 
         {/* View mode toggle and stats */}
         <div className="flex items-center gap-4">
           {/* Diff stats */}
           <div className="flex items-center gap-3 text-sm">
-            <span className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
+            <span className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-300 px-2.5 py-1 rounded-md border border-emerald-200 dark:border-emerald-800">
               <span className="font-semibold">+{stats.added}</span>
-              <span className="text-emerald-600">words</span>
+              <span className="text-emerald-600 dark:text-emerald-400">words</span>
             </span>
-            <span className="flex items-center gap-1.5 text-red-700 bg-red-50 px-2.5 py-1 rounded-md border border-red-200">
+            <span className="flex items-center gap-1.5 text-red-700 bg-red-50 dark:bg-red-900/30 dark:text-red-300 px-2.5 py-1 rounded-md border border-red-200 dark:border-red-800">
               <span className="font-semibold">-{stats.removed}</span>
-              <span className="text-red-600">words</span>
+              <span className="text-red-600 dark:text-red-400">words</span>
             </span>
           </div>
 
           {/* View toggle */}
-          <div className="bg-meta-gray-100 p-1 rounded-full inline-flex border border-meta-gray-300/50">
+          <div className="bg-muted p-1 rounded-full inline-flex border border-border">
             <button
               onClick={() => setViewMode('split')}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
                 viewMode === 'split'
-                  ? 'bg-white text-meta-gray'
-                  : 'text-meta-gray/60 hover:text-meta-gray'
+                  ? 'bg-panel text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
               title="Side by side"
             >
@@ -154,8 +154,8 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = ({
               onClick={() => setViewMode('unified')}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
                 viewMode === 'unified'
-                  ? 'bg-white text-meta-gray'
-                  : 'text-meta-gray/60 hover:text-meta-gray'
+                  ? 'bg-panel text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
               title="Unified view"
             >
@@ -174,11 +174,11 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = ({
           <div className="flex flex-col">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-3 h-3 rounded-full bg-red-400"></div>
-              <span className="text-sm font-semibold text-meta-gray/70 uppercase tracking-wide">
+              <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 Original
               </span>
             </div>
-            <div className="flex-1 border border-meta-gray-300/50 bg-white rounded-2xl p-5 h-[60vh] overflow-y-auto">
+            <div className="flex-1 border border-border bg-panel rounded-2xl p-5 h-[60vh] overflow-y-auto">
               <DiffView
                 original={originalPrompt}
                 optimized={optimizedPrompt}
@@ -191,11 +191,11 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = ({
           <div className="flex flex-col">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
-              <span className="text-sm font-semibold text-meta-gray/70 uppercase tracking-wide">
+              <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 Enhanced
               </span>
             </div>
-            <div className="flex-1 border border-meta-gray-300/50 bg-white rounded-2xl p-5 h-[60vh] overflow-y-auto">
+            <div className="flex-1 border border-border bg-panel rounded-2xl p-5 h-[60vh] overflow-y-auto">
               <DiffView
                 original={originalPrompt}
                 optimized={optimizedPrompt}
@@ -208,14 +208,14 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = ({
         /* Unified view */
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-sm font-semibold text-meta-gray/70 uppercase tracking-wide">
+            <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
               All Changes
             </span>
-            <span className="text-xs text-meta-gray/50">
+            <span className="text-xs text-muted-foreground/70">
               (strikethrough = removed, highlighted = added)
             </span>
           </div>
-          <div className="border border-meta-gray-300/50 bg-white rounded-2xl p-5 h-[60vh] overflow-y-auto">
+          <div className="border border-border bg-panel rounded-2xl p-5 h-[60vh] overflow-y-auto">
             <UnifiedDiffView original={originalPrompt} optimized={optimizedPrompt} />
           </div>
         </div>
@@ -223,13 +223,13 @@ export const OptimizationResults: React.FC<OptimizationResultsProps> = ({
 
       {/* Legend and Copy button */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4 text-sm text-meta-gray/60">
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <span className="inline-block w-4 h-4 bg-red-100 border border-red-200 rounded"></span>
+            <span className="inline-block w-4 h-4 bg-red-100 dark:bg-red-900/40 border border-red-200 dark:border-red-800 rounded"></span>
             <span>Removed</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="inline-block w-4 h-4 bg-emerald-100 border border-emerald-200 rounded"></span>
+            <span className="inline-block w-4 h-4 bg-emerald-100 dark:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded"></span>
             <span>Added</span>
           </div>
         </div>

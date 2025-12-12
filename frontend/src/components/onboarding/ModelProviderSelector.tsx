@@ -509,13 +509,13 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
     const getRoleColor = (role: string) => {
       switch (role) {
         case "target":
-          return "bg-green-100 text-green-800 border-green-200 hover:bg-green-200";
+          return "bg-green-100 text-green-800 border-green-200 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 dark:hover:bg-green-900/50";
         case "optimizer":
-          return "bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200";
+          return "bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800 dark:hover:bg-purple-900/50";
         case "both":
-          return "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200";
+          return "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-900/50";
         default:
-          return "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200";
+          return "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700";
       }
     };
 
@@ -584,7 +584,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
         </button>
 
         {showDropdown && availableRoles.length > 0 && (
-          <div className="absolute top-full left-0 mt-1 bg-white border border-meta-gray-300/50 rounded-xl z-50 min-w-40">
+          <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-xl z-50 min-w-40 shadow-lg">
             <div className="py-1">
               {availableRoles.map((availableRole) => (
                 <button
@@ -596,7 +596,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                     );
                     setShowDropdown(false);
                   }}
-                  className="flex items-center space-x-2 w-full px-3 py-2 text-sm hover:bg-gray-50 transition-colors first:rounded-t-lg last:rounded-b-lg"
+                  className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors first:rounded-t-lg last:rounded-b-lg"
                 >
                   {getRoleIcon(availableRole)}
                   <span>{getRoleLabel(availableRole)}</span>
@@ -932,51 +932,51 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center mb-6">
-        <h2 className="text-2xl md:text-3xl font-normal text-meta-gray mb-4 tracking-tight">
+        <h2 className="text-2xl md:text-3xl font-normal text-foreground mb-4 tracking-tight">
           Choose Your AI Models
         </h2>
-        <p className="text-meta-gray/70 text-lg">
+        <p className="text-muted-foreground text-lg">
           Select inference providers and configure models for your optimization
         </p>
       </div>
 
       {/* Dual Model Explanation */}
-      <div className="bg-meta-gray-100 border border-meta-gray-300 rounded-xl p-6 mb-4">
+      <div className="bg-muted border border-border rounded-xl p-6 mb-4">
         <div className="flex items-start space-x-4">
           <div className="flex-shrink-0">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <Brain className="w-6 h-6 text-blue-600" />
+            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+              <Brain className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-gray-900 mb-2 text-lg">
+            <h3 className="font-bold text-foreground mb-2 text-lg">
               🎯 Dual Model Optimization
             </h3>
-            <p className="text-gray-700 mb-3">
+            <p className="text-muted-foreground mb-3">
               Llama Prompt Ops uses two AI models working together to optimize
               your prompts:
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div className="bg-white/60 p-3 rounded-lg border border-blue-100">
+              <div className="bg-card/60 p-3 rounded-lg border border-green-200 dark:border-green-800">
                 <div className="flex items-center space-x-2 mb-1">
-                  <Target className="w-4 h-4 text-green-600" />
-                  <span className="font-semibold text-green-800">
+                  <Target className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  <span className="font-semibold text-green-800 dark:text-green-300">
                     Target Model
                   </span>
                 </div>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   The model you're optimizing FOR - where your prompt will be
                   deployed in production
                 </p>
               </div>
-              <div className="bg-white/60 p-3 rounded-lg border border-purple-100">
+              <div className="bg-card/60 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
                 <div className="flex items-center space-x-2 mb-1">
-                  <Zap className="w-4 h-4 text-purple-600" />
-                  <span className="font-semibold text-purple-800">
+                  <Zap className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <span className="font-semibold text-purple-800 dark:text-purple-300">
                     Optimizer Model
                   </span>
                 </div>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   The AI that generates improved prompt variations during
                   optimization
                 </p>
@@ -1001,7 +1001,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
 
       {/* Provider Selection */}
       <div className="space-y-4">
-        <h3 className="text-xl font-bold text-meta-gray">
+        <h3 className="text-xl font-bold text-foreground">
           1. Select Inference Providers
         </h3>
 
@@ -1012,8 +1012,8 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
               className={cn(
                 "border-2 rounded-2xl p-4 cursor-pointer transition-colors",
                 selectedProviders.includes(provider.id)
-                  ? "border-meta-blue bg-meta-blue/5"
-                  : "border-gray-200 hover:border-gray-300"
+                  ? "border-meta-blue bg-meta-blue/5 dark:bg-meta-blue/10"
+                  : "border-border hover:border-muted-foreground/30"
               )}
               onClick={() => handleProviderToggle(provider.id)}
             >
@@ -1023,31 +1023,31 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                     className={cn(
                       "p-2 rounded-lg",
                       provider.category === "cloud"
-                        ? "bg-blue-100 text-blue-600"
+                        ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
                         : provider.category === "local"
-                        ? "bg-green-100 text-green-600"
-                        : "bg-purple-100 text-purple-600"
+                        ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                        : "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400"
                     )}
                   >
                     {provider.icon}
                   </div>
                   <div>
-                    <h4 className="font-semibold text-meta-gray">
+                    <h4 className="font-semibold text-foreground">
                       {provider.name}
                     </h4>
-                    <p className="text-sm text-meta-gray/60">
+                    <p className="text-sm text-muted-foreground">
                       {provider.description}
                     </p>
                   </div>
                 </div>
 
                 {selectedProviders.includes(provider.id) && (
-                  <Check className="w-5 h-5 text-meta-blue" />
+                  <Check className="w-5 h-5 text-meta-blue dark:text-meta-blue-light" />
                 )}
               </div>
 
               {/* Quick stats */}
-              <div className="flex items-center space-x-4 text-xs text-meta-gray/60">
+              <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                 <div className="flex items-center space-x-1">
                   {provider.category === "cloud" ? (
                     <Cloud className="w-3 h-3" />
@@ -1073,18 +1073,18 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
               {/* Pros/Cons */}
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                 <div>
-                  <span className="text-green-600 font-medium">Pros:</span>
-                  <ul className="text-meta-gray/60 mt-1">
+                  <span className="text-green-600 dark:text-green-400 font-medium">Pros:</span>
+                  <ul className="text-muted-foreground mt-1">
                     {provider.pros.slice(0, 2).map((pro, idx) => (
                       <li key={idx}>• {pro}</li>
                     ))}
                   </ul>
                 </div>
                 <div>
-                  <span className="text-orange-600 font-medium">
+                  <span className="text-orange-600 dark:text-orange-400 font-medium">
                     Considerations:
                   </span>
-                  <ul className="text-meta-gray/60 mt-1">
+                  <ul className="text-muted-foreground mt-1">
                     {provider.cons.slice(0, 2).map((con, idx) => (
                       <li key={idx}>• {con}</li>
                     ))}
@@ -1093,12 +1093,12 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
               </div>
 
               {/* Documentation link */}
-              <div className="mt-3 pt-3 border-t border-gray-100">
+              <div className="mt-3 pt-3 border-t border-border/50">
                 <a
                   href={provider.docs_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-meta-blue text-xs hover:underline flex items-center space-x-1"
+                  className="text-meta-blue dark:text-meta-blue-light text-xs hover:underline flex items-center space-x-1"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <span>Documentation</span>
@@ -1114,7 +1114,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
       {selectedProviders.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold text-meta-gray">
+            <h3 className="text-xl font-bold text-foreground">
               2. Configure Models
             </h3>
             <button
@@ -1127,12 +1127,12 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
           </div>
 
           {/* Interactive Role Status Overview */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="font-semibold text-blue-900">
+              <h4 className="font-semibold text-blue-900 dark:text-blue-300">
                 Model Role Assignment
               </h4>
-              <div className="text-xs text-blue-600">
+              <div className="text-xs text-blue-600 dark:text-blue-400">
                 Click role badges below to change assignments
               </div>
             </div>
@@ -1152,25 +1152,25 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                     <div
                       className={`p-3 rounded-lg border transition-all ${
                         hasTarget
-                          ? "bg-green-50 border-green-200 shadow-sm"
-                          : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                          ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 shadow-sm"
+                          : "bg-muted border-border hover:bg-muted/80"
                       }`}
                     >
                       <div className="flex items-center space-x-2 mb-2">
                         <Target
                           className={`w-4 h-4 ${
-                            hasTarget ? "text-green-600" : "text-gray-400"
+                            hasTarget ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
                           }`}
                         />
                         <span
                           className={`font-medium ${
-                            hasTarget ? "text-green-800" : "text-gray-600"
+                            hasTarget ? "text-green-800 dark:text-green-300" : "text-muted-foreground"
                           }`}
                         >
                           Target Model
                         </span>
                         {hasTarget && (
-                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
                         )}
                       </div>
                       {targetConfig ? (
@@ -1182,13 +1182,13 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                               className="z-20"
                             />
                             {targetConfig.role === "both" && (
-                              <span className="text-xs text-blue-600 font-medium">
+                              <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
                                 Also optimizer
                               </span>
                             )}
                           </div>
-                          <div className="text-sm text-gray-600">
-                            <div className="font-medium">
+                          <div className="text-sm text-muted-foreground">
+                            <div className="font-medium text-foreground">
                               {targetConfig.provider_id === "custom"
                                 ? targetConfig.custom_provider_name
                                 : PROVIDER_CONFIGS.find(
@@ -1202,7 +1202,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                         </div>
                       ) : (
                         <div className="text-center py-2">
-                          <p className="text-sm text-gray-500 mb-2">
+                          <p className="text-sm text-muted-foreground mb-2">
                             Not configured
                           </p>
                           <button
@@ -1226,25 +1226,25 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                     <div
                       className={`p-3 rounded-lg border transition-all ${
                         hasOptimizer
-                          ? "bg-purple-50 border-purple-200 shadow-sm"
-                          : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                          ? "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 shadow-sm"
+                          : "bg-muted border-border hover:bg-muted/80"
                       }`}
                     >
                       <div className="flex items-center space-x-2 mb-2">
                         <Brain
                           className={`w-4 h-4 ${
-                            hasOptimizer ? "text-purple-600" : "text-gray-400"
+                            hasOptimizer ? "text-purple-600 dark:text-purple-400" : "text-muted-foreground"
                           }`}
                         />
                         <span
                           className={`font-medium ${
-                            hasOptimizer ? "text-purple-800" : "text-gray-600"
+                            hasOptimizer ? "text-purple-800 dark:text-purple-300" : "text-muted-foreground"
                           }`}
                         >
                           Optimizer Model
                         </span>
                         {hasOptimizer && (
-                          <CheckCircle className="w-4 h-4 text-purple-600" />
+                          <CheckCircle className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                         )}
                       </div>
                       {optimizerConfig ? (
@@ -1256,13 +1256,13 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                               className="z-20"
                             />
                             {optimizerConfig.role === "both" && (
-                              <span className="text-xs text-green-600 font-medium">
+                              <span className="text-xs text-green-600 dark:text-green-400 font-medium">
                                 Also target
                               </span>
                             )}
                           </div>
-                          <div className="text-sm text-gray-600">
-                            <div className="font-medium">
+                          <div className="text-sm text-muted-foreground">
+                            <div className="font-medium text-foreground">
                               {optimizerConfig.provider_id === "custom"
                                 ? optimizerConfig.custom_provider_name
                                 : PROVIDER_CONFIGS.find(
@@ -1276,7 +1276,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                         </div>
                       ) : (
                         <div className="text-center py-2">
-                          <p className="text-sm text-gray-500 mb-2">
+                          <p className="text-sm text-muted-foreground mb-2">
                             Not configured
                           </p>
                           <button
@@ -1300,25 +1300,25 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                     <div
                       className={`p-3 rounded-lg border ${
                         hasTarget && hasOptimizer
-                          ? "bg-blue-50 border-blue-200"
+                          ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
                           : hasBoth
-                          ? "bg-blue-50 border-blue-200"
-                          : "bg-yellow-50 border-yellow-200"
+                          ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+                          : "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800"
                       }`}
                     >
                       <div className="flex items-center space-x-2 mb-1">
                         <Settings
                           className={`w-4 h-4 ${
                             (hasTarget && hasOptimizer) || hasBoth
-                              ? "text-blue-600"
-                              : "text-yellow-600"
+                              ? "text-blue-600 dark:text-blue-400"
+                              : "text-yellow-600 dark:text-yellow-400"
                           }`}
                         />
                         <span
                           className={`font-medium ${
                             (hasTarget && hasOptimizer) || hasBoth
-                              ? "text-blue-800"
-                              : "text-yellow-800"
+                              ? "text-blue-800 dark:text-blue-300"
+                              : "text-yellow-800 dark:text-yellow-300"
                           }`}
                         >
                           Setup Status
@@ -1326,31 +1326,31 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                       </div>
                       {hasTarget && hasOptimizer ? (
                         <div className="space-y-1">
-                          <p className="text-sm text-blue-600 font-medium">
+                          <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
                             ✅ Ready for optimization
                           </p>
-                          <p className="text-xs text-blue-500">
+                          <p className="text-xs text-blue-500 dark:text-blue-400/70">
                             Using separate models for each role
                           </p>
                         </div>
                       ) : hasBoth ? (
                         <div className="space-y-1">
-                          <p className="text-sm text-blue-600 font-medium">
+                          <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
                             ✅ Ready for optimization
                           </p>
-                          <p className="text-xs text-blue-500">
+                          <p className="text-xs text-blue-500 dark:text-blue-400/70">
                             Using single model for both roles
                           </p>
                         </div>
                       ) : (
                         <div className="space-y-1">
-                          <p className="text-sm text-yellow-700">
+                          <p className="text-sm text-yellow-700 dark:text-yellow-300">
                             ⚠️ Configure {!hasTarget ? "target" : ""}{" "}
                             {!hasTarget && !hasOptimizer ? " & " : ""}{" "}
                             {!hasOptimizer ? "optimizer" : ""} model
                             {!hasTarget && !hasOptimizer ? "s" : ""}
                           </p>
-                          <p className="text-xs text-yellow-600">
+                          <p className="text-xs text-yellow-600 dark:text-yellow-400/70">
                             Select a provider above to get started
                           </p>
                         </div>
@@ -1373,20 +1373,20 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
 
               if (!provider) return null;
 
-              return (
-                <div
-                  key={providerId}
-                  className="bg-white rounded-2xl p-6 border border-meta-gray-300/50"
-                >
+                return (
+                  <div
+                    key={providerId}
+                    className="bg-card rounded-2xl p-6 border border-border"
+                  >
                   {/* Provider Header */}
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center space-x-3">
                       {provider.icon}
                       <div>
-                        <h4 className="font-semibold text-meta-gray text-lg">
+                        <h4 className="font-semibold text-foreground text-lg">
                           {provider.name}
                         </h4>
-                        <p className="text-sm text-meta-gray/60">
+                        <p className="text-sm text-muted-foreground">
                           {providerConfigs.length} configuration
                           {providerConfigs.length !== 1 ? "s" : ""}
                         </p>
@@ -1499,11 +1499,11 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
 
                     if (hasBothConfig) {
                       return (
-                        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
-                              <Split className="w-4 h-4 text-blue-600" />
-                              <span className="text-sm font-medium text-blue-800">
+                              <Split className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                              <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
                                 Using one model for both roles
                               </span>
                             </div>
@@ -1525,11 +1525,11 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                       );
                     } else if (hasTargetAndOptimizer) {
                       return (
-                        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
-                              <Merge className="w-4 h-4 text-green-600" />
-                              <span className="text-sm font-medium text-green-800">
+                              <Merge className="w-4 h-4 text-green-600 dark:text-green-400" />
+                              <span className="text-sm font-medium text-green-800 dark:text-green-300">
                                 Using separate models for each role
                               </span>
                             </div>
@@ -1555,7 +1555,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                       return (
                         <div
                           key={config.id}
-                          className="bg-gray-50 rounded-lg p-4 border border-gray-200"
+                          className="bg-muted rounded-lg p-4 border border-border"
                         >
                           <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center space-x-3">
@@ -1563,7 +1563,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                 role={config.role}
                                 configId={config.id}
                               />
-                              <h5 className="font-medium text-meta-gray">
+                              <h5 className="font-medium text-foreground">
                                 Model Configuration
                               </h5>
                             </div>
@@ -1603,7 +1603,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                             {/* Custom Provider Name (for custom providers) */}
                             {config.provider_id === "custom" && (
                               <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-meta-gray mb-2">
+                                <label className="block text-sm font-medium text-foreground mb-2">
                                   Provider Name
                                   <span className="text-red-500 ml-1">*</span>
                                 </label>
@@ -1618,7 +1618,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                     )
                                   }
                                   placeholder="e.g., Azure AI Studio, My Custom API"
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-meta-blue"
+                                  className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
                                 />
                               </div>
                             )}
@@ -1627,7 +1627,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                             {(config.provider_id === "custom" ||
                               config.provider_id === "vllm") && (
                               <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-meta-gray mb-2">
+                                <label className="block text-sm font-medium text-foreground mb-2">
                                   API Base URL
                                   <span className="text-red-500 ml-1">*</span>
                                 </label>
@@ -1646,7 +1646,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                       ? "e.g., http://localhost:8000"
                                       : "e.g., https://your-endpoint.eastus2.inference.ai.azure.com/"
                                   }
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-meta-blue"
+                                  className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
                                 />
                               </div>
                             )}
@@ -1654,7 +1654,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                             {/* Model Prefix (for custom providers) */}
                             {config.provider_id === "custom" && (
                               <div>
-                                <label className="block text-sm font-medium text-meta-gray mb-2">
+                                <label className="block text-sm font-medium text-foreground mb-2">
                                   Model Prefix (LiteLLM format)
                                 </label>
                                 <input
@@ -1668,9 +1668,9 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                     )
                                   }
                                   placeholder="e.g., azure_ai/, custom/"
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-meta-blue"
+                                  className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-muted-foreground mt-1">
                                   Leave empty for direct model names
                                 </p>
                               </div>
@@ -1679,7 +1679,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                             {/* Authentication Method (for custom providers) */}
                             {config.provider_id === "custom" && (
                               <div>
-                                <label className="block text-sm font-medium text-meta-gray mb-2">
+                                <label className="block text-sm font-medium text-foreground mb-2">
                                   Authentication Method
                                 </label>
                                 <select
@@ -1694,7 +1694,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                         | "custom_headers"
                                     )
                                   }
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-meta-blue"
+                                  className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
                                 >
                                   <option value="api_key">API Key</option>
                                   <option value="bearer_token">
@@ -1709,7 +1709,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
 
                             {/* Model Selection */}
                             <div>
-                              <label className="block text-sm font-medium text-meta-gray mb-2">
+                              <label className="block text-sm font-medium text-foreground mb-2">
                                 Model
                                 {config.provider_id === "custom" && (
                                   <span className="text-red-500 ml-1">*</span>
@@ -1727,7 +1727,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                     )
                                   }
                                   placeholder="e.g., command-r-plus, mistral-large-latest"
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-meta-blue"
+                                  className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
                                 />
                               ) : (
                                 <select
@@ -1739,7 +1739,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                       e.target.value
                                     )
                                   }
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-meta-blue"
+                                  className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
                                 >
                                   {provider?.popular_models.map((model) => (
                                     <option key={model} value={model}>
@@ -1749,7 +1749,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                 </select>
                               )}
                               {config.provider_id === "custom" && (
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-muted-foreground mt-1">
                                   Final model will be:{" "}
                                   {config.model_prefix || ""}
                                   {config.model_name}
@@ -1761,7 +1761,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                             {(provider?.requires_signup ||
                               config.provider_id === "custom") && (
                               <div>
-                                <label className="block text-sm font-medium text-meta-gray mb-2">
+                                <label className="block text-sm font-medium text-foreground mb-2">
                                   {config.provider_id === "custom"
                                     ? config.auth_method === "bearer_token"
                                       ? "Bearer Token"
@@ -1774,7 +1774,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                 {config.provider_id === "custom" &&
                                 config.auth_method === "custom_headers" ? (
                                   <div className="space-y-2">
-                                    <p className="text-xs text-gray-500">
+                                    <p className="text-xs text-muted-foreground">
                                       Configure custom headers for
                                       authentication
                                     </p>
@@ -1803,7 +1803,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
   "X-API-Key": "your-api-key"
 }`}
                                       rows={4}
-                                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-meta-blue font-mono text-sm"
+                                      className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground font-mono text-sm"
                                     />
                                   </div>
                                 ) : (
@@ -1830,7 +1830,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                             : "Enter your API key"
                                           : "Enter your API key"
                                       }
-                                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-meta-blue pr-10"
+                                      className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground pr-10"
                                     />
                                     <button
                                       type="button"
@@ -1840,7 +1840,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                           [configKey]: !prev[configKey],
                                         }))
                                       }
-                                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                     >
                                       {showApiKeys[configKey] ? (
                                         <EyeOff className="w-4 h-4" />
@@ -1857,7 +1857,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                             {showAdvanced && (
                               <>
                                 <div>
-                                  <label className="block text-sm font-medium text-meta-gray mb-2">
+                                  <label className="block text-sm font-medium text-foreground mb-2">
                                     Temperature
                                   </label>
                                   <input
@@ -1873,12 +1873,12 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                         parseFloat(e.target.value)
                                       )
                                     }
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-meta-blue"
+                                    className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
                                   />
                                 </div>
 
                                 <div>
-                                  <label className="block text-sm font-medium text-meta-gray mb-2">
+                                  <label className="block text-sm font-medium text-foreground mb-2">
                                     Max Tokens
                                   </label>
                                   <input
@@ -1893,13 +1893,13 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                         parseInt(e.target.value)
                                       )
                                     }
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-meta-blue"
+                                    className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
                                   />
                                 </div>
 
                                 {selectedProviders.length > 1 && (
                                   <div>
-                                    <label className="block text-sm font-medium text-meta-gray mb-2">
+                                    <label className="block text-sm font-medium text-foreground mb-2">
                                       Role Assignment
                                     </label>
                                     <select
@@ -1914,7 +1914,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                             | "both"
                                         )
                                       }
-                                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-meta-blue"
+                                      className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
                                     >
                                       <option value="both">
                                         🔄 Both (Target + Optimizer)
@@ -1930,7 +1930,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                 )}
 
                                 <div>
-                                  <label className="block text-sm font-medium text-meta-gray mb-2">
+                                  <label className="block text-sm font-medium text-foreground mb-2">
                                     API Base URL
                                   </label>
                                   <input
@@ -1943,7 +1943,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                         e.target.value
                                       )
                                     }
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-meta-blue"
+                                    className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
                                   />
                                 </div>
                               </>
@@ -1952,10 +1952,10 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
 
                           {/* Connection error message */}
                           {connectionStatus[configKey] === "error" && (
-                            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                               <div className="flex items-center space-x-2">
-                                <AlertCircle className="w-4 h-4 text-red-600" />
-                                <span className="text-red-800 text-sm">
+                                <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                                <span className="text-red-800 dark:text-red-300 text-sm">
                                   Connection failed. Please check your API key
                                   and configuration.
                                 </span>
@@ -1978,11 +1978,11 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
         const provider = PROVIDER_CONFIGS.find((p) => p.id === id);
         return provider?.setup_difficulty !== "easy";
       }) && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-          <h4 className="font-semibold text-yellow-900 mb-2">
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+          <h4 className="font-semibold text-yellow-900 dark:text-yellow-300 mb-2">
             Setup Instructions
           </h4>
-          <div className="space-y-2 text-sm text-yellow-800">
+          <div className="space-y-2 text-sm text-yellow-800 dark:text-yellow-200">
             {selectedProviders.map((id) => {
               const provider = PROVIDER_CONFIGS.find((p) => p.id === id);
               if (provider?.setup_difficulty === "easy") return null;
@@ -1994,13 +1994,13 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                     <div className="ml-4 mt-1">
                       <p>
                         1. Install vLLM:{" "}
-                        <code className="bg-yellow-100 px-1 rounded">
+                        <code className="bg-yellow-100 dark:bg-yellow-900/40 px-1 rounded">
                           pip install vllm
                         </code>
                       </p>
                       <p>
                         2. Start server:{" "}
-                        <code className="bg-yellow-100 px-1 rounded">
+                        <code className="bg-yellow-100 dark:bg-yellow-900/40 px-1 rounded">
                           vllm serve{" "}
                           {configurations
                             .find((c) => c.provider_id === "vllm")
@@ -2027,18 +2027,18 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                       <p>1. Set up your Azure AI Studio endpoint</p>
                       <p>
                         2. Use format:{" "}
-                        <code className="bg-yellow-100 px-1 rounded text-xs">
+                        <code className="bg-yellow-100 dark:bg-yellow-900/40 text-yellow-900 dark:text-yellow-200 px-1 rounded text-xs">
                           azure_ai/
                         </code>{" "}
                         as model prefix
                       </p>
                       <p>
                         3. Model example:{" "}
-                        <code className="bg-yellow-100 px-1 rounded text-xs">
+                        <code className="bg-yellow-100 dark:bg-yellow-900/40 text-yellow-900 dark:text-yellow-200 px-1 rounded text-xs">
                           command-r-plus
                         </code>{" "}
                         → Final:{" "}
-                        <code className="bg-yellow-100 px-1 rounded text-xs">
+                        <code className="bg-yellow-100 dark:bg-yellow-900/40 text-yellow-900 dark:text-yellow-200 px-1 rounded text-xs">
                           azure_ai/command-r-plus
                         </code>
                       </p>
@@ -2050,7 +2050,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                         <a
                           href="https://docs.litellm.ai/docs/providers"
                           target="_blank"
-                          className="text-blue-600 hover:underline"
+                          className="text-blue-600 dark:text-blue-400 hover:underline"
                         >
                           LiteLLM docs
                         </a>{" "}
