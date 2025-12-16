@@ -1,6 +1,8 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { FileQuestion, Database, Settings, Check } from 'lucide-react';
+import { FileQuestion, Database, Settings } from 'lucide-react';
+import { SelectableCard } from '@/components/ui/selectable-card';
+import { InfoBox } from '@/components/ui/info-box';
 
 interface UseCase {
   id: string;
@@ -115,43 +117,14 @@ export const UseCaseSelector: React.FC<UseCaseSelectorProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {useCases.map((useCase) => (
-          <button
+          <SelectableCard
             key={useCase.id}
+            selected={selectedUseCase === useCase.id}
             onClick={() => onSelectUseCase(useCase.id, useCase.config)}
-            className={cn(
-              "relative p-6 rounded-xl border-2",
-              "text-left transition-all duration-200",
-              "hover:border-meta-blue/30 dark:hover:border-meta-blue-light/30",
-              selectedUseCase === useCase.id
-                ? "border-meta-blue dark:border-meta-blue-light bg-meta-blue/5 dark:bg-meta-blue/10"
-                : "border-border bg-card hover:border-muted-foreground/50"
-            )}
+            icon={useCase.icon}
+            title={useCase.title}
+            description={useCase.description}
           >
-            {/* Selection indicator */}
-            {selectedUseCase === useCase.id && (
-              <div className="absolute top-3 right-3 w-6 h-6 bg-meta-blue dark:bg-meta-blue-light rounded-full flex items-center justify-center">
-                <Check className="w-4 h-4 text-white dark:text-meta-gray-900" />
-              </div>
-            )}
-
-            {/* Icon */}
-            <div className={cn(
-              "w-12 h-12 rounded-lg flex items-center justify-center mb-4",
-              selectedUseCase === useCase.id
-                ? "bg-meta-blue dark:bg-meta-blue-light text-white dark:text-meta-gray-900"
-                : "bg-muted text-muted-foreground"
-            )}>
-              {useCase.icon}
-            </div>
-
-            {/* Content */}
-            <h4 className="font-semibold text-foreground mb-2">
-              {useCase.title}
-            </h4>
-            <p className="text-sm text-muted-foreground mb-3">
-              {useCase.description}
-            </p>
-
             {/* Use case examples */}
             <div className="space-y-1">
               <p className="text-xs font-medium text-muted-foreground mb-2">
@@ -169,7 +142,7 @@ export const UseCaseSelector: React.FC<UseCaseSelectorProps> = ({
                 </p>
               )}
             </div>
-          </button>
+          </SelectableCard>
         ))}
       </div>
 
@@ -187,19 +160,14 @@ export const UseCaseSelector: React.FC<UseCaseSelectorProps> = ({
 
       {/* Helper text based on selection */}
       {selectedUseCase && (
-        <div className={cn(
-          "mt-4 p-4 rounded-lg",
-          "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
-        )}>
-          <p className="text-sm text-blue-800 dark:text-blue-200">
-            {selectedUseCase === 'custom'
-              ? "You'll configure all settings manually in the following steps based on your specific requirements."
-              : `Perfect! We'll show you the most relevant options for ${
-                  useCases.find(uc => uc.id === selectedUseCase)?.title
-                } applications in the next steps.`
-            }
-          </p>
-        </div>
+        <InfoBox variant="info" className="mt-4">
+          {selectedUseCase === 'custom'
+            ? "You'll configure all settings manually in the following steps based on your specific requirements."
+            : `Perfect! We'll show you the most relevant options for ${
+                useCases.find(uc => uc.id === selectedUseCase)?.title
+              } applications in the next steps.`
+          }
+        </InfoBox>
       )}
     </div>
   );

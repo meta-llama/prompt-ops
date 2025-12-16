@@ -10,19 +10,21 @@ import {
   ChevronUp,
   HelpCircle,
   AlertCircle,
-  Cpu,
   Clock,
   BarChart3,
+  Sparkles,
+  Cpu,
   GitBranch,
   Layers,
-  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SectionTitle } from "@/components/ui/section-title";
+import { InfoBox } from "@/components/ui/info-box";
+import { getStatusColor, getSpeedColor, getQualityColor } from "@/lib/status-colors";
 
 interface OptimizerConfig {
   id: string;
@@ -236,45 +238,6 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
     }
   };
 
-  const getComplexityColor = (complexity: string) => {
-    switch (complexity) {
-      case "low":
-        return "text-green-600";
-      case "medium":
-        return "text-yellow-600";
-      case "high":
-        return "text-red-600";
-      default:
-        return "text-gray-600";
-    }
-  };
-
-  const getExecutionTimeColor = (time: string) => {
-    switch (time) {
-      case "fast":
-        return "text-green-600";
-      case "medium":
-        return "text-yellow-600";
-      case "slow":
-        return "text-red-600";
-      default:
-        return "text-gray-600";
-    }
-  };
-
-  const getQualityColor = (quality: string) => {
-    switch (quality) {
-      case "good":
-        return "text-green-600";
-      case "better":
-        return "text-blue-600";
-      case "best":
-        return "text-purple-600";
-      default:
-        return "text-gray-600";
-    }
-  };
-
   const getRecommendedOptimizer = () => {
     if (useCase === "qa" || useCase === "rag") {
       return "llama"; // Recommended for Q&A and RAG tasks
@@ -344,25 +307,18 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl md:text-3xl font-normal text-foreground mb-4 tracking-tight">
-          Choose Your Optimizer
-        </h2>
-        <p className="text-muted-foreground text-lg">
-          Select the optimization strategy that best fits your use case and quality requirements
-        </p>
-      </div>
+      <SectionTitle
+        title="Choose Your Optimizer"
+        subtitle="Select the optimization strategy that best fits your use case and quality requirements"
+      />
 
-      {/* Recommendation Alert */}
+      {/* Recommendation */}
       {useCase && (
-        <Alert className="border-meta-blue/20 dark:border-meta-blue-light/20 bg-meta-blue/5 dark:bg-meta-blue/10">
-          <AlertCircle className="h-4 w-4 text-meta-blue dark:text-meta-blue-light" />
-          <AlertDescription className="text-foreground">
-            <strong>Recommendation:</strong> For your <strong>{useCase.toUpperCase()}</strong> use case,
-            we recommend the <strong>{OPTIMIZER_CONFIGS.find(o => o.id === getRecommendedOptimizer())?.name}</strong> optimizer
-            for optimal results.
-          </AlertDescription>
-        </Alert>
+        <InfoBox variant="info" title="Recommendation">
+          For your <strong>{useCase.toUpperCase()}</strong> use case,
+          we recommend the <strong>{OPTIMIZER_CONFIGS.find(o => o.id === getRecommendedOptimizer())?.name}</strong> optimizer
+          for optimal results.
+        </InfoBox>
       )}
 
       <div className="grid grid-cols-1 gap-6">
@@ -441,7 +397,7 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
                           <p className="text-xs text-muted-foreground/70 uppercase tracking-wide font-medium">
                             Complexity
                           </p>
-                          <p className={cn("font-semibold capitalize", getComplexityColor(optimizer.complexity))}>
+                          <p className={cn("font-semibold capitalize", getStatusColor(optimizer.complexity))}>
                             {optimizer.complexity}
                           </p>
                         </div>
@@ -453,7 +409,7 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
                           <p className="text-xs text-muted-foreground/70 uppercase tracking-wide font-medium">
                             Speed
                           </p>
-                          <p className={cn("font-semibold capitalize", getExecutionTimeColor(optimizer.execution_time))}>
+                          <p className={cn("font-semibold capitalize", getSpeedColor(optimizer.execution_time))}>
                             {optimizer.execution_time}
                           </p>
                         </div>

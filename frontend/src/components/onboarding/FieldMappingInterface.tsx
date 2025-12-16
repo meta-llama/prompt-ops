@@ -4,7 +4,6 @@ import { apiUrl } from "@/lib/config";
 import {
   ArrowRight,
   CheckCircle,
-  AlertCircle,
   Eye,
   RefreshCw,
   FileText,
@@ -13,6 +12,7 @@ import {
   List,
   Settings,
 } from "lucide-react";
+import { InfoBox } from "@/components/ui/info-box";
 
 interface FieldInfo {
   name: string;
@@ -291,19 +291,15 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
 
   if (error) {
     return (
-      <div className="p-6 bg-red-50 border border-red-200 rounded-lg">
-        <div className="flex items-center mb-2">
-          <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-          <h3 className="text-lg font-semibold text-red-800">Analysis Error</h3>
-        </div>
-        <p className="text-red-700">{error}</p>
+      <InfoBox variant="error" title="Analysis Error">
+        <p className="mb-3">{error}</p>
         <button
           onClick={analyzeDataset}
-          className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
         >
           Try Again
         </button>
-      </div>
+      </InfoBox>
     );
   }
 
@@ -452,7 +448,7 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
             {analysis.fields.map((field, index) => (
               <div
                 key={index}
-                className="p-3 border border-border rounded-lg hover:bg-muted"
+                className="p-3 border border-border rounded-lg"
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-2">

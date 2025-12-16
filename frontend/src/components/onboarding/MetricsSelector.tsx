@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   Check,
-  Info,
   Settings,
   Zap,
   Target,
@@ -13,6 +12,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { InfoBox } from "@/components/ui/info-box";
 
 // Helper components for complex parameter types
 const ArrayInput: React.FC<{

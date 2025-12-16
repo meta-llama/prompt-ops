@@ -96,12 +96,6 @@ export const StepCard: React.FC<StepCardProps> = ({
         </div>
       </div>
 
-      {/* Active pulse animation */}
-      {status === "active" && (
-        <div
-          className="absolute inset-0 rounded-xl animate-pulse opacity-30 bg-meta-blue"
-        />
-      )}
     </button>
   );
 };

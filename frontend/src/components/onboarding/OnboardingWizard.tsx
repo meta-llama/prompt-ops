@@ -6,28 +6,21 @@ import {
   Lightbulb,
   Database,
   Target,
-  Eye,
-  Globe,
   Zap,
-  Shield,
-  Server,
   Brain,
-  Key,
   Settings,
-  BarChart3,
-  Cpu,
-  AlertCircle,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { apiUrl, wsUrl } from "@/lib/config";
+import { WizardSection } from "@/components/ui/wizard-section";
+import { InfoBox } from "@/components/ui/info-box";
+import { getProviderIcon, getProviderName } from "@/lib/providers";
 import { UseCaseSelector } from "./UseCaseSelector";
 import { FieldMappingInterface } from "./FieldMappingInterface";
 import { MetricsSelector } from "./MetricsSelector";
 import { ModelProviderSelector } from "./ModelProviderSelector";
 import { OptimizerSelector } from "./OptimizerSelector";
+import { DatasetUploader } from "./DatasetUploader";
 
 interface OnboardingWizardProps {
   activeMode: "enhance" | "migrate";
@@ -85,98 +78,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       ...prev,
       [sectionId]: !prev[sectionId]
     }));
-  };
-
-  // Provider icon mapping
-  const getProviderIcon = (providerId: string) => {
-    switch (providerId) {
-      case "openrouter":
-        return <Globe className="w-5 h-5 text-blue-600" />;
-      case "together":
-        return <Zap className="w-5 h-5 text-purple-600" />;
-      case "anthropic":
-        return <Shield className="w-5 h-5 text-orange-600" />;
-      case "openai":
-        return <Brain className="w-5 h-5 text-meta-teal" />;
-      case "vllm":
-      case "ollama":
-        return <Server className="w-5 h-5 text-gray-600" />;
-      case "custom":
-        return <Server className="w-5 h-5 text-indigo-600" />;
-      default:
-        return <Globe className="w-5 h-5 text-gray-600" />;
-    }
-  };
-
-  // Provider name formatting
-  const getProviderName = (providerId: string, customName?: string) => {
-    if (providerId === "custom" && customName) {
-      return customName;
-    }
-
-    const names: Record<string, string> = {
-      openrouter: "OpenRouter",
-      together: "Together AI",
-      anthropic: "Anthropic",
-      openai: "OpenAI",
-      vllm: "vLLM",
-      ollama: "Ollama",
-      custom: "Custom Provider",
-    };
-
-    return names[providerId] || providerId.replace("_", " ");
-  };
-
-  // Role badge component for review page
-  const ReviewRoleBadge = ({
-    role,
-  }: {
-    role: "target" | "optimizer" | "both";
-  }) => {
-    const getRoleConfig = (role: string) => {
-      switch (role) {
-        case "target":
-          return {
-            icon: <Target className="w-3 h-3" />,
-            label: "Target",
-            className: "bg-meta-teal/10 text-meta-teal-800 border-meta-teal/30",
-          };
-        case "optimizer":
-          return {
-            icon: <Brain className="w-3 h-3" />,
-            label: "Optimizer",
-            className: "bg-meta-purple/10 text-meta-purple-800 border-meta-purple/30",
-          };
-        case "both":
-          return {
-            icon: (
-              <div className="flex items-center space-x-0.5">
-                <Target className="w-2.5 h-2.5" />
-                <Brain className="w-2.5 h-2.5" />
-              </div>
-            ),
-            label: "Target + Optimizer",
-            className: "bg-meta-blue/10 text-meta-blue border-meta-blue/30",
-          };
-        default:
-          return {
-            icon: <Globe className="w-3 h-3" />,
-            label: role,
-            className: "bg-gray-100 text-gray-800 border-gray-200",
-          };
-      }
-    };
-
-    const config = getRoleConfig(role);
-
-    return (
-      <div
-        className={`inline-flex items-center space-x-1 px-2 py-1 rounded-md text-xs font-medium border ${config.className}`}
-      >
-        {config.icon}
-        <span>{config.label}</span>
-      </div>
-    );
   };
 
   // Generate dynamic project name
@@ -465,48 +366,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     updateFormData("fieldMappings", mappings);
   };
 
-  // Section header component
-  const SectionHeader = ({
-    id,
-    title,
-    icon: Icon,
-    status
-  }: {
-    id: string;
-    title: string;
-    icon: any;
-    status: 'complete' | 'incomplete' | 'empty';
-  }) => (
-    <button
-      onClick={() => toggleSection(id)}
-      className="w-full flex items-center justify-between p-4 bg-muted rounded-xl border border-border hover:border-meta-blue/30 transition-all duration-200"
-    >
-      <div className="flex items-center space-x-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-          status === 'complete'
-            ? 'bg-meta-teal/10 text-meta-teal'
-            : status === 'incomplete'
-            ? 'bg-meta-orange/10 text-meta-orange'
-            : 'bg-meta-blue/10 text-meta-blue'
-        }`}>
-          {status === 'complete' ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
-        </div>
-        <h3 className="text-lg font-bold text-foreground">{title}</h3>
-        {status === 'complete' && (
-          <Badge variant="success">Complete</Badge>
-        )}
-        {status === 'incomplete' && (
-          <Badge variant="warning">In Progress</Badge>
-        )}
-      </div>
-      {collapsedSections[id] ? (
-        <ChevronDown className="w-5 h-5 text-muted-foreground" />
-      ) : (
-        <ChevronUp className="w-5 h-5 text-muted-foreground" />
-      )}
-    </button>
-  );
-
   const renderRequirementsHeader = () => (
     <div className="text-center mb-8 pt-4">
       <h1 className="text-2xl md:text-3xl font-normal text-foreground mb-4 tracking-tight">
@@ -535,221 +394,129 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   );
 
   const renderPromptSection = () => (
-    <div ref={sectionRefs.prompt} className="space-y-4">
-      <SectionHeader id="prompt" title="1. Your Prompt" icon={FileText} status={getSectionStatus('prompt')} />
+    <div ref={sectionRefs.prompt}>
+      <WizardSection
+        id="prompt"
+        title="1. Your Prompt"
+        icon={<FileText className="w-5 h-5" />}
+        status={getSectionStatus('prompt')}
+        collapsed={!!collapsedSections.prompt}
+        onToggle={() => toggleSection('prompt')}
+      >
+        <p className="text-muted-foreground text-sm">
+          Enter the prompt you want to optimize. This is the instruction or system prompt that guides AI behavior.
+        </p>
 
-      {!collapsedSections.prompt && (
-        <div className="pl-4 space-y-4">
-          <p className="text-muted-foreground text-sm">
-            Enter the prompt you want to optimize. This is the instruction or system prompt that guides AI behavior.
+        <div className="space-y-3">
+          <label className="block text-sm font-medium text-foreground">
+            Current Prompt
+          </label>
+          <textarea
+            value={formData.prompt}
+            onChange={(e) => updateFormData("prompt", e.target.value)}
+            placeholder="Enter your prompt here..."
+            className="w-full h-32 p-4 border border-border rounded-xl focus:ring-2 focus:ring-ring focus:border-transparent resize-none bg-panel text-foreground placeholder:text-muted-foreground"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-muted-foreground">
+            Quick Examples:
           </p>
-
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-foreground">
-              Current Prompt
-            </label>
-            <textarea
-              value={formData.prompt}
-              onChange={(e) => updateFormData("prompt", e.target.value)}
-              placeholder="Enter your prompt here..."
-              className="w-full h-32 p-4 border border-border rounded-xl focus:ring-2 focus:ring-ring focus:border-transparent resize-none bg-panel text-foreground placeholder:text-muted-foreground"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">
-              Quick Examples:
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {[
-                "Analyze the sentiment of this text:",
-                "Summarize this document in 3 bullet points:",
-                "Answer this question based on the context:",
-                "Classify this text into categories:",
-              ].map((example) => (
-                <button
-                  key={example}
-                  onClick={() => updateFormData("prompt", example)}
-                  className="text-xs bg-meta-blue/10 hover:bg-meta-blue/20 text-meta-blue px-3 py-1.5 rounded-full border border-meta-blue/30 transition-colors duration-200"
-                >
-                  {example}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-wrap gap-2">
+            {[
+              "Analyze the sentiment of this text:",
+              "Summarize this document in 3 bullet points:",
+              "Answer this question based on the context:",
+              "Classify this text into categories:",
+            ].map((example) => (
+              <button
+                key={example}
+                onClick={() => updateFormData("prompt", example)}
+                className="text-xs bg-meta-blue/10 hover:bg-meta-blue/20 text-meta-blue dark:text-meta-blue-light px-3 py-1.5 rounded-full border border-meta-blue/30 dark:border-meta-blue-light/50 transition-colors"
+              >
+                {example}
+              </button>
+            ))}
           </div>
         </div>
-      )}
+      </WizardSection>
     </div>
   );
 
   const renderUseCaseSection = () => (
-    <div ref={sectionRefs.usecase} className="space-y-4">
-      <SectionHeader id="usecase" title="2. Use Case" icon={Lightbulb} status={getSectionStatus('usecase')} />
+    <div ref={sectionRefs.usecase}>
+      <WizardSection
+        id="usecase"
+        title="2. Use Case"
+        icon={<Lightbulb className="w-5 h-5" />}
+        status={getSectionStatus('usecase')}
+        collapsed={!!collapsedSections.usecase}
+        onToggle={() => toggleSection('usecase')}
+      >
+        <p className="text-muted-foreground text-sm">
+          Choose the type that best matches your project to get relevant options for field mapping and metrics.
+        </p>
 
-      {!collapsedSections.usecase && (
-        <div className="pl-4 space-y-4">
-          <p className="text-muted-foreground text-sm">
-            Choose the type that best matches your project to get relevant options for field mapping and metrics.
-          </p>
-
-          <UseCaseSelector
-            selectedUseCase={formData.useCase}
-            onSelectUseCase={(useCaseId) => updateFormData("useCase", useCaseId)}
-          />
-        </div>
-      )}
+        <UseCaseSelector
+          selectedUseCase={formData.useCase}
+          onSelectUseCase={(useCaseId) => updateFormData("useCase", useCaseId)}
+        />
+      </WizardSection>
     </div>
   );
 
   const renderDatasetSection = () => (
-    <div ref={sectionRefs.dataset} className="space-y-4">
-      <SectionHeader id="dataset" title="3. Dataset" icon={Database} status={getSectionStatus('dataset')} />
-
-      {!collapsedSections.dataset && (
-        <div className="pl-4 space-y-4">
-          <p className="text-muted-foreground text-sm">
-            Upload a JSON file containing your evaluation examples.
-          </p>
-
-          <div
-            className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
-              formData.datasetPath
-                ? "border-meta-teal bg-meta-teal/5"
-                : uploadError
-                ? "border-red-500 bg-red-500/5 dark:border-red-400 dark:bg-red-400/5"
-                : "border-border bg-panel hover:border-meta-blue"
-            }`}
-          >
-            {uploadLoading ? (
-              <div className="space-y-3">
-                <div className="w-12 h-12 bg-meta-blue/10 rounded-full flex items-center justify-center mx-auto">
-                  <div className="w-6 h-6 border-2 border-meta-blue border-t-transparent rounded-full animate-spin"></div>
-                </div>
-                <p className="text-foreground">Uploading dataset...</p>
-              </div>
-            ) : formData.datasetPath ? (
-              <div className="space-y-3">
-                <div className="w-12 h-12 bg-meta-teal/10 rounded-full flex items-center justify-center mx-auto">
-                  <CheckCircle className="w-6 h-6 text-meta-teal" />
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground">
-                    {formData.datasetPath}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {formData.uploadedFile
-                      ? (formData.uploadedFile.size / 1024).toFixed(2)
-                      : "0"}{" "}
-                    KB
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    updateFormData("datasetPath", "");
-                    updateFormData("uploadedFile", null);
-                    setUploadError(null);
-                  }}
-                  className="text-sm text-red-600 hover:underline dark:text-red-400"
-                >
-                  Remove file
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <Database className="w-10 h-10 text-muted-foreground/50 mx-auto" />
-                <div>
-                  <label htmlFor="file-upload" className="cursor-pointer">
-                    <span className="text-meta-blue hover:underline font-semibold">
-                      Click to upload
-                    </span>
-                    <span className="text-muted-foreground"> or drag and drop</span>
-                  </label>
-                  <input
-                    id="file-upload"
-                    type="file"
-                    accept=".json"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        handleFileUpload(file);
-                      }
-                    }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  JSON files only, max 10MB
-                </p>
-                {uploadError && (
-                  <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400 p-2 rounded">
-                    {uploadError}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Dataset format helper */}
-          {formData.useCase && formData.useCase !== "custom" && (
-            <div className="bg-meta-blue/5 border border-meta-blue/20 rounded-xl p-4">
-              <p className="text-xs font-semibold text-foreground mb-2">
-                Expected format for {formData.useCase.toUpperCase()}:
-              </p>
-              <pre className="text-xs bg-panel p-3 rounded-lg border border-border overflow-x-auto text-muted-foreground">
-                {formData.useCase === "qa"
-                  ? JSON.stringify(
-                      [
-                        {
-                          question: "What is the capital of France?",
-                          answer: "Paris",
-                        },
-                      ],
-                      null,
-                      2
-                    )
-                  : JSON.stringify(
-                      [
-                        {
-                          query: "What are the key terms in this contract?",
-                          context: [
-                            "Document 1 content text...",
-                            "Document 2 content text...",
-                          ],
-                          answer: "The key terms include...",
-                        },
-                      ],
-                      null,
-                      2
-                    )}
-              </pre>
-            </div>
-          )}
-        </div>
-      )}
+    <div ref={sectionRefs.dataset}>
+      <WizardSection
+        id="dataset"
+        title="3. Dataset"
+        icon={<Database className="w-5 h-5" />}
+        status={getSectionStatus('dataset')}
+        collapsed={!!collapsedSections.dataset}
+        onToggle={() => toggleSection('dataset')}
+      >
+        <DatasetUploader
+          datasetPath={formData.datasetPath}
+          uploadedFile={formData.uploadedFile}
+          useCase={formData.useCase}
+          onUpload={handleFileUpload}
+          onRemove={() => {
+            updateFormData("datasetPath", "");
+            updateFormData("uploadedFile", null);
+            setUploadError(null);
+          }}
+          loading={uploadLoading}
+          error={uploadError}
+        />
+      </WizardSection>
     </div>
   );
 
   const renderFieldMappingSection = () => (
-    <div ref={sectionRefs.fieldmapping} className="space-y-4">
-      <SectionHeader id="fieldmapping" title="4. Field Mapping" icon={ArrowRight} status={getSectionStatus('fieldmapping')} />
-
-      {!collapsedSections.fieldmapping && (
-        <div className="pl-4 space-y-4">
-          {formData.datasetPath ? (
-            <FieldMappingInterface
-              filename={formData.datasetPath}
-              useCase={formData.useCase}
-              onMappingUpdate={handleFieldMappingUpdate}
-              existingMappings={formData.fieldMappings}
-            />
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <ArrowRight className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p>Upload a dataset first to configure field mappings</p>
-            </div>
-          )}
-        </div>
-      )}
+    <div ref={sectionRefs.fieldmapping}>
+      <WizardSection
+        id="fieldmapping"
+        title="4. Field Mapping"
+        icon={<ArrowRight className="w-5 h-5" />}
+        status={getSectionStatus('fieldmapping')}
+        collapsed={!!collapsedSections.fieldmapping}
+        onToggle={() => toggleSection('fieldmapping')}
+      >
+        {formData.datasetPath ? (
+          <FieldMappingInterface
+            filename={formData.datasetPath}
+            useCase={formData.useCase}
+            onMappingUpdate={handleFieldMappingUpdate}
+            existingMappings={formData.fieldMappings}
+          />
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <ArrowRight className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p>Upload a dataset first to configure field mappings</p>
+          </div>
+        )}
+      </WizardSection>
     </div>
   );
 
@@ -762,37 +529,43 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   };
 
   const renderMetricsSection = () => (
-    <div ref={sectionRefs.metrics} className="space-y-4">
-      <SectionHeader id="metrics" title="5. Success Metrics" icon={Target} status={getSectionStatus('metrics')} />
-
-      {!collapsedSections.metrics && (
-        <div className="pl-4 space-y-4">
-          <MetricsSelector
-            useCase={formData.useCase}
-            fieldMappings={formData.fieldMappings}
-            selectedMetrics={formData.metrics}
-            onMetricsChange={handleMetricsChange}
-          />
-        </div>
-      )}
+    <div ref={sectionRefs.metrics}>
+      <WizardSection
+        id="metrics"
+        title="5. Success Metrics"
+        icon={<Target className="w-5 h-5" />}
+        status={getSectionStatus('metrics')}
+        collapsed={!!collapsedSections.metrics}
+        onToggle={() => toggleSection('metrics')}
+      >
+        <MetricsSelector
+          useCase={formData.useCase}
+          fieldMappings={formData.fieldMappings}
+          selectedMetrics={formData.metrics}
+          onMetricsChange={handleMetricsChange}
+        />
+      </WizardSection>
     </div>
   );
 
   const renderModelsSection = () => (
-    <div ref={sectionRefs.models} className="space-y-4">
-      <SectionHeader id="models" title="6. AI Models" icon={Brain} status={getSectionStatus('models')} />
-
-      {!collapsedSections.models && (
-        <div className="pl-4 space-y-4">
-          <ModelProviderSelector
-            useCase={formData.useCase}
-            fieldMappings={formData.fieldMappings}
-            onConfigurationChange={(configs) =>
-              setFormData((prev) => ({ ...prev, modelConfigurations: configs }))
-            }
-          />
-        </div>
-      )}
+    <div ref={sectionRefs.models}>
+      <WizardSection
+        id="models"
+        title="6. AI Models"
+        icon={<Brain className="w-5 h-5" />}
+        status={getSectionStatus('models')}
+        collapsed={!!collapsedSections.models}
+        onToggle={() => toggleSection('models')}
+      >
+        <ModelProviderSelector
+          useCase={formData.useCase}
+          fieldMappings={formData.fieldMappings}
+          onConfigurationChange={(configs) =>
+            setFormData((prev) => ({ ...prev, modelConfigurations: configs }))
+          }
+        />
+      </WizardSection>
     </div>
   );
 
@@ -834,19 +607,22 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   };
 
   const renderOptimizerSection = () => (
-    <div ref={sectionRefs.optimizer} className="space-y-4">
-      <SectionHeader id="optimizer" title="7. Optimizer" icon={Zap} status={getSectionStatus('optimizer')} />
-
-      {!collapsedSections.optimizer && (
-        <div className="pl-4 space-y-4">
-          <OptimizerSelector
-            selectedOptimizer={formData.selectedOptimizer}
-            onOptimizerChange={handleOptimizerChange}
-            modelCount={formData.modelConfigurations.length}
-            useCase={formData.useCase}
-          />
-        </div>
-      )}
+    <div ref={sectionRefs.optimizer}>
+      <WizardSection
+        id="optimizer"
+        title="7. Optimizer"
+        icon={<Zap className="w-5 h-5" />}
+        status={getSectionStatus('optimizer')}
+        collapsed={!!collapsedSections.optimizer}
+        onToggle={() => toggleSection('optimizer')}
+      >
+        <OptimizerSelector
+          selectedOptimizer={formData.selectedOptimizer}
+          onOptimizerChange={handleOptimizerChange}
+          modelCount={formData.modelConfigurations.length}
+          useCase={formData.useCase}
+        />
+      </WizardSection>
     </div>
   );
 
@@ -872,26 +648,20 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         <div className="mt-10 pt-8 border-t border-border">
           {/* Form Validation Summary */}
           {!isFormValid() && !projectCreationResult && (
-            <div className="mb-6 p-4 bg-meta-orange/5 border border-meta-orange/30 rounded-xl">
-              <div className="flex items-start space-x-3">
-                <AlertCircle className="w-5 h-5 text-meta-orange mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="font-medium text-meta-orange-text">Complete all sections to continue</p>
-                  <ul className="mt-2 text-sm text-meta-orange-text/80 space-y-1">
-                    {formData.prompt.trim() === "" && <li>• Enter your prompt</li>}
-                    {formData.useCase === "" && <li>• Select a use case</li>}
-                    {formData.datasetPath === "" && <li>• Upload a dataset</li>}
-                    {formData.useCase !== "custom" && formData.datasetPath !== "" && !(() => {
-                      const reqs = formData.useCase === "qa" ? ["question", "answer"] : ["context", "query", "answer"];
-                      return reqs.every(f => formData.fieldMappings[f]);
-                    })() && <li>• Complete field mappings</li>}
-                    {formData.metrics.length === 0 && <li>• Select at least one metric</li>}
-                    {formData.modelConfigurations.length === 0 && <li>• Configure at least one model</li>}
-                    {formData.selectedOptimizer === "" && <li>• Select an optimizer</li>}
-                  </ul>
-                </div>
-              </div>
-            </div>
+            <InfoBox variant="warning" title="Complete all sections to continue" className="mb-6">
+              <ul className="mt-2 space-y-1">
+                {formData.prompt.trim() === "" && <li>• Enter your prompt</li>}
+                {formData.useCase === "" && <li>• Select a use case</li>}
+                {formData.datasetPath === "" && <li>• Upload a dataset</li>}
+                {formData.useCase !== "custom" && formData.datasetPath !== "" && !(() => {
+                  const reqs = formData.useCase === "qa" ? ["question", "answer"] : ["context", "query", "answer"];
+                  return reqs.every(f => formData.fieldMappings[f]);
+                })() && <li>• Complete field mappings</li>}
+                {formData.metrics.length === 0 && <li>• Select at least one metric</li>}
+                {formData.modelConfigurations.length === 0 && <li>• Configure at least one model</li>}
+                {formData.selectedOptimizer === "" && <li>• Select an optimizer</li>}
+              </ul>
+            </InfoBox>
           )}
 
           {/* Project Creation Results */}
@@ -1044,21 +814,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     </div>
                   </div>
 
-                  <div className="mt-4 p-3 bg-meta-blue/5 rounded-lg border border-meta-blue/30">
-                    <p className="text-sm text-meta-blue">
-                      <strong>Next Steps:</strong> Your optimized prompt has been saved to the project directory.
-                      You can now use this improved prompt in your applications!
-                    </p>
-                  </div>
+                  <InfoBox variant="info" title="Next Steps" className="mt-4">
+                    Your optimized prompt has been saved to the project directory.
+                    You can now use this improved prompt in your applications!
+                  </InfoBox>
                 </div>
               ) : (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-                  <div className="flex items-center space-x-3 mb-3">
-                    <AlertCircle className="w-6 h-6 text-red-600" />
-                    <h3 className="font-bold text-red-800">Optimization Failed</h3>
-                  </div>
-                  <p className="text-red-700">{optimizationResult.error}</p>
-                </div>
+                <InfoBox variant="error" title="Optimization Failed">
+                  {optimizationResult.error}
+                </InfoBox>
               )}
             </div>
           )}
