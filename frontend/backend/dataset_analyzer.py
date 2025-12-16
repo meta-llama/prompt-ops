@@ -66,30 +66,33 @@ class DatasetAnalyzer:
             Dictionary containing field analysis results
         """
         try:
-            # Load data
-            data = self._load_data(file_path)
-            if not data:
+            # Load dataset records
+            dataset_records = self._load_data(file_path)
+            if not dataset_records:
                 return {"error": "Could not load or parse file"}
 
-            # For accurate coverage calculation, we need to analyze the full dataset
-            # But for performance, we'll analyze a larger sample for coverage
-            coverage_sample_size = min(
-                len(data), 100
-            )  # Use up to 100 records for coverage
-            coverage_data = data[:coverage_sample_size]
+            # For accurate coverage calculation, analyze up to 100 records
+            coverage_sample_size = min(len(dataset_records), 100)
+            coverage_records = dataset_records[:coverage_sample_size]
 
             # Use smaller sample for field type analysis and sample values
-            sample_data = data[:sample_size] if len(data) > sample_size else data
+            analysis_records = (
+                dataset_records[:sample_size]
+                if len(dataset_records) > sample_size
+                else dataset_records
+            )
 
             # Analyze fields with full dataset size for accurate coverage
-            fields = self._analyze_fields(coverage_data, len(data))
+            detected_fields = self._analyze_fields(
+                coverage_records, len(dataset_records)
+            )
 
             return {
-                "total_records": len(data),
-                "sample_size": len(sample_data),
-                "fields": [field.to_dict() for field in fields],
-                "suggestions": {},  # Empty suggestions since we removed classification
-                "sample_data": sample_data[:3],  # Show first 3 records
+                "total_records": len(dataset_records),
+                "sample_size": len(analysis_records),
+                "fields": [field.to_dict() for field in detected_fields],
+                "suggestions": {},
+                "sample_data": analysis_records[:3],  # Show first 3 records
             }
 
         except Exception as e:
@@ -124,62 +127,66 @@ class DatasetAnalyzer:
             return []
 
     def _analyze_fields(
-        self, data: List[Dict[str, Any]], total_dataset_size: int
+        self, sample_records: List[Dict[str, Any]], total_dataset_size: int
     ) -> List[FieldInfo]:
-        """Analyze fields in the dataset."""
-        if not data:
+        """Analyze fields in the dataset sample."""
+        if not sample_records:
             return []
 
-        field_info = {}
-        sample_size = len(data)
+        field_value_collector = {}
+        analyzed_sample_size = len(sample_records)
 
-        # First pass: collect all field values without tracking coverage
-        for record in data:
-            self._extract_fields_recursive(record, field_info, track_coverage=False)
+        # First pass: collect all field values for type detection
+        for record in sample_records:
+            self._extract_fields_recursive(
+                record, field_value_collector, track_coverage=False
+            )
 
-        # Second pass: count how many records have each field (for completeness)
-        field_completeness = {}
-        for record in data:
+        # Second pass: count field presence for completeness calculation
+        field_presence_counts = {}
+        for record in sample_records:
             # Get all fields present in this record
-            record_fields = set()
-            self._get_record_fields(record, record_fields)
+            present_fields = set()
+            self._get_record_fields(record, present_fields)
 
-            # Count this record for each field it contains
-            for field_path in record_fields:
-                if field_path not in field_completeness:
-                    field_completeness[field_path] = 0
-                field_completeness[field_path] += 1
+            # Increment count for each field found
+            for field_path in present_fields:
+                if field_path not in field_presence_counts:
+                    field_presence_counts[field_path] = 0
+                field_presence_counts[field_path] += 1
 
         # Convert to FieldInfo objects
-        fields = []
-        for field_path, info in field_info.items():
-            field_type = self._determine_field_type(info["values"])
-            sample_values = self._get_sample_values(info["values"])
+        detected_fields = []
+        for field_path, field_data in field_value_collector.items():
+            field_type = self._determine_field_type(field_data["values"])
+            sample_values = self._get_sample_values(field_data["values"])
 
-            # Calculate coverage: how many records have this field
-            populated_count_in_sample = field_completeness.get(field_path, 0)
+            # Calculate coverage: proportion of records containing this field
+            records_with_field = field_presence_counts.get(field_path, 0)
 
             # Extrapolate coverage to full dataset
-            if sample_size > 0:
-                sample_coverage = populated_count_in_sample / sample_size
-                estimated_populated_count = int(sample_coverage * total_dataset_size)
-                coverage = min(sample_coverage, 1.0)  # Cap at 100%
+            if analyzed_sample_size > 0:
+                sample_coverage_ratio = records_with_field / analyzed_sample_size
+                estimated_total_records_with_field = int(
+                    sample_coverage_ratio * total_dataset_size
+                )
+                coverage = min(sample_coverage_ratio, 1.0)  # Cap at 100%
             else:
-                estimated_populated_count = 0
+                estimated_total_records_with_field = 0
                 coverage = 0.0
 
-            fields.append(
+            detected_fields.append(
                 FieldInfo(
                     name=field_path,
                     field_type=field_type,
                     sample_values=sample_values,
                     coverage=coverage,
-                    populated_count=estimated_populated_count,
+                    populated_count=estimated_total_records_with_field,
                     total_count=total_dataset_size,
                 )
             )
 
-        return fields
+        return detected_fields
 
     def _extract_fields_recursive(
         self,
@@ -268,7 +275,9 @@ class DatasetAnalyzer:
         for value in sample_values:
             if isinstance(value, str):
                 type_counts["string"] += 1
-            elif isinstance(value, bool):  # Check bool BEFORE int/float (bool is subclass of int)
+            elif isinstance(
+                value, bool
+            ):  # Check bool BEFORE int/float (bool is subclass of int)
                 type_counts["boolean"] += 1
             elif isinstance(value, (int, float)):
                 type_counts["number"] += 1

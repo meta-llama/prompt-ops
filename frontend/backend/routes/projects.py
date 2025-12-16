@@ -214,7 +214,10 @@ async def download_config(project_name: str):
             media_type="application/x-yaml",
             filename=f"{project_name}-config.yaml",
         )
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Error downloading config for project {project_name}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -1,5 +1,5 @@
 [run]
-source = src/llama_prompt_ops
+source = src/prompt_ops
 omit =
     */tests/*
     */site-packages/*

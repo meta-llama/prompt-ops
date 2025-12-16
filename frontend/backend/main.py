@@ -48,52 +48,41 @@ load_dotenv()
 try:
     import websockets as websockets_lib
 
-    print("✓ WebSocket support is available")
+    logger.info("WebSocket support is available")
     WEBSOCKETS_AVAILABLE = True
 except ImportError:
-    print("⚠️  WARNING: WebSocket support not available!")
-    print("   Install with: pip install websockets")
-    print("   WebSocket endpoints will not work until this is installed.")
+    logger.warning("WebSocket support not available!")
+    logger.warning("Install with: pip install websockets")
+    logger.warning("WebSocket endpoints will not work until this is installed.")
     WEBSOCKETS_AVAILABLE = False
 
-# Install required dependencies if missing
-required_packages = ["scipy", "llama-prompt-ops==0.0.7"]
-try:
-    for package in required_packages:
-        try:
-            # Handle special case for llama-prompt-ops
-            if "llama-prompt-ops" in package:
-                module_name = "llama_prompt_ops"
-            else:
-                module_name = package.replace("-", "_")
+# Check for required dependencies
+# Note: prompt-ops should be installed via 'pip install -e .' from the repo root
+required_packages = ["scipy", "prompt_ops"]
+for package in required_packages:
+    try:
+        importlib.import_module(package)
+        logger.info(f"✓ {package} is available")
+    except ImportError:
+        if package == "prompt_ops":
+            logger.warning(
+                f"⚠ {package} not found. Install it with: pip install -e . (from repo root)"
+            )
+        else:
+            logger.warning(
+                f"⚠ {package} not found. Install it with: pip install {package}"
+            )
 
-            importlib.import_module(module_name)
-            print(f"✓ {package} is already installed")
-        except ImportError:
-            print(f"Installing {package}...")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-            print(f"✓ {package} installed successfully")
-except Exception as e:
-    print(f"Warning: Failed to install dependencies: {e}")
-
-# Add llama-prompt-ops to Python path
-llama_prompt_ops_path = os.path.abspath(
+# Add prompt-ops to Python path
+prompt_ops_path = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "src")
 )
-if llama_prompt_ops_path not in sys.path:
-    sys.path.insert(0, llama_prompt_ops_path)
-    print(f"Added {llama_prompt_ops_path} to Python path")
+if prompt_ops_path not in sys.path:
+    sys.path.insert(0, prompt_ops_path)
+    logger.info(f"Added {prompt_ops_path} to Python path")
 
-# Try to import core modules
-try:
-    from llama_prompt_ops.core.migrator import PromptMigrator
-
-    print("✓ Successfully imported llama_prompt_ops core modules")
-    LLAMA_PROMPT_OPS_AVAILABLE = True
-except ImportError as e:
-    print(f"Warning: Could not import llama_prompt_ops: {e}")
-    print("The /api/migrate-prompt endpoint will fall back to OpenRouter")
-    LLAMA_PROMPT_OPS_AVAILABLE = False
+# Import shared core module with availability checks
+from core import LLAMA_PROMPT_OPS_AVAILABLE
 
 # FastAPI Application Setup
 app = FastAPI(title="Llama Prompt Ops API")
@@ -179,7 +168,7 @@ async def health_check():
     return {
         "status": "healthy" if len(issues) == 0 else "degraded",
         "websockets_available": WEBSOCKETS_AVAILABLE,
-        "llama_prompt_ops_available": LLAMA_PROMPT_OPS_AVAILABLE,
+        "prompt_ops_available": LLAMA_PROMPT_OPS_AVAILABLE,
         "api_key_configured": bool(api_key),
         "issues": issues,
     }

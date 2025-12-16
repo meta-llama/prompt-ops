@@ -63,37 +63,51 @@ def create_llm_completion(
     if api_base:
         completion_kwargs["api_base"] = api_base
 
-    print(f"🚀 LiteLLM completion - Model: {model}, API Base: {api_base or 'default'}")
+    # Note: Using print here instead of logger to avoid circular import
+    # This function is called early in initialization
+    import logging
+
+    logging.getLogger(__name__).debug(
+        f"LiteLLM completion - Model: {model}, API Base: {api_base or 'default'}"
+    )
 
     return completion(**completion_kwargs)
 
 
 def get_uploaded_datasets():
-    """Get list of uploaded datasets."""
-    datasets = []
+    """Get list of uploaded datasets with metadata."""
+    uploaded_datasets = []
     if os.path.exists(UPLOAD_DIR):
         for filename in os.listdir(UPLOAD_DIR):
             if filename.endswith(".json"):
-                filepath = os.path.join(UPLOAD_DIR, filename)
+                dataset_path = os.path.join(UPLOAD_DIR, filename)
                 try:
-                    with open(filepath, "r") as f:
-                        data = json.load(f)
+                    with open(dataset_path, "r") as file:
+                        dataset_content = json.load(file)
                         # Get first few records for preview
-                        preview = data[:3] if isinstance(data, list) else []
-                        datasets.append(
+                        preview_records = (
+                            dataset_content[:3]
+                            if isinstance(dataset_content, list)
+                            else []
+                        )
+                        uploaded_datasets.append(
                             {
                                 "name": f"Uploaded: {filename}",
                                 "filename": filename,
-                                "path": filepath,
-                                "preview": preview,
+                                "path": dataset_path,
+                                "preview": preview_records,
                                 "total_records": (
-                                    len(data) if isinstance(data, list) else 0
+                                    len(dataset_content)
+                                    if isinstance(dataset_content, list)
+                                    else 0
                                 ),
                             }
                         )
                 except Exception as e:
-                    print(f"Error reading dataset {filename}: {e}")
-    return datasets
+                    logging.getLogger(__name__).warning(
+                        f"Error reading dataset {filename}: {e}"
+                    )
+    return uploaded_datasets
 
 
 def generate_unique_project_name(base_name: str, base_dir: str) -> str:
@@ -234,7 +248,6 @@ class OptimizationManager:
         loggers_to_stream = [
             logging.getLogger(),  # Root logger
             logging.getLogger("prompt_ops"),  # llama-prompt-ops logger
-            logging.getLogger("llama_prompt_ops"),  # Alternative logger name
             logging.getLogger("dspy"),  # DSPy optimization logs
             logging.getLogger("LiteLLM"),  # LiteLLM API call logs
         ]
@@ -248,7 +261,6 @@ class OptimizationManager:
             loggers_to_cleanup = [
                 logging.getLogger(),
                 logging.getLogger("prompt_ops"),
-                logging.getLogger("llama_prompt_ops"),
                 logging.getLogger("dspy"),
                 logging.getLogger("LiteLLM"),
             ]

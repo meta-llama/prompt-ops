@@ -18,23 +18,23 @@ class ConfigurationTransformer:
     # Mapping from frontend metric IDs to backend metric classes
     METRIC_ID_MAPPING = {
         "exact_match": {
-            "class": "llama_prompt_ops.core.metrics.ExactMatchMetric",
+            "class": "prompt_ops.core.metrics.ExactMatchMetric",
             "default_params": {},
         },
         "semantic_similarity": {
-            "class": "llama_prompt_ops.core.metrics.DSPyMetricAdapter",
+            "class": "prompt_ops.core.metrics.DSPyMetricAdapter",
             "default_params": {"signature_name": "similarity"},
         },
         "correctness": {
-            "class": "llama_prompt_ops.core.metrics.DSPyMetricAdapter",
+            "class": "prompt_ops.core.metrics.DSPyMetricAdapter",
             "default_params": {"signature_name": "correctness"},
         },
         "json_structured": {
-            "class": "llama_prompt_ops.core.metrics.StandardJSONMetric",
+            "class": "prompt_ops.core.metrics.StandardJSONMetric",
             "default_params": {},
         },
         "facility_metric": {
-            "class": "llama_prompt_ops.core.metrics.FacilityMetric",
+            "class": "prompt_ops.core.metrics.FacilityMetric",
             "default_params": {"strict_json": False},
         },
     }
@@ -59,33 +59,33 @@ class ConfigurationTransformer:
     # Mapping from wizard dataset types to adapter configurations
     DATASET_FIELD_MAPPING = {
         "qa": {
-            "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+            "adapter_class": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
             "input_field": "question",
             "golden_output_field": "answer",
         },
         "rag": {
-            "adapter_class": "llama_prompt_ops.core.datasets.RAGJSONAdapter",
+            "adapter_class": "prompt_ops.core.datasets.RAGJSONAdapter",
             "question_field": "query",
             "context_field": "context",
             "golden_answer_field": "answer",
         },
         "classification": {
-            "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+            "adapter_class": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
             "input_field": "text",
             "golden_output_field": "category",
         },
         "summarization": {
-            "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+            "adapter_class": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
             "input_field": "text",
             "golden_output_field": "summary",
         },
         "extraction": {
-            "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+            "adapter_class": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
             "input_field": "text",
             "golden_output_field": "extracted_data",
         },
         "custom": {
-            "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+            "adapter_class": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
             # No default fields - will be populated from user mappings
         },
     }
@@ -266,10 +266,10 @@ class ConfigurationTransformer:
 
         if not models:
             # Default model configuration (no name field, use task_model/proposer_model)
+            # LiteLLM auto-detects provider from model name prefix (e.g., openrouter/)
             return {
                 "task_model": "openrouter/meta-llama/llama-3.3-70b-instruct",
                 "proposer_model": "openrouter/meta-llama/llama-3.3-70b-instruct",
-                "api_base": "https://openrouter.ai/api/v1",
                 "temperature": 0.0,
             }
 

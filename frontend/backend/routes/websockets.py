@@ -8,21 +8,19 @@ import os
 import yaml
 from config import UPLOAD_DIR
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from utils import load_class_dynamically, OptimizationManager
+from utils import OptimizationManager, load_class_dynamically
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Check for llama-prompt-ops availability
-try:
-    from llama_prompt_ops.core.metrics import DSPyMetricAdapter
-    from llama_prompt_ops.core.migrator import PromptMigrator
-    from llama_prompt_ops.core.model import setup_model
-    from llama_prompt_ops.core.model_strategies import LlamaStrategy
-
-    LLAMA_PROMPT_OPS_AVAILABLE = True
-except ImportError:
-    LLAMA_PROMPT_OPS_AVAILABLE = False
+# Import shared core module with availability checks
+from core import (
+    LLAMA_PROMPT_OPS_AVAILABLE,
+    DSPyMetricAdapter,
+    LlamaStrategy,
+    PromptMigrator,
+    setup_model,
+)
 
 
 @router.websocket("/ws/optimize/{project_name}")
@@ -107,8 +105,10 @@ async def optimize_with_streaming(websocket: WebSocket, project_name: str):
         optimization_config = config_dict.get("optimization", {})
 
         # Setup models
+        # Check for task_model first, then fall back to name, then default
         task_model_name = model_config.get(
-            "task_model", "openrouter/meta-llama/llama-3.3-70b-instruct"
+            "task_model",
+            model_config.get("name", "openrouter/meta-llama/llama-3.3-70b-instruct"),
         )
         proposer_model_name = model_config.get("proposer_model", task_model_name)
 
@@ -136,7 +136,7 @@ async def optimize_with_streaming(websocket: WebSocket, project_name: str):
         await manager.send_progress("metric", 75, "Setting up evaluation metric...")
 
         metric_class_path = metric_config.get(
-            "class", "llama_prompt_ops.core.metrics.ExactMatchMetric"
+            "class", "prompt_ops.core.metrics.ExactMatchMetric"
         )
         metric_cls = load_class_dynamically(metric_class_path)
         metric_params = {k: v for k, v in metric_config.items() if k != "class"}
@@ -150,7 +150,7 @@ async def optimize_with_streaming(websocket: WebSocket, project_name: str):
         await manager.send_progress("dataset", 85, "Loading dataset...")
 
         adapter_class_path = dataset_config.get(
-            "adapter_class", "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter"
+            "adapter_class", "prompt_ops.core.datasets.ConfigurableJSONAdapter"
         )
         adapter_cls = load_class_dynamically(adapter_class_path)
 

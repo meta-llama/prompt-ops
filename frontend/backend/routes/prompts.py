@@ -25,17 +25,15 @@ from utils import (
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Check for llama-prompt-ops availability (copy from main.py)
-try:
-    from llama_prompt_ops.core.datasets import ConfigurableJSONAdapter
-    from llama_prompt_ops.core.metrics import DSPyMetricAdapter
-    from llama_prompt_ops.core.migrator import PromptMigrator
-    from llama_prompt_ops.core.model import setup_model
-    from llama_prompt_ops.core.model_strategies import LlamaStrategy
-
-    LLAMA_PROMPT_OPS_AVAILABLE = True
-except ImportError:
-    LLAMA_PROMPT_OPS_AVAILABLE = False
+# Import shared core module with availability checks
+from core import (
+    LLAMA_PROMPT_OPS_AVAILABLE,
+    ConfigurableJSONAdapter,
+    DSPyMetricAdapter,
+    LlamaStrategy,
+    PromptMigrator,
+    setup_model,
+)
 
 
 # Pydantic models
@@ -78,7 +76,9 @@ async def enhance_prompt(request: PromptRequest):
         import time
 
         start_time = time.monotonic()
-        print(f"🎯 Enhance - Model: {model}, API Base: {api_base or 'auto-detected'}")
+        logger.info(
+            f"Enhance - Model: {model}, API Base: {api_base or 'auto-detected'}"
+        )
 
         completion_kwargs = {
             "model": model,
@@ -92,14 +92,14 @@ async def enhance_prompt(request: PromptRequest):
             completion_kwargs["api_base"] = api_base
 
         response = completion(**completion_kwargs)
-        print(
-            f"✅ Enhance response received in {time.monotonic() - start_time:.2f} seconds"
+        logger.info(
+            f"Enhance response received in {time.monotonic() - start_time:.2f} seconds"
         )
         enhanced_prompt = response.choices[0].message.content.strip()
         return {"optimizedPrompt": enhanced_prompt}
 
     except Exception as e:
-        print(f"Error enhancing prompt: {e}")
+        logger.error(f"Error enhancing prompt: {e}")
         raise HTTPException(status_code=500, detail=f"Error enhancing prompt: {str(e)}")
 
 
@@ -136,14 +136,16 @@ async def migrate_prompt(request: PromptRequest):
         # Set the API key in the environment so all components can access it
         if api_key and not os.getenv("OPENROUTER_API_KEY"):
             os.environ["OPENROUTER_API_KEY"] = api_key
-            print("Set OPENROUTER_API_KEY from frontend configuration")
+            logger.info("Set OPENROUTER_API_KEY from frontend configuration")
 
         # Get configuration from request or use defaults
         task_model_name = MODEL_MAPPING.get(
-            config.get("model", "Llama 3.1 8B"), "meta-llama/llama-3.1-8b-instruct"
+            config.get("model", "Llama 3.1 8B"),
+            "openrouter/meta-llama/llama-3.1-8b-instruct",
         )
         proposer_model_name = MODEL_MAPPING.get(
-            config.get("proposer", "Llama 3.1 8B"), "meta-llama/llama-3.1-8b-instruct"
+            config.get("proposer", "Llama 3.1 8B"),
+            "openrouter/meta-llama/llama-3.1-8b-instruct",
         )
         optimization_level = STRATEGY_MAPPING.get(
             config.get("strategy", "Basic"), "basic"
@@ -195,7 +197,7 @@ async def migrate_prompt(request: PromptRequest):
         if not metric_cfg:
             metric_name = "exact_match"
             metric_cfg = {
-                "class": "llama_prompt_ops.core.metrics.ExactMatchMetric",
+                "class": "prompt_ops.core.metrics.ExactMatchMetric",
                 "params": {},
             }
 
@@ -312,7 +314,9 @@ async def migrate_prompt(request: PromptRequest):
             return {"optimizedPrompt": optimized_prompt}
 
         except Exception as component_error:
-            print(f"Error during llama-prompt-ops component setup: {component_error}")
+            logger.error(
+                f"Error during llama-prompt-ops component setup: {component_error}"
+            )
             traceback.print_exc()
             if fail_on_error:
                 raise HTTPException(
@@ -320,11 +324,11 @@ async def migrate_prompt(request: PromptRequest):
                     detail=f"Optimization failed: {str(component_error)}",
                 )
             else:
-                print("Falling back to simple enhancement")
+                logger.info("Falling back to simple enhancement")
                 return await enhance_prompt(request)
 
     except Exception as exc:
-        print(f"Unexpected error in migrate_prompt: {exc}")
+        logger.error(f"Unexpected error in migrate_prompt: {exc}")
         traceback.print_exc()
         raise HTTPException(
             status_code=500, detail=f"Error migrating prompt: {str(exc)}"

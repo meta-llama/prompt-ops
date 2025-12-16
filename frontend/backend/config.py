@@ -21,11 +21,11 @@ MODEL_MAPPING = {
 # Available metrics from llama-prompt-ops
 METRIC_MAPPING = {
     "exact_match": {
-        "class": "llama_prompt_ops.core.metrics.ExactMatchMetric",
+        "class": "prompt_ops.core.metrics.ExactMatchMetric",
         "params": {"output_field": "answer"},
     },
     "semantic_similarity": {
-        "class": "llama_prompt_ops.core.metrics.DSPyMetricAdapter",
+        "class": "prompt_ops.core.metrics.DSPyMetricAdapter",
         "params": {
             "signature_name": "similarity",
             "score_range": (1, 10),
@@ -33,7 +33,7 @@ METRIC_MAPPING = {
         },
     },
     "correctness": {
-        "class": "llama_prompt_ops.core.metrics.DSPyMetricAdapter",
+        "class": "prompt_ops.core.metrics.DSPyMetricAdapter",
         "params": {
             "signature_name": "correctness",
             "score_range": (1, 10),
@@ -41,7 +41,7 @@ METRIC_MAPPING = {
         },
     },
     "json_structured": {
-        "class": "llama_prompt_ops.core.metrics.StandardJSONMetric",
+        "class": "prompt_ops.core.metrics.StandardJSONMetric",
         "params": {
             "output_field": "answer",
             "evaluation_mode": "selected_fields_comparison",
@@ -50,19 +50,19 @@ METRIC_MAPPING = {
     },
     # Legacy mappings for backward compatibility
     "Facility Support": {
-        "class": "llama_prompt_ops.core.metrics.FacilityMetric",
+        "class": "prompt_ops.core.metrics.FacilityMetric",
         "params": {"output_field": "answer", "strict_json": False},
     },
     "HotpotQA": {
-        "class": "llama_prompt_ops.datasets.hotpotqa.HotpotQAMetric",
+        "class": "prompt_ops.datasets.hotpotqa.HotpotQAMetric",
         "params": {"output_field": "answer"},
     },
     "Standard JSON": {
-        "class": "llama_prompt_ops.core.metrics.StandardJSONMetric",
+        "class": "prompt_ops.core.metrics.StandardJSONMetric",
         "params": {"output_field": "answer"},
     },
     "Exact Match": {
-        "class": "llama_prompt_ops.core.metrics.ExactMatchMetric",
+        "class": "prompt_ops.core.metrics.ExactMatchMetric",
         "params": {},
     },
 }
@@ -70,13 +70,13 @@ METRIC_MAPPING = {
 # Available dataset adapters from llama-prompt-ops
 DATASET_ADAPTER_MAPPING = {
     "standard_json": {
-        "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+        "adapter_class": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
         "description": "Standard JSON format with customizable field mappings",
         "example_fields": {"input": "string", "output": "string"},
         "params": {"input_field": "input", "golden_output_field": "output"},
     },
     "hotpotqa": {
-        "adapter_class": "llama_prompt_ops.datasets.hotpotqa.adapter.HotPotQAAdapter",
+        "adapter_class": "prompt_ops.datasets.hotpotqa.adapter.HotPotQAAdapter",
         "description": "Multi-hop reasoning dataset for question answering",
         "example_fields": {
             "question": "string",
@@ -90,7 +90,7 @@ DATASET_ADAPTER_MAPPING = {
         },
     },
     "facility": {
-        "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+        "adapter_class": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
         "description": "Facility support and maintenance dataset with nested field structure",
         "example_fields": {"fields": "object", "answer": "string"},
         "params": {
