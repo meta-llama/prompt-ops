@@ -680,7 +680,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
     // Add provider-specific headers
     if (config.provider_id === "openrouter") {
       headers["HTTP-Referer"] = window.location.origin;
-      headers["X-Title"] = "Llama Prompt Ops";
+      headers["X-Title"] = "Prompt Ops";
     }
 
     // Prepare test request body - minimal completion request
@@ -860,7 +860,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
               🎯 Dual Model Optimization
             </h3>
             <p className="text-muted-foreground mb-3">
-              Llama Prompt Ops uses two AI models working together to optimize
+              Prompt Ops uses two AI models working together to optimize
               your prompts:
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">

@@ -11,7 +11,7 @@ export const Sidebar = () => {
   const navItems = [
     { id: 'playground', label: 'Playground', icon: Play, path: '/', mode: 'migrate' },
     { id: 'docs', label: 'Docs', icon: Book, path: '/docs', mode: 'docs' },
-    { id: 'github', label: 'GitHub', icon: Github, path: 'https://github.com/meta-llama/llama-prompt-ops', external: true },
+    { id: 'github', label: 'GitHub', icon: Github, path: 'https://github.com/meta-llama/prompt-ops', external: true },
   ];
 
   const handleNavClick = (item: any) => {
@@ -29,7 +29,7 @@ export const Sidebar = () => {
             to="/"
             className="text-foreground font-bold text-2xl tracking-tight hover:text-meta-blue transition-colors duration-200 cursor-pointer"
           >
-            llama-prompt-ops
+            prompt-ops
           </Link>
         </div>
 

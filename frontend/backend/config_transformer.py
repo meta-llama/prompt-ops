@@ -1,6 +1,6 @@
 """
 Configuration transformer service for converting onboarding wizard data
-to llama-prompt-ops YAML configuration format.
+to prompt-ops YAML configuration format.
 """
 
 import os
@@ -12,7 +12,7 @@ import yaml
 
 class ConfigurationTransformer:
     """
-    Transforms onboarding wizard data into llama-prompt-ops compatible YAML configuration.
+    Transforms onboarding wizard data into prompt-ops compatible YAML configuration.
     """
 
     # Mapping from frontend metric IDs to backend metric classes
@@ -676,7 +676,7 @@ class ConfigurationTransformer:
 
 ## Project Overview
 
-This project was generated using the llama-prompt-ops onboarding wizard.
+This project was generated using the prompt-ops onboarding wizard.
 
 **Use Case:** {use_case.title()}
 **Optimization Strategy:** {optimizer.title()}
@@ -702,7 +702,7 @@ This project was generated using the llama-prompt-ops onboarding wizard.
    OPENROUTER_API_KEY=your_actual_api_key_here
    ```
 
-2. **Install llama-prompt-ops:**
+2. **Install prompt-ops:**
    ```bash
    pip install llama-prompt-ops
    ```
@@ -737,5 +737,5 @@ The `config.yaml` file contains all the settings for your optimization run:
 
 ## Support
 
-For more information, see the [llama-prompt-ops documentation](https://github.com/meta-llama/llama-prompt-ops).
+For more information, see the [prompt-ops documentation](https://github.com/meta-llama/prompt-ops).
 """

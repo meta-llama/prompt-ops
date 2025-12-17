@@ -37,13 +37,13 @@ export const DocsTab = () => {
       script.setAttribute('version', 'stable');
       script.setAttribute('crossorigin', 'true');
       script.setAttribute('runllm-keyboard-shortcut', 'Mod+j');
-      script.setAttribute('runllm-name', 'llama-prompt-ops Assistant');
+      script.setAttribute('runllm-name', 'prompt-ops Assistant');
       script.setAttribute('runllm-position', 'BOTTOM_RIGHT');
       // RunLLM Assistant ID from https://app.runllm.com/assistant/1149
       script.setAttribute('runllm-assistant-id', '1149');
       script.setAttribute('runllm-theme-color', '#1877f2'); // Facebook blue
       script.setAttribute('runllm-floating-button-text', 'Ask AI');
-      script.setAttribute('runllm-disclaimer', 'This AI assistant can help you navigate the llama-prompt-ops documentation.');
+      script.setAttribute('runllm-disclaimer', 'This AI assistant can help you navigate the prompt-ops documentation.');
       script.async = true;
 
       document.head.appendChild(script);
@@ -67,7 +67,7 @@ export const DocsTab = () => {
       title: 'Getting Started',
       path: 'README.md',
       category: 'Basics',
-      description: 'Learn the fundamentals of llama-prompt-ops',
+      description: 'Learn the fundamentals of prompt-ops',
       icon: Book
     },
     {
@@ -137,7 +137,7 @@ export const DocsTab = () => {
           Documentation
         </h1>
         <p className="text-lg text-meta-gray/70 max-w-8xl">
-          Comprehensive guides, API references, and examples to help you get the most out of llama-prompt-ops.
+          Comprehensive guides, API references, and examples to help you get the most out of prompt-ops.
           <span className="inline-block ml-2 px-2 py-1 bg-meta-blue/10 text-meta-blue text-sm rounded-md font-medium">
             💬 Ask AI for help (Cmd+J)
           </span>

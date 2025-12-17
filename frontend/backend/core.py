@@ -15,7 +15,7 @@ try:
     from prompt_ops.core.metrics import DSPyMetricAdapter
     from prompt_ops.core.migrator import PromptMigrator
     from prompt_ops.core.model import setup_model
-    from prompt_ops.core.model_strategies import LlamaStrategy
+    from prompt_ops.core.prompt_strategies import BasicOptimizationStrategy
 
     LLAMA_PROMPT_OPS_AVAILABLE = True
     logger.info("✓ prompt_ops core modules loaded successfully")
@@ -25,7 +25,7 @@ except ImportError as e:
     DSPyMetricAdapter = None
     PromptMigrator = None
     setup_model = None
-    LlamaStrategy = None
+    BasicOptimizationStrategy = None
 
     LLAMA_PROMPT_OPS_AVAILABLE = False
     logger.warning(f"⚠ Could not import prompt_ops: {e}")
@@ -37,5 +37,5 @@ __all__ = [
     "DSPyMetricAdapter",
     "PromptMigrator",
     "setup_model",
-    "LlamaStrategy",
+    "BasicOptimizationStrategy",
 ]

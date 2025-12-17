@@ -1,6 +1,6 @@
-# Llama Prompt Ops - Frontend
+# Prompt Ops - Frontend
 
-A modern React frontend interface for [llama-prompt-ops](https://github.com/meta-llama/llama-prompt-ops), providing an intuitive web interface for prompt optimization workflows.
+A modern React frontend interface for [prompt-ops](https://github.com/meta-llama/prompt-ops), providing an intuitive web interface for prompt optimization workflows.
 
 ## Features
 
@@ -17,7 +17,7 @@ A modern React frontend interface for [llama-prompt-ops](https://github.com/meta
 - **UI Components**: Radix UI + shadcn/ui
 - **Styling**: Tailwind CSS with Meta/Facebook design system
 - **Build Tool**: Vite
-- **Backend**: FastAPI with llama-prompt-ops integration
+- **Backend**: FastAPI with prompt-ops integration
 
 ## Quick Start
 
@@ -31,8 +31,8 @@ A modern React frontend interface for [llama-prompt-ops](https://github.com/meta
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/meta-llama/llama-prompt-ops.git
-   cd llama-prompt-ops/frontend
+   git clone https://github.com/meta-llama/prompt-ops.git
+   cd prompt-ops/frontend
    ```
 
 2. **Install frontend dependencies**
@@ -186,4 +186,4 @@ frontend/
 
 ## License
 
-This project is licensed under the same terms as llama-prompt-ops.
+This project is licensed under the same terms as prompt-ops.

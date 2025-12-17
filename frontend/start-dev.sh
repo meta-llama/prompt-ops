@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Development script for llama-prompt-ops frontend
+# Development script for prompt-ops frontend
 # This script starts both the backend API and frontend development servers
 
 set -e  # Exit on any error
@@ -47,7 +47,7 @@ cleanup() {
 # Set up trap to catch termination signal
 trap cleanup SIGINT SIGTERM
 
-print_color $GREEN "Starting llama-prompt-ops frontend development environment..."
+print_color $GREEN "Starting prompt-ops frontend development environment..."
 
 # Check if we're in the right directory
 if [[ ! -f "package.json" ]]; then

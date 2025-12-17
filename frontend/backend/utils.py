@@ -247,7 +247,7 @@ class OptimizationManager:
         # Add handler to multiple loggers to capture all output
         loggers_to_stream = [
             logging.getLogger(),  # Root logger
-            logging.getLogger("prompt_ops"),  # llama-prompt-ops logger
+            logging.getLogger("prompt_ops"),  # prompt-ops logger
             logging.getLogger("dspy"),  # DSPy optimization logs
             logging.getLogger("LiteLLM"),  # LiteLLM API call logs
         ]

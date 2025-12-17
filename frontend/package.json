@@ -1,7 +1,7 @@
 {
-  "name": "llama-prompt-ops-frontend",
+  "name": "prompt-ops-frontend",
   "version": "1.0.0",
-  "description": "Frontend interface for llama-prompt-ops - A comprehensive prompt optimization toolkit",
+  "description": "Frontend interface for prompt-ops - A comprehensive prompt optimization toolkit",
   "private": true,
   "type": "module",
   "scripts": {
@@ -74,7 +74,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/meta-llama/llama-prompt-ops.git"
+    "url": "https://github.com/meta-llama/prompt-ops.git"
   },
   "keywords": [
     "llama",

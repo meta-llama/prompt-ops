@@ -18,7 +18,7 @@ MODEL_MAPPING = {
     "GPT-4o-mini": "openai/gpt-4o-mini",
 }
 
-# Available metrics from llama-prompt-ops
+# Available metrics from prompt-ops
 METRIC_MAPPING = {
     "exact_match": {
         "class": "prompt_ops.core.metrics.ExactMatchMetric",
@@ -67,7 +67,7 @@ METRIC_MAPPING = {
     },
 }
 
-# Available dataset adapters from llama-prompt-ops
+# Available dataset adapters from prompt-ops
 DATASET_ADAPTER_MAPPING = {
     "standard_json": {
         "adapter_class": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
@@ -101,7 +101,7 @@ DATASET_ADAPTER_MAPPING = {
     },
 }
 
-# Available optimization strategies from llama-prompt-ops
+# Available optimization strategies from prompt-ops
 STRATEGY_MAPPING = {
     "Basic": "basic",
 }

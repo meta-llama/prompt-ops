@@ -28,9 +28,9 @@ router = APIRouter()
 # Import shared core module with availability checks
 from core import (
     LLAMA_PROMPT_OPS_AVAILABLE,
+    BasicOptimizationStrategy,
     ConfigurableJSONAdapter,
     DSPyMetricAdapter,
-    LlamaStrategy,
     PromptMigrator,
     setup_model,
 )
@@ -105,19 +105,19 @@ async def enhance_prompt(request: PromptRequest):
 
 @router.post("/api/migrate-prompt", response_model=PromptResponse)
 async def migrate_prompt(request: PromptRequest):
-    """Run llama-prompt-ops optimization based on frontend config."""
+    """Run prompt-ops optimization based on frontend config."""
     config = request.config or {}
 
     # Get fail_on_error setting - if True, raise errors instead of falling back
     # Priority: request config > global env var (FAIL_ON_ERROR)
     fail_on_error = config.get("failOnError", FAIL_ON_ERROR)
 
-    # Check if llama-prompt-ops is available
+    # Check if prompt-ops is available
     if not LLAMA_PROMPT_OPS_AVAILABLE:
         if fail_on_error:
             raise HTTPException(
                 status_code=500,
-                detail="llama-prompt-ops is not available. Cannot proceed with strict mode enabled.",
+                detail="prompt-ops is not available. Cannot proceed with strict mode enabled.",
             )
         else:
             # Fall back to simple enhancement
@@ -266,7 +266,7 @@ async def migrate_prompt(request: PromptRequest):
             adapter_params = dataset_adapter_cfg.get("params", {}).copy()
             adapter = adapter_cls(dataset_path=dataset_info["path"], **adapter_params)
 
-            strategy = LlamaStrategy(
+            strategy = BasicOptimizationStrategy(
                 model_name=task_model_name,
                 metric=metric,
                 auto=optimization_level,
@@ -314,9 +314,7 @@ async def migrate_prompt(request: PromptRequest):
             return {"optimizedPrompt": optimized_prompt}
 
         except Exception as component_error:
-            logger.error(
-                f"Error during llama-prompt-ops component setup: {component_error}"
-            )
+            logger.error(f"Error during prompt-ops component setup: {component_error}")
             traceback.print_exc()
             if fail_on_error:
                 raise HTTPException(

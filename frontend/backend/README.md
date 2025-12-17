@@ -51,7 +51,7 @@ Enhances a prompt using OpenAI's GPT model.
 
 ### POST /api/migrate-prompt
 
-Optimizes a prompt using the llama-prompt-ops library.
+Optimizes a prompt using the prompt-ops library.
 
 **Request Body:**
 ```json

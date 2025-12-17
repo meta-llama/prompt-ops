@@ -85,7 +85,7 @@ if prompt_ops_path not in sys.path:
 from core import LLAMA_PROMPT_OPS_AVAILABLE
 
 # FastAPI Application Setup
-app = FastAPI(title="Llama Prompt Ops API")
+app = FastAPI(title="Prompt Ops API")
 
 # CORS for local development
 app.add_middleware(
@@ -147,9 +147,9 @@ async def health_check():
     if not LLAMA_PROMPT_OPS_AVAILABLE:
         issues.append(
             {
-                "component": "llama-prompt-ops",
+                "component": "prompt-ops",
                 "status": "missing",
-                "message": "llama-prompt-ops not available. Some features may not work.",
+                "message": "prompt-ops not available. Some features may not work.",
                 "severity": "warning",
             }
         )
