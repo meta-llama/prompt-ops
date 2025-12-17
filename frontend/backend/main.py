@@ -122,7 +122,6 @@ class ConfigResponse(BaseModel):
 @app.options("/api/datasets/analyze/{filename}")
 @app.options("/api/datasets/preview-transformation")
 @app.options("/api/datasets/save-mapping")
-@app.options("/api/quick-start-demo")
 @app.options("/api/docs/structure")
 @app.options("/docs/{file_path:path}")
 async def options_route():

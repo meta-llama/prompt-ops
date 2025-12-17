@@ -29,11 +29,6 @@ export const PromptInput = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const { activeMode, setIsModeLocked } = useContext(AppContext);
 
-  // Add state for quick start demo
-  const [isLoadingDemo, setIsLoadingDemo] = useState(false);
-  const [isDemoLoaded, setIsDemoLoaded] = useState(false);
-  const [isDemoDismissed, setIsDemoDismissed] = useState(false);
-
   // Dataset upload state
   const [showDatasetDialog, setShowDatasetDialog] = useState(false);
   const [isUploadingDataset, setIsUploadingDataset] = useState(false);
@@ -187,55 +182,6 @@ export const PromptInput = () => {
       await fetchUploadedDatasets();
     } catch (error) {
       console.error('Error deleting dataset:', error);
-    }
-  };
-
-  const handleQuickStartDemo = async () => {
-    setIsLoadingDemo(true);
-
-    try {
-      const response = await fetch(apiUrl('/api/quick-start-demo'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to load quick start demo');
-      }
-
-      const data = await response.json();
-
-      // Update the prompt with demo prompt
-      setPrompt(data.prompt);
-
-      // Refresh uploaded datasets to show the demo dataset first
-      await fetchUploadedDatasets();
-
-      // Add a small delay to ensure the datasets are loaded, then update configuration
-      setTimeout(() => {
-        setConfig(data.config);
-      }, 100);
-
-      // Mark demo as loaded
-      setIsDemoLoaded(true);
-
-      toast({
-        title: "Demo Loaded Successfully! 🚀",
-        description: data.message,
-        duration: 5000,
-      });
-
-    } catch (error) {
-      console.error('Error loading quick start demo:', error);
-      toast({
-        title: "Failed to Load Demo",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingDemo(false);
     }
   };
 
