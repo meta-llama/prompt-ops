@@ -25,53 +25,13 @@ import { Label } from "@/components/ui/label";
 import { SectionTitle } from "@/components/ui/section-title";
 import { InfoBox } from "@/components/ui/info-box";
 import { getStatusColor, getSpeedColor, getQualityColor } from "@/lib/status-colors";
-
-interface OptimizerConfig {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ReactNode;
-  category: "basic" | "advanced" | "experimental";
-  complexity: "low" | "medium" | "high";
-  execution_time: "fast" | "medium" | "slow";
-  optimization_quality: "good" | "better" | "best";
-  features: string[];
-  use_cases: string[];
-  pros: string[];
-  cons: string[];
-  technical_details: string[];
-  parameters: CustomParameters;
-}
+import type { OptimizerConfig, CustomParameters } from "@/types";
 
 interface OptimizerSelectorProps {
   selectedOptimizer?: string;
   onOptimizerChange: (optimizer: string, config: OptimizerConfig, customParams?: any) => void;
   modelCount?: number;
   useCase?: string;
-}
-
-interface CustomParameters {
-  auto_mode: "basic" | "intermediate" | "advanced";
-  max_bootstrapped_demos: number;
-  max_labeled_demos: number;
-  num_candidates: number;
-  num_threads: number;
-  max_errors: number;
-  seed: number;
-  init_temperature: number;
-  track_stats: boolean;
-  log_dir?: string;
-  metric_threshold?: number;
-  num_trials?: number;
-  minibatch: boolean;
-  minibatch_size: number;
-  minibatch_full_eval_steps: number;
-  program_aware_proposer: boolean;
-  data_aware_proposer: boolean;
-  view_data_batch_size: number;
-  tip_aware_proposer: boolean;
-  fewshot_aware_proposer: boolean;
-  use_llama_tips: boolean;
 }
 
 const OPTIMIZER_CONFIGS: OptimizerConfig[] = [

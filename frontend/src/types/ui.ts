@@ -22,3 +22,18 @@ export type QualityLevel = "good" | "better" | "best";
  */
 export type StepStatus = "empty" | "active" | "completed" | "error";
 
+/**
+ * Status for wizard sections
+ */
+export type WizardSectionStatus = "complete" | "incomplete" | "empty";
+
+/**
+ * Role type for model configuration
+ */
+export type RoleType = "target" | "optimizer" | "both";
+
+/**
+ * Variant for info box styling
+ */
+export type InfoBoxVariant = "info" | "warning" | "success" | "error";
+

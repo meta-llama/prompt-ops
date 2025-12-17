@@ -2,8 +2,9 @@ import * as React from "react";
 import { useState, useEffect, useRef } from "react";
 import { Target, Brain, Globe, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { RoleType } from "@/types";
 
-export type RoleType = "target" | "optimizer" | "both";
+export type { RoleType } from "@/types";
 
 export interface RoleBadgeProps {
   role: RoleType;

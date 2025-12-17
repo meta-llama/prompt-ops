@@ -23,42 +23,10 @@ import {
   Split,
   Merge,
 } from "lucide-react";
-import { RoleBadge, RoleType } from "@/components/ui/role-badge";
+import { RoleBadge } from "@/components/ui/role-badge";
 import { InfoBox } from "@/components/ui/info-box";
 import { SectionTitle } from "@/components/ui/section-title";
-
-interface ProviderConfig {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ReactNode;
-  category: "cloud" | "local" | "enterprise";
-  pricing: "free" | "paid" | "usage";
-  setup_difficulty: "easy" | "medium" | "hard";
-  api_base: string;
-  model_prefix: string;
-  popular_models: string[];
-  pros: string[];
-  cons: string[];
-  docs_url: string;
-  requires_signup: boolean;
-}
-
-interface ModelConfig {
-  id: string; // Unique identifier for this configuration
-  provider_id: string;
-  model_name: string;
-  role: "target" | "optimizer" | "both";
-  api_key?: string;
-  api_base?: string;
-  temperature: number;
-  max_tokens: number;
-  // Custom provider fields
-  custom_provider_name?: string;
-  model_prefix?: string;
-  auth_method?: "api_key" | "bearer_token" | "custom_headers";
-  custom_headers?: Record<string, string>;
-}
+import type { ProviderConfig, ModelConfig, RoleType } from "@/types";
 
 interface ModelProviderSelectorProps {
   useCase: string;

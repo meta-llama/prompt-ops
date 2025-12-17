@@ -2,8 +2,9 @@ import * as React from "react";
 import { CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "./badge";
+import type { WizardSectionStatus } from "@/types";
 
-export type WizardSectionStatus = "complete" | "incomplete" | "empty";
+export type { WizardSectionStatus } from "@/types";
 
 export interface WizardSectionProps {
   id: string;

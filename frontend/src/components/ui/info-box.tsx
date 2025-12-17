@@ -1,8 +1,9 @@
 import * as React from "react";
 import { AlertCircle, CheckCircle, Info, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { InfoBoxVariant } from "@/types";
 
-export type InfoBoxVariant = "info" | "warning" | "success" | "error";
+export type { InfoBoxVariant } from "@/types";
 
 export interface InfoBoxProps {
   variant: InfoBoxVariant;

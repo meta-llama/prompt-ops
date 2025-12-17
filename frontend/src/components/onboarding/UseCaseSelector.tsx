@@ -3,24 +3,7 @@ import { cn } from '@/lib/utils';
 import { FileQuestion, Database, Settings } from 'lucide-react';
 import { SelectableCard } from '@/components/ui/selectable-card';
 import { InfoBox } from '@/components/ui/info-box';
-
-interface UseCase {
-  id: string;
-  title: string;
-  description: string;
-  examples: string[];
-  expectedFormat?: {
-    title: string;
-    structure: string;
-  };
-  icon: React.ReactNode;
-  config: {
-    datasetAdapter?: string;
-    metrics?: string;
-    optimizer?: string;
-    model?: string;
-  };
-}
+import type { UseCase } from '@/types';
 
 interface UseCaseSelectorProps {
   selectedUseCase?: string;

@@ -13,15 +13,7 @@ import {
   Settings,
 } from "lucide-react";
 import { InfoBox } from "@/components/ui/info-box";
-
-interface FieldInfo {
-  name: string;
-  type: string;
-  samples: any[];
-  coverage: number;
-  populated_count: number;
-  total_count: number;
-}
+import type { FieldInfo, DatasetAnalysis, PreviewData } from "@/types";
 
 interface FieldMappingInterfaceProps {
   filename: string;
@@ -29,22 +21,6 @@ interface FieldMappingInterfaceProps {
   onMappingUpdate: (mappings: Record<string, string>) => void;
   className?: string;
   existingMappings?: Record<string, string>;
-}
-
-interface DatasetAnalysis {
-  total_records: number;
-  sample_size: number;
-  fields: FieldInfo[];
-  suggestions: Record<string, any>;
-  sample_data: any[];
-  error?: string;
-}
-
-interface PreviewData {
-  original_data: any[];
-  transformed_data: any[];
-  adapter_config: any;
-  error?: string;
 }
 
 const USE_CASE_REQUIREMENTS = {

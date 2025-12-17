@@ -100,45 +100,7 @@ const FieldMappingInput: React.FC<{
   );
 };
 
-interface MetricConfig {
-  id: string;
-  name: string;
-  description: string;
-  type: "exact" | "semantic" | "structured" | "custom";
-  icon: React.ReactNode;
-  useCases: string[];
-  dataRequirements: string[];
-  parameters?: {
-    [key: string]: {
-      type:
-        | "boolean"
-        | "number"
-        | "string"
-        | "select"
-        | "array"
-        | "object"
-        | "fieldMapping";
-      default: any;
-      description: string;
-      options?: string[];
-      arrayType?: "string" | "number";
-      objectSchema?: {
-        [key: string]: {
-          type: "string" | "number" | "boolean";
-          required?: boolean;
-        };
-      };
-    };
-  };
-  examples: {
-    input: string;
-    output: string;
-    score: string;
-  }[];
-  pros: string[];
-  cons: string[];
-  recommendedFor: string[];
-}
+import type { MetricConfig } from "@/types";
 
 interface MetricsSelectorProps {
   useCase: string;

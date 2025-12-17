@@ -14,5 +14,22 @@ export type {
   SpeedLevel,
   QualityLevel,
   StepStatus,
+  WizardSectionStatus,
+  RoleType,
+  InfoBoxVariant,
 } from "./ui";
+
+// API types
+export type { FieldInfo, DatasetAnalysis, PreviewData } from "./api";
+
+// Onboarding types
+export type {
+  UseCase,
+  Step,
+  CustomParameters,
+  OptimizerConfig,
+  ProviderConfig,
+  ModelConfig,
+  MetricConfig,
+} from "./onboarding";
 

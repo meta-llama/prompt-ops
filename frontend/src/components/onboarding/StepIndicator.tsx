@@ -1,12 +1,7 @@
 import React from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface Step {
-  id: string;
-  title: string;
-  description?: string;
-}
+import type { Step } from '@/types';
 
 interface StepIndicatorProps {
   steps: Step[] | string[];
