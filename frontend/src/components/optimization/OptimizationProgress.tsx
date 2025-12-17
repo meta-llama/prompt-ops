@@ -1,12 +1,8 @@
 import React from 'react';
 import { Check, Hourglass } from 'lucide-react';
+import type { OptimizationStep } from '@/types';
 
-export type OptimizationStep = {
-  id: string;
-  label: string;
-  completed: boolean;
-  inProgress: boolean;
-};
+export type { OptimizationStep } from '@/types';
 
 interface OptimizationProgressProps {
   steps: OptimizationStep[];

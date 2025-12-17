@@ -4,16 +4,9 @@ import { Book, Search, FileText, Code, Settings, ChevronRight } from 'lucide-rea
 import { Input } from '@/components/ui/input';
 import { DocsContent } from './DocsContent';
 import { DocsSidebar } from './DocsSidebar';
+import type { DocItem } from '@/types';
 
-export interface DocItem {
-  id: string;
-  title: string;
-  path: string;
-  category: string;
-  description?: string;
-  lastModified?: string;
-  icon?: React.ElementType;
-}
+export type { DocItem } from '@/types';
 
 export const DocsTab = () => {
   const { docId } = useParams<{ docId?: string }>();

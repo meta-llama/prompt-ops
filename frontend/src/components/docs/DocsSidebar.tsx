@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronDown, ChevronRight, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DocItem } from './DocsTab';
+import type { DocItem } from '@/types';
 
 interface DocsSidebarProps {
   docs: DocItem[];

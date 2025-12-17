@@ -1,8 +1,9 @@
 import React from "react";
 import { CheckCircle, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { StepStatus } from "@/types";
 
-export type StepStatus = "empty" | "active" | "completed" | "error";
+export type { StepStatus } from "@/types";
 
 export interface StepCardProps {
   id: string;

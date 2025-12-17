@@ -2,9 +2,9 @@
  * Utility functions for consistent status-based coloring across the app.
  */
 
-export type StatusLevel = "low" | "medium" | "high";
-export type SpeedLevel = "fast" | "medium" | "slow";
-export type QualityLevel = "good" | "better" | "best";
+import type { StatusLevel, SpeedLevel, QualityLevel } from "@/types";
+
+export type { StatusLevel, SpeedLevel, QualityLevel } from "@/types";
 
 /**
  * Get text color class for a three-level status (low/medium/high).

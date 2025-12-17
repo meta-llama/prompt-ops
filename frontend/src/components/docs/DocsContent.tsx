@@ -5,7 +5,7 @@ import rehypeHighlight from 'rehype-highlight';
 import rehypeSlug from 'rehype-slug';
 import { Copy, Check, ExternalLink, Clock, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DocItem } from './DocsTab';
+import type { DocItem } from '@/types';
 import { apiUrl } from '@/lib/config';
 import 'highlight.js/styles/github.css';
 

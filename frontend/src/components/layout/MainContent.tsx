@@ -6,16 +6,7 @@ import { DocsTab } from '../docs/DocsTab';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Lock, Folder, FileText, Database, Calendar } from 'lucide-react';
-
-interface Project {
-  name: string;
-  path: string;
-  hasConfig: boolean;
-  hasPrompt: boolean;
-  hasDataset: boolean;
-  createdAt: number;
-  modifiedAt: number;
-}
+import type { Project } from '@/types';
 
 export const MainContent = () => {
   const { activeMode, setActiveMode, isModeLocked } = useContext(AppContext)!;
