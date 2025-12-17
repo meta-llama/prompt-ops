@@ -37,7 +37,6 @@
     "diff": "^8.0.2",
     "install": "^0.13.0",
     "lucide-react": "^0.462.0",
-    "next-themes": "^0.3.0",
     "npm": "^11.7.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -49,7 +48,6 @@
     "rehype-highlight": "^7.0.2",
     "rehype-slug": "^6.0.0",
     "remark-gfm": "^4.0.1",
-    "sonner": "^1.5.0",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.23.8"
