@@ -17,7 +17,7 @@ try:
     from prompt_ops.core.model import setup_model
     from prompt_ops.core.prompt_strategies import BasicOptimizationStrategy
 
-    LLAMA_PROMPT_OPS_AVAILABLE = True
+    PROMPT_OPS_AVAILABLE = True
     logger.info("✓ prompt_ops core modules loaded successfully")
 except ImportError as e:
     # Set all to None when not available
@@ -27,12 +27,12 @@ except ImportError as e:
     setup_model = None
     BasicOptimizationStrategy = None
 
-    LLAMA_PROMPT_OPS_AVAILABLE = False
+    PROMPT_OPS_AVAILABLE = False
     logger.warning(f"⚠ Could not import prompt_ops: {e}")
     logger.warning("Some features may not work without prompt_ops installed")
 
 __all__ = [
-    "LLAMA_PROMPT_OPS_AVAILABLE",
+    "PROMPT_OPS_AVAILABLE",
     "ConfigurableJSONAdapter",
     "DSPyMetricAdapter",
     "PromptMigrator",

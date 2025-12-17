@@ -82,7 +82,7 @@ if prompt_ops_path not in sys.path:
     logger.info(f"Added {prompt_ops_path} to Python path")
 
 # Import shared core module with availability checks
-from core import LLAMA_PROMPT_OPS_AVAILABLE
+from core import PROMPT_OPS_AVAILABLE
 
 # FastAPI Application Setup
 app = FastAPI(title="Prompt Ops API")
@@ -144,7 +144,7 @@ async def health_check():
             }
         )
 
-    if not LLAMA_PROMPT_OPS_AVAILABLE:
+    if not PROMPT_OPS_AVAILABLE:
         issues.append(
             {
                 "component": "prompt-ops",
@@ -168,7 +168,7 @@ async def health_check():
     return {
         "status": "healthy" if len(issues) == 0 else "degraded",
         "websockets_available": WEBSOCKETS_AVAILABLE,
-        "prompt_ops_available": LLAMA_PROMPT_OPS_AVAILABLE,
+        "prompt_ops_available": PROMPT_OPS_AVAILABLE,
         "api_key_configured": bool(api_key),
         "issues": issues,
     }

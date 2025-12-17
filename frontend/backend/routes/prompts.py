@@ -27,7 +27,7 @@ router = APIRouter()
 
 # Import shared core module with availability checks
 from core import (
-    LLAMA_PROMPT_OPS_AVAILABLE,
+    PROMPT_OPS_AVAILABLE,
     BasicOptimizationStrategy,
     ConfigurableJSONAdapter,
     DSPyMetricAdapter,
@@ -113,7 +113,7 @@ async def migrate_prompt(request: PromptRequest):
     fail_on_error = config.get("failOnError", FAIL_ON_ERROR)
 
     # Check if prompt-ops is available
-    if not LLAMA_PROMPT_OPS_AVAILABLE:
+    if not PROMPT_OPS_AVAILABLE:
         if fail_on_error:
             raise HTTPException(
                 status_code=500,

@@ -15,7 +15,7 @@ router = APIRouter()
 
 # Import shared core module with availability checks
 from core import (
-    LLAMA_PROMPT_OPS_AVAILABLE,
+    PROMPT_OPS_AVAILABLE,
     BasicOptimizationStrategy,
     DSPyMetricAdapter,
     PromptMigrator,
@@ -81,7 +81,7 @@ async def optimize_with_streaming(websocket: WebSocket, project_name: str):
         await manager.send_status("Setting up models and dataset...", "setup")
 
         # Check if prompt-ops is available
-        if not LLAMA_PROMPT_OPS_AVAILABLE:
+        if not PROMPT_OPS_AVAILABLE:
             await manager.send_error("prompt-ops is not available. Please install it.")
             return
 
