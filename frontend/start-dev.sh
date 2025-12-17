@@ -80,6 +80,8 @@ if [[ ! -d "venv" ]]; then
 else
     print_color $YELLOW "Activating Python virtual environment..."
     source venv/bin/activate
+    print_color $YELLOW "Syncing Python dependencies..."
+    pip install -q -r requirements.txt
 fi
 
 # Verify environment is activated
