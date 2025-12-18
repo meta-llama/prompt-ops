@@ -25,7 +25,7 @@ from config import (
     STRATEGY_MAPPING,
 )
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
@@ -95,6 +95,23 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+
+# Exception handlers
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Log HTTPException details before returning response."""
+    logger.error(
+        f"HTTPException: {exc.status_code} - {exc.detail} (path: {request.url.path})"
+    )
+    # Return the standard HTTPException response
+    from fastapi.responses import JSONResponse
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
 
 # Include route modules
 app.include_router(datasets.router)

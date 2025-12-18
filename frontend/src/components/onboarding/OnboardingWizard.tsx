@@ -135,6 +135,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     useCase: "",
     datasetPath: "",
     uploadedFile: null as File | null,
+    datasetRecordCount: 0,
+    datasetFieldCount: 0,
     fieldMappings: {} as Record<string, string>,
     datasetType: "standard_json",
     metrics: [] as string[],
@@ -446,13 +448,20 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       );
 
       if (!response.ok) {
-        throw new Error("Failed to upload dataset");
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to upload dataset");
       }
 
       const data = await response.json();
 
       updateFormData("datasetPath", data.filename);
       updateFormData("uploadedFile", file);
+      updateFormData("datasetRecordCount", data.total_records || 0);
+      // Count unique fields from preview data
+      const fieldCount = data.preview && data.preview.length > 0
+        ? Object.keys(data.preview[0]).length
+        : 0;
+      updateFormData("datasetFieldCount", fieldCount);
 
       console.log("Dataset uploaded successfully:", data);
     } catch (error) {
@@ -627,11 +636,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         <DatasetUploader
           datasetPath={formData.datasetPath}
           uploadedFile={formData.uploadedFile}
+          datasetRecordCount={formData.datasetRecordCount}
+          datasetFieldCount={formData.datasetFieldCount}
           useCase={formData.useCase}
           onUpload={handleFileUpload}
           onRemove={() => {
             updateFormData("datasetPath", "");
             updateFormData("uploadedFile", null);
+            updateFormData("datasetRecordCount", 0);
+            updateFormData("datasetFieldCount", 0);
             setUploadError(null);
           }}
           loading={uploadLoading}
