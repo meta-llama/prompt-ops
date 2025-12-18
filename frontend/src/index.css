@@ -1,3 +1,6 @@
+/* Clash Display Font */
+@import url('https://api.fontshare.com/v2/css?f[]=clash-display@200,300,400,500,600,700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -137,5 +140,163 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Clash Display', system-ui, sans-serif;
   }
+}
+
+/* Hero animations */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 30px rgba(0, 100, 224, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 60px rgba(0, 100, 224, 0.8);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 1.2s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-up-delay-1 {
+  animation: fade-in-up 1s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-up-delay-2 {
+  animation: fade-in-up 1s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-up-delay-3 {
+  animation: fade-in-up 1s cubic-bezier(0.16, 1, 0.3, 1) 0.45s forwards;
+  opacity: 0;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Video background utilities */
+.video-overlay {
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.4) 0%,
+    rgba(0, 0, 0, 0.2) 50%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+}
+
+/* Glass panel utilities for docs and dark pages */
+.glass-panel {
+  @apply bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl;
+}
+
+.glass-panel-solid {
+  @apply bg-white/[0.06] backdrop-blur-xl border border-white/[0.1] rounded-2xl;
+}
+
+.glass-input {
+  @apply bg-white/[0.05] border border-white/[0.1] rounded-xl text-white placeholder:text-white/40;
+  @apply focus:border-white/20 focus:ring-1 focus:ring-white/10 focus:bg-white/[0.08];
+}
+
+.glass-nav-link {
+  @apply text-white/70 hover:text-white hover:bg-white/[0.08] transition-all duration-200;
+}
+
+.glass-nav-link-active {
+  @apply text-white bg-white/[0.1];
+}
+
+/* Dark theme prose for docs markdown */
+.prose-dark {
+  @apply text-white/80;
+}
+
+.prose-dark h1,
+.prose-dark h2,
+.prose-dark h3,
+.prose-dark h4 {
+  @apply text-white font-semibold;
+}
+
+.prose-dark p {
+  @apply text-white/70 leading-relaxed;
+}
+
+.prose-dark a {
+  @apply text-[#4da3ff] hover:text-[#7dbdff] underline decoration-[#4da3ff]/30 hover:decoration-[#4da3ff];
+}
+
+.prose-dark code {
+  @apply bg-white/[0.1] text-[#a5d6ff] px-1.5 py-0.5 rounded text-sm font-mono;
+}
+
+.prose-dark pre {
+  background-color: #050608;
+  @apply border border-white/[0.08] rounded-xl p-4 overflow-x-auto;
+}
+
+.prose-dark pre code {
+  @apply bg-transparent p-0;
+}
+
+.prose-dark blockquote {
+  @apply border-l-2 border-[#4da3ff]/50 pl-4 italic text-white/60;
+}
+
+.prose-dark ul,
+.prose-dark ol {
+  @apply text-white/70 space-y-1;
+}
+
+.prose-dark li {
+  @apply leading-relaxed;
+}
+
+.prose-dark table {
+  @apply w-full border-collapse;
+}
+
+.prose-dark th {
+  @apply border border-white/[0.1] px-4 py-2 bg-white/[0.05] text-white font-medium text-left;
+}
+
+.prose-dark td {
+  @apply border border-white/[0.1] px-4 py-2 text-white/70;
+}
+
+.prose-dark hr {
+  @apply border-white/[0.1] my-8;
 }
