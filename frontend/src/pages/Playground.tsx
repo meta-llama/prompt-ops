@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import { useContext, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Play, Book, Github, Sun, Moon, Monitor, Lock } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
@@ -10,6 +10,23 @@ import { Badge } from '@/components/ui/badge';
 const Playground = () => {
   const { activeMode, setActiveMode, isModeLocked } = useContext(AppContext)!;
   const { theme, setTheme } = useTheme();
+
+  // Set page title and meta description
+  useEffect(() => {
+    document.title = 'Playground | prompt-ops';
+    
+    let metaDescription = document.querySelector('meta[name="description"]');
+    if (!metaDescription) {
+      metaDescription = document.createElement('meta');
+      metaDescription.setAttribute('name', 'description');
+      document.head.appendChild(metaDescription);
+    }
+    metaDescription.setAttribute('content', 'Try prompt-ops playground to optimize and enhance your LLM prompts with AI-powered strategies.');
+
+    return () => {
+      document.title = 'prompt-ops';
+    };
+  }, []);
 
   return (
     <div className="min-h-screen w-full bg-background">
