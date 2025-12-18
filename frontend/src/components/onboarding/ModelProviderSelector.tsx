@@ -1357,7 +1357,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                     )
                                   }
                                   placeholder="e.g., Azure AI Studio, My Custom API"
-                                  className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
+                                  className="w-full p-3 border border-input bg-background rounded-lg text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background transition-colors"
                                 />
                               </div>
                             )}
@@ -1385,7 +1385,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                       ? "e.g., http://localhost:8000"
                                       : "e.g., https://your-endpoint.eastus2.inference.ai.azure.com/"
                                   }
-                                  className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
+                                  className="w-full p-3 border border-input bg-background rounded-lg text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background transition-colors"
                                 />
                               </div>
                             )}
@@ -1407,7 +1407,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                     )
                                   }
                                   placeholder="e.g., azure_ai/, custom/"
-                                  className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
+                                  className="w-full p-3 border border-input bg-background rounded-lg text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background transition-colors"
                                 />
                                 <p className="text-xs text-muted-foreground mt-1">
                                   Leave empty for direct model names
@@ -1433,7 +1433,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                         | "custom_headers"
                                     )
                                   }
-                                  className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
+                                  className="w-full p-3 border border-input bg-background rounded-lg text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background transition-colors"
                                 >
                                   <option value="api_key">API Key</option>
                                   <option value="bearer_token">
@@ -1469,7 +1469,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                     ? "e.g., command-r-plus, mistral-large-latest"
                                     : "Enter or select a model"
                                 }
-                                className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
+                                className="w-full p-3 border border-input bg-background rounded-lg text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background transition-colors"
                               />
 
                               {/* Suggestion buttons for non-custom providers */}
@@ -1487,10 +1487,10 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                         )
                                       }
                                       className={cn(
-                                        "px-3 py-1 text-xs rounded-full border transition-colors",
+                                        "text-xs px-3 py-1.5 rounded-full border transition-colors",
                                         config.model_name === model
-                                          ? "bg-meta-blue text-white border-meta-blue"
-                                          : "bg-muted text-foreground border-border hover:border-meta-blue hover:bg-meta-blue/10"
+                                          ? "bg-meta-blue/10 text-meta-blue dark:text-meta-blue-light border-meta-blue/30 dark:border-meta-blue-light/50"
+                                          : "bg-meta-blue/10 hover:bg-meta-blue/20 text-meta-blue dark:text-meta-blue-light border-meta-blue/30 dark:border-meta-blue-light/50"
                                       )}
                                     >
                                       {model.split("/").pop() || model}
@@ -1554,7 +1554,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
   "X-API-Key": "your-api-key"
 }`}
                                       rows={4}
-                                      className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground font-mono text-sm"
+                                      className="w-full p-3 border border-input bg-background rounded-lg text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background font-mono text-sm transition-colors"
                                     />
                                   </div>
                                 ) : (
@@ -1581,7 +1581,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                             : "Enter your API key"
                                           : "Enter your API key"
                                       }
-                                      className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground pr-10"
+                                      className="w-full p-3 border border-input bg-background rounded-lg text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background pr-10 transition-colors"
                                     />
                                     <button
                                       type="button"
@@ -1624,7 +1624,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                         parseFloat(e.target.value)
                                       )
                                     }
-                                    className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
+                                    className="w-full p-3 border border-input bg-background rounded-lg text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background transition-colors"
                                   />
                                 </div>
 
@@ -1644,7 +1644,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                         parseInt(e.target.value)
                                       )
                                     }
-                                    className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
+                                    className="w-full p-3 border border-input bg-background rounded-lg text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background transition-colors"
                                   />
                                 </div>
 
@@ -1665,7 +1665,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                             | "both"
                                         )
                                       }
-                                      className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
+                                      className="w-full p-3 border border-input bg-background rounded-lg text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background transition-colors"
                                     >
                                       <option value="both">
                                         🔄 Both (Target + Optimizer)
@@ -1694,7 +1694,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                         e.target.value
                                       )
                                     }
-                                    className="w-full p-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-input text-foreground"
+                                    className="w-full p-3 border border-input bg-background rounded-lg text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background transition-colors"
                                   />
                                 </div>
                               </>
