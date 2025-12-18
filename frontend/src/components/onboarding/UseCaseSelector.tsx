@@ -2,7 +2,6 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { FileQuestion, Database, Settings } from 'lucide-react';
 import { SelectableCard } from '@/components/ui/selectable-card';
-import { InfoBox } from '@/components/ui/info-box';
 import type { UseCase } from '@/types';
 
 interface UseCaseSelectorProps {
@@ -139,18 +138,6 @@ export const UseCaseSelector: React.FC<UseCaseSelectorProps> = ({
             <code>{useCases.find(uc => uc.id === selectedUseCase)?.expectedFormat?.structure}</code>
           </pre>
         </div>
-      )}
-
-      {/* Helper text based on selection */}
-      {selectedUseCase && (
-        <InfoBox variant="info" className="mt-4">
-          {selectedUseCase === 'custom'
-            ? "You'll configure all settings manually in the following steps based on your specific requirements."
-            : `Perfect! We'll show you the most relevant options for ${
-                useCases.find(uc => uc.id === selectedUseCase)?.title
-              } applications in the next steps.`
-          }
-        </InfoBox>
       )}
     </div>
   );

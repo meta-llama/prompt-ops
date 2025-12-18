@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import {
   ArrowRight,
   CheckCircle,
@@ -9,7 +9,11 @@ import {
   Zap,
   Brain,
   Settings,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
 } from "lucide-react";
+import { diffWords } from "diff";
 import { Button } from "@/components/ui/button";
 import { apiUrl, wsUrl } from "@/lib/config";
 import { WizardSection } from "@/components/ui/wizard-section";
@@ -22,15 +26,72 @@ import { ModelProviderSelector } from "./ModelProviderSelector";
 import { OptimizerSelector } from "./OptimizerSelector";
 import { DatasetUploader } from "./DatasetUploader";
 
+// Diff view component for comparing original and optimized prompts
+const DiffView: React.FC<{
+  original: string;
+  optimized: string;
+  showOriginal: boolean;
+}> = ({ original, optimized, showOriginal }) => {
+  const diffResult = useMemo(() => diffWords(original, optimized), [original, optimized]);
+
+  return (
+    <div className="whitespace-pre-wrap text-foreground text-sm leading-relaxed">
+      {diffResult.map((part, index) => {
+        // For the "original" side, show removed parts highlighted, skip added parts
+        if (showOriginal) {
+          if (part.added) return null;
+          if (part.removed) {
+            return (
+              <span
+                key={index}
+                className="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 px-0.5 rounded line-through decoration-red-400"
+              >
+                {part.value}
+              </span>
+            );
+          }
+          return <span key={index}>{part.value}</span>;
+        }
+
+        // For the "optimized" side, show added parts highlighted, skip removed parts
+        if (part.removed) return null;
+        if (part.added) {
+          return (
+            <span
+              key={index}
+              className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 px-0.5 rounded"
+            >
+              {part.value}
+            </span>
+          );
+        }
+        return <span key={index}>{part.value}</span>;
+      })}
+    </div>
+  );
+};
+
 interface OnboardingWizardProps {
   activeMode: "enhance" | "migrate";
   onComplete: (config: any) => void;
 }
 
+// Step definitions
+const WIZARD_STEPS = [
+  { id: "prompt", title: "Your Prompt", icon: FileText },
+  { id: "usecase", title: "Use Case", icon: Lightbulb },
+  { id: "dataset", title: "Dataset", icon: Database },
+  { id: "fieldmapping", title: "Field Mapping", icon: ArrowRight },
+  { id: "metrics", title: "Success Metrics", icon: Target },
+  { id: "models", title: "AI Models", icon: Brain },
+  { id: "optimizer", title: "Optimizer", icon: Zap },
+];
+
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   activeMode,
   onComplete,
 }) => {
+  const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState({
     prompt: "",
     useCase: "",
@@ -42,13 +103,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     metricConfigurations: {} as Record<string, any>,
     modelConfigurations: [] as any[],
     modelProvider: "Llama 3.1 8B", // Keep for backward compatibility
-    selectedOptimizer: "basic", // Default optimizer
+    selectedOptimizer: "", // Will be selected by user
     optimizerConfig: null as any,
     customOptimizerParams: null as any,
   });
-
-  // Section collapse state
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -61,24 +119,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const [optimizationProgress, setOptimizationProgress] = useState({ phase: "", progress: 0, message: "" });
   const [optimizationResult, setOptimizationResult] = useState<any>(null);
   const [websocket, setWebsocket] = useState<WebSocket | null>(null);
-
-  // Refs for scrolling to sections
-  const sectionRefs = {
-    prompt: useRef<HTMLDivElement>(null),
-    usecase: useRef<HTMLDivElement>(null),
-    dataset: useRef<HTMLDivElement>(null),
-    fieldmapping: useRef<HTMLDivElement>(null),
-    metrics: useRef<HTMLDivElement>(null),
-    models: useRef<HTMLDivElement>(null),
-    optimizer: useRef<HTMLDivElement>(null),
-  };
-
-  const toggleSection = (sectionId: string) => {
-    setCollapsedSections(prev => ({
-      ...prev,
-      [sectionId]: !prev[sectionId]
-    }));
-  };
 
   // Generate dynamic project name
   const generateProjectName = () => {
@@ -248,7 +288,31 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Form validation
+  // Step navigation
+  const goToNextStep = () => {
+    if (currentStep < WIZARD_STEPS.length - 1) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const goToPreviousStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const goToStep = (stepIndex: number) => {
+    setCurrentStep(stepIndex);
+  };
+
+  // Check if current step is valid
+  const isCurrentStepValid = () => {
+    const stepId = WIZARD_STEPS[currentStep].id;
+    const status = getSectionStatus(stepId);
+    return status === 'complete';
+  };
+
+  // Form validation (all steps)
   const isFormValid = () => {
     // Check prompt
     if (formData.prompt.trim() === "") return false;
@@ -366,42 +430,87 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     updateFormData("fieldMappings", mappings);
   };
 
-  const renderRequirementsHeader = () => (
-    <div className="text-center mb-8 pt-4">
-      <h1 className="text-2xl md:text-3xl font-normal text-foreground mb-4 tracking-tight">
-        Prompt Optimization
-      </h1>
-      <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-        Complete the form below to configure and optimize your prompt. Fill out each section, then click "Create & Optimize" at the bottom.
-      </p>
+  // Render progress stepper
+  const renderStepper = () => (
+    <div className="mb-8">
+      <div className="flex items-center justify-between">
+        {WIZARD_STEPS.map((step, index) => {
+          const Icon = step.icon;
+          const isActive = index === currentStep;
+          const isComplete = getSectionStatus(step.id) === 'complete';
+          const isAccessible = index <= currentStep || isComplete;
 
-      {/* Quick requirements reminder */}
-      <div className="flex flex-wrap justify-center gap-4 mt-6">
-        <div className="flex items-center space-x-2 bg-meta-blue/10 px-4 py-2 rounded-md">
-          <FileText className="w-4 h-4 text-meta-blue" />
-          <span className="text-sm text-foreground/80">Your Prompt</span>
-        </div>
-        <div className="flex items-center space-x-2 bg-meta-blue/10 px-4 py-2 rounded-md">
-          <Database className="w-4 h-4 text-meta-blue" />
-          <span className="text-sm text-foreground/80">Dataset (JSON)</span>
-        </div>
-        <div className="flex items-center space-x-2 bg-meta-blue/10 px-4 py-2 rounded-md">
-          <Target className="w-4 h-4 text-meta-blue" />
-          <span className="text-sm text-foreground/80">Success Metrics</span>
-        </div>
+          return (
+            <React.Fragment key={step.id}>
+              <div className="flex flex-col items-center flex-1">
+                <button
+                  onClick={() => isAccessible && goToStep(index)}
+                  disabled={!isAccessible}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all ${
+                    isComplete
+                      ? "bg-meta-teal border-meta-teal text-white"
+                      : isActive
+                      ? "bg-meta-blue border-meta-blue text-white"
+                      : isAccessible
+                      ? "border-border bg-panel text-muted-foreground hover:border-meta-blue/50"
+                      : "border-border bg-muted text-muted-foreground/50 cursor-not-allowed"
+                  }`}
+                >
+                  {isComplete ? (
+                    <CheckCircle className="w-6 h-6" />
+                  ) : (
+                    <Icon className="w-5 h-5" />
+                  )}
+                </button>
+                <span
+                  className={`mt-2 text-xs text-center ${
+                    isActive
+                      ? "text-foreground font-medium"
+                      : isComplete
+                      ? "text-meta-teal"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {step.title}
+                </span>
+              </div>
+
+              {index < WIZARD_STEPS.length - 1 && (
+                <div
+                  className={`h-0.5 flex-1 mx-2 mt-[-32px] transition-colors ${
+                    getSectionStatus(WIZARD_STEPS[index + 1].id) === 'complete'
+                      ? "bg-meta-teal"
+                      : "bg-border"
+                  }`}
+                />
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
     </div>
   );
 
+  const renderRequirementsHeader = () => (
+    <div className="text-center mb-8 pt-4">
+      <h1 className="text-2xl md:text-3xl font-normal text-foreground mb-4 tracking-tight">
+        Prompt Optimization Wizard
+      </h1>
+      <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+        Step {currentStep + 1} of {WIZARD_STEPS.length}: {WIZARD_STEPS[currentStep].title}
+      </p>
+    </div>
+  );
+
   const renderPromptSection = () => (
-    <div ref={sectionRefs.prompt}>
+    <div>
       <WizardSection
         id="prompt"
-        title="1. Your Prompt"
+        title="Your Prompt"
         icon={<FileText className="w-5 h-5" />}
         status={getSectionStatus('prompt')}
-        collapsed={!!collapsedSections.prompt}
-        onToggle={() => toggleSection('prompt')}
+        collapsed={false}
+        onToggle={() => {}}
       >
         <p className="text-muted-foreground text-sm">
           Enter the prompt you want to optimize. This is the instruction or system prompt that guides AI behavior.
@@ -445,14 +554,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   );
 
   const renderUseCaseSection = () => (
-    <div ref={sectionRefs.usecase}>
+    <div>
       <WizardSection
         id="usecase"
-        title="2. Use Case"
+        title="Use Case"
         icon={<Lightbulb className="w-5 h-5" />}
         status={getSectionStatus('usecase')}
-        collapsed={!!collapsedSections.usecase}
-        onToggle={() => toggleSection('usecase')}
+        collapsed={false}
+        onToggle={() => {}}
       >
         <p className="text-muted-foreground text-sm">
           Choose the type that best matches your project to get relevant options for field mapping and metrics.
@@ -467,14 +576,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   );
 
   const renderDatasetSection = () => (
-    <div ref={sectionRefs.dataset}>
+    <div>
       <WizardSection
         id="dataset"
-        title="3. Dataset"
+        title="Dataset"
         icon={<Database className="w-5 h-5" />}
         status={getSectionStatus('dataset')}
-        collapsed={!!collapsedSections.dataset}
-        onToggle={() => toggleSection('dataset')}
+        collapsed={false}
+        onToggle={() => {}}
       >
         <DatasetUploader
           datasetPath={formData.datasetPath}
@@ -494,14 +603,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   );
 
   const renderFieldMappingSection = () => (
-    <div ref={sectionRefs.fieldmapping}>
+    <div>
       <WizardSection
         id="fieldmapping"
-        title="4. Field Mapping"
+        title="Field Mapping"
         icon={<ArrowRight className="w-5 h-5" />}
         status={getSectionStatus('fieldmapping')}
-        collapsed={!!collapsedSections.fieldmapping}
-        onToggle={() => toggleSection('fieldmapping')}
+        collapsed={false}
+        onToggle={() => {}}
       >
         {formData.datasetPath ? (
           <FieldMappingInterface
@@ -529,14 +638,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   };
 
   const renderMetricsSection = () => (
-    <div ref={sectionRefs.metrics}>
+    <div>
       <WizardSection
         id="metrics"
-        title="5. Success Metrics"
+        title="Success Metrics"
         icon={<Target className="w-5 h-5" />}
         status={getSectionStatus('metrics')}
-        collapsed={!!collapsedSections.metrics}
-        onToggle={() => toggleSection('metrics')}
+        collapsed={false}
+        onToggle={() => {}}
       >
         <MetricsSelector
           useCase={formData.useCase}
@@ -549,14 +658,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   );
 
   const renderModelsSection = () => (
-    <div ref={sectionRefs.models}>
+    <div>
       <WizardSection
         id="models"
-        title="6. AI Models"
+        title="AI Models"
         icon={<Brain className="w-5 h-5" />}
         status={getSectionStatus('models')}
-        collapsed={!!collapsedSections.models}
-        onToggle={() => toggleSection('models')}
+        collapsed={false}
+        onToggle={() => {}}
       >
         <ModelProviderSelector
           useCase={formData.useCase}
@@ -607,14 +716,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   };
 
   const renderOptimizerSection = () => (
-    <div ref={sectionRefs.optimizer}>
+    <div>
       <WizardSection
         id="optimizer"
-        title="7. Optimizer"
+        title="Optimizer"
         icon={<Zap className="w-5 h-5" />}
         status={getSectionStatus('optimizer')}
-        collapsed={!!collapsedSections.optimizer}
-        onToggle={() => toggleSection('optimizer')}
+        collapsed={false}
+        onToggle={() => {}}
       >
         <OptimizerSelector
           selectedOptimizer={formData.selectedOptimizer}
@@ -626,6 +735,29 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     </div>
   );
 
+  // Render current step content
+  const renderCurrentStep = () => {
+    const stepId = WIZARD_STEPS[currentStep].id;
+    switch (stepId) {
+      case "prompt":
+        return renderPromptSection();
+      case "usecase":
+        return renderUseCaseSection();
+      case "dataset":
+        return renderDatasetSection();
+      case "fieldmapping":
+        return renderFieldMappingSection();
+      case "metrics":
+        return renderMetricsSection();
+      case "models":
+        return renderModelsSection();
+      case "optimizer":
+        return renderOptimizerSection();
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="w-full">
       {/* Main Form Container */}
@@ -633,36 +765,73 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         {/* Header */}
         {renderRequirementsHeader()}
 
-        {/* All Form Sections */}
-        <div className="space-y-6">
-          {renderPromptSection()}
-          {renderUseCaseSection()}
-          {renderDatasetSection()}
-          {renderFieldMappingSection()}
-          {renderMetricsSection()}
-          {renderModelsSection()}
-          {renderOptimizerSection()}
+        {/* Progress Stepper */}
+        {renderStepper()}
+
+        {/* Current Step Content */}
+        <div className="mb-8">
+          {renderCurrentStep()}
         </div>
 
-        {/* Action Section */}
-        <div className="mt-10 pt-8 border-t border-border">
-          {/* Form Validation Summary */}
-          {!isFormValid() && !projectCreationResult && (
-            <InfoBox variant="warning" title="Complete all sections to continue" className="mb-6">
-              <ul className="mt-2 space-y-1">
-                {formData.prompt.trim() === "" && <li>• Enter your prompt</li>}
-                {formData.useCase === "" && <li>• Select a use case</li>}
-                {formData.datasetPath === "" && <li>• Upload a dataset</li>}
-                {formData.useCase !== "custom" && formData.datasetPath !== "" && !(() => {
-                  const reqs = formData.useCase === "qa" ? ["question", "answer"] : ["context", "query", "answer"];
-                  return reqs.every(f => formData.fieldMappings[f]);
-                })() && <li>• Complete field mappings</li>}
-                {formData.metrics.length === 0 && <li>• Select at least one metric</li>}
-                {formData.modelConfigurations.length === 0 && <li>• Configure at least one model</li>}
-                {formData.selectedOptimizer === "" && <li>• Select an optimizer</li>}
-              </ul>
-            </InfoBox>
+        {/* Step Navigation */}
+        <div className="flex justify-between items-center mb-8 pt-6 border-t border-border">
+          {currentStep > 0 ? (
+            <Button
+              onClick={goToPreviousStep}
+              variant="outlined"
+              size="medium"
+            >
+              <ChevronLeft className="w-5 h-5" />
+              Previous
+            </Button>
+          ) : (
+            <div />
           )}
+
+          <div className="text-sm text-muted-foreground">
+            Step {currentStep + 1} of {WIZARD_STEPS.length}
+          </div>
+
+          {currentStep < WIZARD_STEPS.length - 1 ? (
+            <Button
+              onClick={goToNextStep}
+              disabled={!isCurrentStepValid()}
+              variant="filled"
+              size="medium"
+            >
+              Next
+              <ChevronRight className="w-5 h-5" />
+            </Button>
+          ) : (
+            <Button
+              onClick={handleCreateProject}
+              disabled={!isFormValid() || creatingProject || projectCreationResult?.success}
+              variant="filledTeal"
+              size="medium"
+            >
+              {creatingProject ? (
+                <>
+                  Creating Project...
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                </>
+              ) : projectCreationResult?.success ? (
+                <>
+                  Project Created
+                  <CheckCircle />
+                </>
+              ) : (
+                <>
+                  Create Project
+                  <CheckCircle />
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+
+        {/* Final Action Section - Show results when available */}
+        {currentStep === WIZARD_STEPS.length - 1 && (
+          <div className="mt-6">
 
           {/* Project Creation Results */}
           {projectCreationResult && (
@@ -706,6 +875,20 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               ) : (
                 <p className="text-red-600 dark:text-red-400">{projectCreationResult.error}</p>
               )}
+            </div>
+          )}
+
+          {/* Start Optimization Button */}
+          {projectCreationResult?.success && !optimizing && !optimizationResult && (
+            <div className="flex justify-center mb-6">
+              <Button
+                onClick={handleComplete}
+                variant="filledTeal"
+                size="large"
+              >
+                Start Optimization
+                <Zap />
+              </Button>
             </div>
           )}
 
@@ -788,28 +971,38 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-white rounded-lg p-4 border border-green-200">
-                      <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
-                        <FileText className="w-4 h-4 mr-2" />
-                        Original Prompt
-                      </h4>
-                      <div className="bg-gray-50 rounded p-3 max-h-48 overflow-y-auto">
-                        <pre className="text-sm text-gray-700 whitespace-pre-wrap">
-                          {optimizationResult.originalPrompt || "No original prompt"}
-                        </pre>
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Before panel */}
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                        <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                          Original
+                        </span>
+                      </div>
+                      <div className="flex-1 border border-border bg-panel rounded-xl p-4 max-h-64 overflow-y-auto">
+                        <DiffView
+                          original={optimizationResult.originalPrompt || ""}
+                          optimized={optimizationResult.optimizedPrompt || ""}
+                          showOriginal={true}
+                        />
                       </div>
                     </div>
 
-                    <div className="bg-white rounded-lg p-4 border border-green-200">
-                      <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
-                        <Zap className="w-4 h-4 mr-2 text-meta-teal" />
-                        Optimized Prompt
-                      </h4>
-                      <div className="bg-meta-teal/5 rounded p-3 max-h-48 overflow-y-auto">
-                        <pre className="text-sm text-gray-700 whitespace-pre-wrap">
-                          {optimizationResult.optimizedPrompt}
-                        </pre>
+                    {/* After panel */}
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
+                        <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                          Optimized
+                        </span>
+                      </div>
+                      <div className="flex-1 border border-border bg-panel rounded-xl p-4 max-h-64 overflow-y-auto">
+                        <DiffView
+                          original={optimizationResult.originalPrompt || ""}
+                          optimized={optimizationResult.optimizedPrompt || ""}
+                          showOriginal={false}
+                        />
                       </div>
                     </div>
                   </div>
@@ -827,58 +1020,25 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             </div>
           )}
 
-          {/* Action Buttons */}
-          {!optimizing && !optimizationResult && (
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {!projectCreationResult?.success ? (
+            {/* Reset button after completion */}
+            {optimizationResult && (
+              <div className="flex justify-center mt-4">
                 <Button
-                  onClick={handleCreateProject}
-                  disabled={!isFormValid() || creatingProject}
-                  variant="filled"
-                  size="large"
+                  onClick={() => {
+                    setProjectCreationResult(null);
+                    setOptimizationResult(null);
+                    setOptimizationLogs([]);
+                    setCurrentStep(0);
+                  }}
+                  variant="outlined"
+                  size="medium"
                 >
-                  {creatingProject ? (
-                    <>
-                      Creating Project...
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    </>
-                  ) : (
-                    <>
-                      Create & Configure Project
-                      <Settings />
-                    </>
-                  )}
+                  Start New Optimization
                 </Button>
-              ) : (
-                <Button
-                  onClick={handleComplete}
-                  variant="filledTeal"
-                  size="large"
-                >
-                  Start Optimization
-                  <Zap />
-                </Button>
-              )}
-            </div>
-          )}
-
-          {/* Reset button after completion */}
-          {optimizationResult && (
-            <div className="flex justify-center mt-4">
-              <Button
-                onClick={() => {
-                  setProjectCreationResult(null);
-                  setOptimizationResult(null);
-                  setOptimizationLogs([]);
-                }}
-                variant="outlined"
-                size="medium"
-              >
-                Start New Optimization
-              </Button>
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

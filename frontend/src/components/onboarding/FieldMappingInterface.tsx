@@ -290,14 +290,13 @@ export const FieldMappingInterface: React.FC<FieldMappingInterfaceProps> = ({
   return (
     <div className={cn("space-y-6", className)}>
       {/* Header */}
-      <div className="bg-card rounded-2xl p-6 border border-border">
-        <h2 className="text-2xl md:text-3xl font-normal text-foreground mb-4 tracking-tight">Field Mapping</h2>
-        <p className="text-muted-foreground text-lg mb-4">
+      <div>
+        <p className="text-muted-foreground text-sm mb-4">
           To evaluate your dataset correctly, map your dataset's fields to the required fields below.
           Check the <span className="font-medium text-foreground">Completeness</span> percentages to ensure your selected fields have sufficient data coverage.
         </p>
 
-        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+        <div className="flex items-center space-x-4 text-xs text-muted-foreground mb-4">
           <span>Dataset: {filename}</span>
           <span>•</span>
           <span>{analysis.total_records} records</span>

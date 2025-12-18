@@ -25,7 +25,6 @@ import {
 } from "lucide-react";
 import { RoleBadge } from "@/components/ui/role-badge";
 import { InfoBox } from "@/components/ui/info-box";
-import { SectionTitle } from "@/components/ui/section-title";
 import type { ProviderConfig, ModelConfig, RoleType } from "@/types";
 
 interface ModelProviderSelectorProps {
@@ -810,10 +809,11 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
 
   return (
     <div className="space-y-6">
-      <SectionTitle
-        title="Choose Your AI Models"
-        subtitle="Select inference providers and configure models for your optimization"
-      />
+      <div>
+        <p className="text-muted-foreground text-sm">
+          Select inference providers and configure models for your optimization.
+        </p>
+      </div>
 
       {/* Dual Model Explanation */}
       <div className="bg-muted border border-border rounded-xl p-6 mb-4">

@@ -502,8 +502,9 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
 
     return (
       <div
+        onClick={() => handleMetricToggle(metric.id)}
         className={cn(
-          "border rounded-xl p-6 transition-all duration-200",
+          "border rounded-xl p-6 transition-all duration-200 cursor-pointer",
           isSelected
             ? "border-meta-blue dark:border-meta-blue-light bg-meta-blue/5 dark:bg-meta-blue/10"
             : "border-border hover:border-muted-foreground/50"
@@ -512,17 +513,16 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-start space-x-3">
-            <button
-              onClick={() => handleMetricToggle(metric.id)}
+            <div
               className={cn(
                 "w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 transition-colors",
                 isSelected
                   ? "border-meta-blue dark:border-meta-blue-light bg-meta-blue dark:bg-meta-blue-light"
-                  : "border-border hover:border-meta-blue dark:hover:border-meta-blue-light"
+                  : "border-border"
               )}
             >
               {isSelected && <Check className="w-3 h-3 text-white dark:text-meta-gray-900" />}
-            </button>
+            </div>
 
             <div className="flex-1">
               <div className="flex items-center space-x-2 mb-2">
@@ -547,7 +547,10 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
           </div>
 
           <button
-            onClick={() => setExpandedMetric(isExpanded ? null : metric.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpandedMetric(isExpanded ? null : metric.id);
+            }}
             className="text-muted-foreground hover:text-foreground"
           >
             <HelpCircle className="w-5 h-5" />
@@ -556,7 +559,7 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
 
         {/* Expanded Details */}
         {isExpanded && (
-          <div className="space-y-4 border-t border-border pt-4">
+          <div className="space-y-4 border-t border-border pt-4" onClick={(e) => e.stopPropagation()}>
             {/* Examples */}
             <div>
               <h4 className="font-medium text-foreground mb-2">Examples</h4>
@@ -618,7 +621,7 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
 
         {/* Parameters Configuration */}
         {isSelected && metric.parameters && (
-          <div className="mt-4 pt-4 border-t border-border">
+          <div className="mt-4 pt-4 border-t border-border" onClick={(e) => e.stopPropagation()}>
             <h4 className="font-medium text-foreground mb-3 flex items-center">
               <Settings className="w-4 h-4 mr-2" />
               Configuration
@@ -731,26 +734,17 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
   return (
     <div className={cn("space-y-6", className)}>
       {/* Header */}
-      <div className="text-center">
-        <h2 className="text-2xl md:text-3xl font-normal text-foreground mb-4 tracking-tight">
-          Success Metrics
-        </h2>
-        <p className="text-muted-foreground text-lg">
-          Choose how to evaluate your optimized prompt's performance
+      <div>
+        <p className="text-muted-foreground text-sm">
+          Choose how to evaluate your optimized prompt's performance. Select one or more metrics below.
         </p>
       </div>
 
       {/* Smart Recommendations */}
       {recommendedMetrics.length > 0 && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6">
-          <div className="flex items-center mb-3">
-            <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" />
-            <h3 className="font-semibold text-blue-900 dark:text-blue-300">
-              Smart Recommendations
-            </h3>
-          </div>
-          <p className="text-blue-800 dark:text-blue-200 text-sm mb-3">
-            Based on your {useCase} use case and field mappings, we recommend:
+        <div>
+          <p className="text-sm text-muted-foreground mb-3">
+            Based on your <span className="font-semibold text-foreground bg-meta-blue/10 px-2 py-0.5 rounded">{useCase.toUpperCase()}</span> use case, we recommend:
           </p>
           <div className="flex flex-wrap gap-2">
             {recommendedMetrics.map((metricId) => {
@@ -760,12 +754,13 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
                   key={metricId}
                   onClick={() => handleMetricToggle(metricId)}
                   className={cn(
-                    "px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                    "px-3 py-2 rounded-lg text-sm font-medium transition-colors border flex items-center gap-2",
                     selectedMetrics.includes(metricId)
-                      ? "bg-blue-600 dark:bg-blue-500 text-white"
-                      : "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/60"
+                      ? "bg-meta-blue dark:bg-meta-blue-light text-white border-meta-blue dark:border-meta-blue-light"
+                      : "bg-panel text-foreground border-border hover:border-meta-blue dark:hover:border-meta-blue-light"
                   )}
                 >
+                  {React.cloneElement(metric.icon as React.ReactElement, { className: "w-4 h-4" })}
                   {metric.name}
                 </button>
               ) : null;

@@ -1,5 +1,5 @@
 import React from "react";
-import { Database, CheckCircle } from "lucide-react";
+import { Database, CheckCircle, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface DatasetUploaderProps {
@@ -83,8 +83,9 @@ export const DatasetUploader: React.FC<DatasetUploaderProps> = ({
                 e.stopPropagation();
                 onRemove();
               }}
-              className="text-sm text-red-600 hover:underline dark:text-red-400"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 mx-auto"
             >
+              <Trash2 className="w-4 h-4" />
               Remove file
             </button>
           </div>

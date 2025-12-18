@@ -51,8 +51,9 @@ export const MainContent = () => {
           </h1>
         </div>
 
-        {/* Projects List Section */}
-        {!loadingProjects && projects.length > 0 && (
+        {/* Projects List Section - TEMPORARILY HIDDEN */}
+        {/* Will be re-enabled later with project management features */}
+        {false && !loadingProjects && projects.length > 0 && (
           <div className="mb-12">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl md:text-3xl font-normal text-foreground tracking-tight">
@@ -123,7 +124,7 @@ export const MainContent = () => {
           </div>
         )}
 
-        {!loadingProjects && projects.length === 0 && (
+        {false && !loadingProjects && projects.length === 0 && (
           <div className="mb-12 text-center p-12 bg-panel border border-border rounded-3xl">
             <Folder className="mx-auto mb-4 text-muted-foreground/50" size={48} />
             <h3 className="text-xl font-semibold text-muted-foreground mb-2">
