@@ -212,7 +212,6 @@ async def optimize_with_streaming(websocket: WebSocket, project_name: str):
             trainset=trainset,
             valset=valset,
             testset=testset,
-            use_llama_tips=optimization_config.get("use_llama_tips", True),
         )
 
         # Extract results

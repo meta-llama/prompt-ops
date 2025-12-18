@@ -276,6 +276,58 @@ class ConfigurableJSONAdapter(DatasetAdapter):
             logging.warning(f"Error transforming value: {e}")
             return value
 
+    def _ensure_string_value(
+        self, value: Any, field_spec: Union[str, List[str], Dict[str, str]]
+    ) -> str:
+        """
+        Ensure a value is a string suitable for DSPy.
+
+        Args:
+            value: The value to convert
+            field_spec: The field specification (for error messages)
+
+        Returns:
+            String representation of the value
+
+        Raises:
+            ValueError: If the value cannot be reasonably converted to a string
+        """
+        # Already a string - perfect
+        if isinstance(value, str):
+            return value
+
+        # None/null - warn and use empty string or default
+        if value is None:
+            logging.warning(
+                f"Field '{field_spec}' is None. Using default value: '{self.default_value}'"
+            )
+            return str(self.default_value) if self.default_value is not None else ""
+
+        # Dict or list - this is likely an error, but handle gracefully
+        if isinstance(value, (dict, list)):
+            logging.error(
+                f"Field '{field_spec}' contains a {type(value).__name__} but should be a string. "
+                f"This will be JSON-stringified, but you should fix your field mapping. "
+                f"Hint: Did you mean to specify a nested path? "
+                f"For example, if your data has {{'fields': {{'input': '...'}}}}, "
+                f"use 'fields.input' instead of just 'fields'."
+            )
+            return json.dumps(value, ensure_ascii=False)
+
+        # Primitives (int, float, bool) - convert to string
+        if isinstance(value, (int, float, bool)):
+            logging.warning(
+                f"Field '{field_spec}' is a {type(value).__name__}. Converting to string."
+            )
+            return str(value)
+
+        # Unknown type - try to stringify but warn
+        logging.warning(
+            f"Field '{field_spec}' has unexpected type {type(value).__name__}. "
+            f"Attempting to convert to string."
+        )
+        return str(value)
+
     def _map_to_standard_format(
         self,
         values: Any,
@@ -296,19 +348,55 @@ class ConfigurableJSONAdapter(DatasetAdapter):
         result = {}
 
         if isinstance(values, dict):
-            # Values already in dictionary format (from dict field_spec)
-            result.update(values)
+            # Values already in dictionary format
+            # This happens when:
+            # 1. field_spec is a dict like {"source": "dest"} (intended behavior)
+            # 2. field_spec extracted a dict value (likely a configuration error)
+
+            # Check if this is likely a configuration error
+            if not isinstance(field_spec, dict):
+                logging.error(
+                    f"⚠️  FIELD MAPPING ERROR: Field '{field_spec}' extracted a dict "
+                    f"with keys {list(values.keys())}, but a string value was expected. "
+                    f"\n   Hint: If your data structure is {{'fields': {{'input': '...'}}}}, "
+                    f"\n   you should map to ['fields', 'input'] (nested path) instead of just 'fields'."
+                    f"\n   The dict will be converted to preserve individual fields, but this may cause issues with DSPy."
+                )
+
+            # Validate each value in the dict to ensure they're strings
+            validated_dict = {}
+            for key, value in values.items():
+                if not isinstance(value, str):
+                    validated_dict[key] = self._ensure_string_value(
+                        value, f"{field_spec}.{key}"
+                    )
+                else:
+                    validated_dict[key] = value
+            result.update(validated_dict)
+
+            # Ensure standard field exists (question/answer)
+            standard_field = "question" if is_input else "answer"
+            if standard_field not in result:
+                # Use the first value as the standard field
+                if validated_dict:
+                    result[standard_field] = next(iter(validated_dict.values()))
+                    logging.warning(
+                        f"Added '{standard_field}' field automatically using value from '{list(validated_dict.keys())[0]}'. "
+                        f"Consider fixing your field mapping to avoid confusion."
+                    )
         else:
-            # Single value
+            # Single value - ensure it's a string for DSPy compatibility
+            standardized_value = self._ensure_string_value(values, field_spec)
+
             if isinstance(field_spec, str):
                 # Keep original field name as well
-                result[field_spec] = values
+                result[field_spec] = standardized_value
 
             # Add standardized field names for DSPy compatibility
             if is_input:
-                result["question"] = values
+                result["question"] = standardized_value
             else:
-                result["answer"] = values
+                result["answer"] = standardized_value
 
         return result
 
@@ -441,17 +529,19 @@ class RAGJSONAdapter(ConfigurableJSONAdapter):
             field_type: Type of field ('question', 'context', 'answer')
 
         Returns:
-            The primary value for the field
+            The primary value for the field (always a string)
         """
-        # If the standard name already exists, return it
+        # If the standard name already exists, use it
         if field_type in field_data:
-            return field_data[field_type]
-
+            value = field_data[field_type]
         # Otherwise, use the first value in the dictionary
-        if field_data:
-            return next(iter(field_data.values()))
+        elif field_data:
+            value = next(iter(field_data.values()))
+        else:
+            value = self.default_value
 
-        return self.default_value
+        # Ensure the value is a string for DSPy compatibility
+        return self._ensure_string_value(value, field_type)
 
     def adapt(self) -> List[Dict[str, Any]]:
         """
@@ -517,17 +607,86 @@ def create_dspy_example(doc: Dict[str, Any]) -> dspy.Example:
     Convert a standardized document into a DSPy example.
 
     Args:
-        doc: Standardized document
+        doc: Standardized document with 'inputs' and 'outputs' dictionaries
 
     Returns:
         DSPy example
+
+    Raises:
+        ValueError: If the document structure is invalid or contains non-string values
     """
-    # Create example with inputs and outputs
-    example = dspy.Example(**doc["inputs"], **doc["outputs"])
+    # Validate document structure
+    if "inputs" not in doc or "outputs" not in doc:
+        raise ValueError(
+            f"Document must contain 'inputs' and 'outputs' keys. Found: {list(doc.keys())}"
+        )
+
+    if not isinstance(doc["inputs"], dict):
+        raise ValueError(
+            f"'inputs' must be a dictionary, got {type(doc['inputs']).__name__}"
+        )
+
+    if not isinstance(doc["outputs"], dict):
+        raise ValueError(
+            f"'outputs' must be a dictionary, got {type(doc['outputs']).__name__}"
+        )
+
+    # Validate that all input and output values are strings (or can be converted)
+    validated_inputs = {}
+    for key, value in doc["inputs"].items():
+        if not isinstance(value, str):
+            logging.warning(
+                f"Input field '{key}' is not a string (type: {type(value).__name__}). "
+                f"Converting to string for DSPy compatibility."
+            )
+            if isinstance(value, (dict, list)):
+                value = json.dumps(value, ensure_ascii=False)
+            else:
+                value = str(value)
+        validated_inputs[key] = value
+
+    validated_outputs = {}
+    for key, value in doc["outputs"].items():
+        if not isinstance(value, str):
+            logging.warning(
+                f"Output field '{key}' is not a string (type: {type(value).__name__}). "
+                f"Converting to string for DSPy compatibility."
+            )
+            if isinstance(value, (dict, list)):
+                value = json.dumps(value, ensure_ascii=False)
+            else:
+                value = str(value)
+        validated_outputs[key] = value
+
+    # Verify that standard fields exist
+    if "question" not in validated_inputs and "query" not in validated_inputs:
+        logging.error(
+            f"❌ DSPy Example missing 'question' field! "
+            f"Input keys: {list(validated_inputs.keys())}. "
+            f"This will cause DSPy optimization to fail. "
+            f"Check your dataset adapter configuration."
+        )
+
+    if "answer" not in validated_outputs:
+        logging.error(
+            f"❌ DSPy Example missing 'answer' field! "
+            f"Output keys: {list(validated_outputs.keys())}. "
+            f"This will cause DSPy optimization to fail. "
+            f"Check your dataset adapter configuration."
+        )
+
+    # Create example with validated inputs and outputs
+    example = dspy.Example(**validated_inputs, **validated_outputs)
 
     # Set input and output keys explicitly
-    example._input_keys = set(doc["inputs"].keys())
-    example._output_keys = set(doc["outputs"].keys())
+    example._input_keys = set(validated_inputs.keys())
+    example._output_keys = set(validated_outputs.keys())
+
+    # Log for debugging
+    logging.debug(
+        f"Created DSPy Example with input_keys={example._input_keys}, "
+        f"output_keys={example._output_keys}"
+    )
 
     # Add metadata if available
     if "metadata" in doc:

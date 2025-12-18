@@ -306,7 +306,6 @@ async def migrate_prompt(request: PromptRequest):
                 trainset=trainset,
                 valset=valset,
                 testset=testset,
-                use_llama_tips=use_llama_tips,
             )
 
             # Extract the optimized prompt
