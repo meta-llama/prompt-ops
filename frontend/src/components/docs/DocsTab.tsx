@@ -1,11 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Book, Search, FileText, Code, Settings, ChevronRight } from 'lucide-react';
+import { Book, Search, FileText, Code, Settings, ChevronRight, Loader2, Zap, BookOpen } from 'lucide-react';
 import { DocsContent } from './DocsContent';
 import { DocsSidebar } from './DocsSidebar';
+import { apiUrl } from '@/lib/config';
 import type { DocItem } from '@/types';
 
 export type { DocItem } from '@/types';
+
+// Map icon names from backend to actual icon components
+const iconMap: Record<string, React.ElementType> = {
+  book: Book,
+  'book-open': BookOpen,
+  settings: Settings,
+  code: Code,
+  'file-text': FileText,
+  zap: Zap,
+};
+
+// Map categories to default icons
+const categoryIconMap: Record<string, React.ElementType> = {
+  'Basics': Book,
+  'Guides': FileText,
+  'Intermediate': Settings,
+  'Advanced': Code,
+};
 
 export const DocsTab = () => {
   const { docId } = useParams<{ docId?: string }>();
@@ -13,6 +32,50 @@ export const DocsTab = () => {
   const [selectedDoc, setSelectedDoc] = useState<DocItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [docsStructure, setDocsStructure] = useState<DocItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch docs structure from API
+  useEffect(() => {
+    const fetchDocsStructure = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(apiUrl('/api/docs/structure'));
+        if (!response.ok) {
+          throw new Error('Failed to fetch documentation structure');
+        }
+        const data = await response.json();
+        
+        if (data.success && data.docs) {
+          // Map backend response to DocItem format with icons
+          const docs: DocItem[] = data.docs.map((doc: {
+            id: string;
+            title: string;
+            path: string;
+            category: string;
+            description?: string;
+            icon?: string;
+          }) => ({
+            id: doc.id,
+            title: doc.title,
+            path: doc.path,
+            category: doc.category,
+            description: doc.description,
+            icon: doc.icon ? iconMap[doc.icon] : categoryIconMap[doc.category] || FileText,
+          }));
+          setDocsStructure(docs);
+        }
+      } catch (err) {
+        console.error('Failed to fetch docs structure:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load documentation');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDocsStructure();
+  }, []);
 
   // Load RunLLM widget when component mounts
   useEffect(() => {
@@ -52,53 +115,9 @@ export const DocsTab = () => {
     };
   }, []);
 
-  // Sample docs structure - in a real app, this would come from an API
-  const docsStructure: DocItem[] = [
-    {
-      id: 'getting-started',
-      title: 'Getting Started',
-      path: 'README.md',
-      category: 'Basics',
-      description: 'Learn the fundamentals of prompt-ops',
-      icon: Book
-    },
-    {
-      id: 'metrics-guide',
-      title: 'Metric Selection Guide',
-      path: 'metric_selection_guide.md',
-      category: 'Guides',
-      description: 'Choose the right metrics for your optimization',
-      icon: Settings
-    },
-    {
-      id: 'dataset-adapter',
-      title: 'Dataset Adapter Guide',
-      path: 'dataset_adapter_selection_guide.md',
-      category: 'Guides',
-      description: 'Configure dataset adapters for different data formats',
-      icon: FileText
-    },
-    {
-      id: 'intermediate-guide',
-      title: 'Facility YAML Configuration',
-      path: 'intermediate/readme.md',
-      category: 'Intermediate',
-      description: 'Advanced YAML configuration options for facility management tasks',
-      icon: Code
-    },
-    {
-      id: 'inference-providers',
-      title: 'Inference Providers',
-      path: 'inference_providers.md',
-      category: 'Advanced',
-      description: 'Configure and use different inference providers',
-      icon: Code
-    }
-  ];
-
   // Sync selectedDoc with URL parameter
   useEffect(() => {
-    if (docId) {
+    if (docId && docsStructure.length > 0) {
       const doc = docsStructure.find(d => d.id === docId);
       if (doc) {
         setSelectedDoc(doc);
@@ -106,7 +125,7 @@ export const DocsTab = () => {
     } else {
       setSelectedDoc(null);
     }
-  }, [docId]);
+  }, [docId, docsStructure]);
 
   // Handler to update both state and URL when selecting a doc
   const handleSelectDoc = (doc: DocItem) => {
@@ -120,6 +139,33 @@ export const DocsTab = () => {
   );
 
   const categories = Array.from(new Set(docsStructure.map(doc => doc.category)));
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-[#4da3ff]" />
+          <p className="text-white/60">Loading documentation...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="glass-panel p-8 text-center max-w-md">
+          <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+            <FileText className="w-6 h-6 text-red-400" />
+          </div>
+          <h3 className="text-lg font-medium text-white mb-2">Failed to load documentation</h3>
+          <p className="text-white/60 text-sm">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex gap-6 px-8 py-6 max-w-7xl mx-auto">

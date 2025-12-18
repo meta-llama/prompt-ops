@@ -1,3 +1,11 @@
+---
+title: Getting Started
+category: Basics
+description: Learn the fundamentals of prompt-ops and choose your optimization path
+order: 1
+icon: book
+---
+
 # prompt-ops Getting Started Guide
 
 Welcome to prompt-ops! This guide will help you understand what's supported out of the box and how to get started quickly.

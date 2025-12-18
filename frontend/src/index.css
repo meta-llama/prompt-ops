@@ -8,124 +8,70 @@
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. */
 
 @layer base {
-  :root {
-    /* Backgrounds: Meta Gray 100 for subtle off-white */
-    --background: 210 27% 96%;        /* Meta Gray 100 #F1F4F7 */
-    --foreground: 204 30% 16%;        /* Meta Gray #1c2b33 */
+  /* Dark-only theme - using dark values as default */
+  :root,
+  .dark {
+    /* Dark backgrounds - matching #0a0c10 cinematic theme */
+    --background: 220 20% 4%;         /* #0a0c10 - cinematic dark */
+    --foreground: 210 27% 96%;        /* Meta Gray 100 - light text */
 
-    --card: 0 0% 100%;                /* White for cards */
-    --card-foreground: 204 30% 16%;   /* Meta Gray */
+    --card: 220 15% 8%;               /* Slightly elevated dark card */
+    --card-foreground: 210 27% 96%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 204 30% 16%;
+    --popover: 220 15% 8%;
+    --popover-foreground: 210 27% 96%;
 
     /* Primary: Meta Blue */
     --primary: 213 100% 44%;          /* Meta Blue #0064E0 */
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Light gray for subtle backgrounds */
-    --secondary: 210 27% 96%;         /* Meta Gray 100 */
-    --secondary-foreground: 204 30% 16%;
+    /* Secondary: Dark gray for subtle backgrounds */
+    --secondary: 220 15% 12%;
+    --secondary-foreground: 210 27% 96%;
 
-    /* Muted: slightly darker gray for less emphasis */
-    --muted: 210 27% 96%;             /* Meta Gray 100 */
-    --muted-foreground: 203 19% 47%;  /* Meta Gray 600 #67788A */
+    /* Muted: For less emphasis on dark bg */
+    --muted: 220 15% 12%;
+    --muted-foreground: 210 20% 60%;  /* Lighter gray for readable muted text */
 
     /* Accent: Meta Teal for highlights */
     --accent: 172 100% 41%;           /* Meta Teal #00D2BE */
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders: Meta Gray 300 */
-    --border: 210 14% 82%;            /* Meta Gray 300 #CBD2D9 */
-    --input: 210 14% 82%;
+    /* Borders: Subtle white borders for glass effect */
+    --border: 220 15% 18%;            /* Subtle dark border */
+    --input: 220 15% 12%;             /* Dark input background */
     --ring: 213 100% 44%;             /* Meta Blue for focus rings */
 
     --radius: 0.5rem;
 
-    /* Sidebar */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 204 30% 16%;
-    --sidebar-primary: 213 100% 44%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 27% 96%;
-    --sidebar-accent-foreground: 213 100% 44%;
-    --sidebar-border: 210 14% 82%;
-    --sidebar-ring: 213 100% 44%;
-
-    /* Meta brand colors as CSS variables for dark mode support */
-    --meta-blue: 213 100% 44%;           /* #0064E0 */
-    --meta-blue-hover: 213 100% 36%;     /* #004bb9 - darker for hover */
-    --meta-teal: 172 100% 41%;           /* #00D2BE */
-    --meta-teal-hover: 180 100% 30%;     /* #009b9b */
-    --meta-purple: 249 100% 73%;         /* #8773FF */
-    --meta-purple-text: 260 60% 45%;     /* Darker for text on light bg */
-    --meta-orange: 28 96% 54%;           /* #FA8719 */
-    --meta-orange-text: 28 80% 34%;      /* Darker for text on light bg */
-    --meta-pink: 330 94% 74%;            /* #FA7DC8 */
-
-    /* Panel/card backgrounds */
-    --panel: 0 0% 100%;                  /* White panels */
-    --panel-hover: 210 27% 98%;          /* Slight gray on hover */
-    --panel-muted: 210 27% 96%;          /* meta-gray-100 */
-  }
-
-  .dark {
-    /* Dark mode uses Meta Gray palette */
-    --background: 204 30% 16%;        /* Meta Gray #1c2b33 */
-    --foreground: 210 27% 96%;        /* Meta Gray 100 */
-
-    --card: 203 24% 20%;              /* Meta Gray 900 #283943 */
-    --card-foreground: 210 27% 96%;
-
-    --popover: 203 24% 20%;
-    --popover-foreground: 210 27% 96%;
-
-    --primary: 213 100% 44%;          /* Meta Blue */
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 203 20% 26%;         /* Meta Gray 800 #344854 */
-    --secondary-foreground: 210 27% 96%;
-
-    --muted: 203 20% 26%;
-    --muted-foreground: 203 19% 47%;  /* Meta Gray 600 */
-
-    --accent: 172 100% 41%;           /* Meta Teal */
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 203 20% 26%;            /* Meta Gray 800 */
-    --input: 203 20% 26%;
-    --ring: 213 100% 44%;             /* Meta Blue */
-
-    --sidebar-background: 204 30% 12%;
+    /* Sidebar - darker than main bg */
+    --sidebar-background: 220 20% 3%;
     --sidebar-foreground: 210 27% 96%;
     --sidebar-primary: 213 100% 44%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 203 20% 26%;
+    --sidebar-accent: 220 15% 12%;
     --sidebar-accent-foreground: 210 27% 96%;
-    --sidebar-border: 203 20% 26%;
+    --sidebar-border: 220 15% 18%;
     --sidebar-ring: 213 100% 44%;
 
-    /* Inverted brand colors - lighter/brighter on dark backgrounds */
+    /* Meta brand colors - brighter for dark backgrounds */
     --meta-blue: 213 100% 60%;           /* Brighter blue */
     --meta-blue-hover: 213 100% 70%;     /* Even brighter for hover */
     --meta-teal: 172 100% 45%;           /* Brighter teal */
     --meta-teal-hover: 172 100% 55%;
     --meta-purple: 249 100% 78%;         /* Brighter purple */
-    --meta-purple-text: 249 100% 78%;    /* Same for dark mode */
+    --meta-purple-text: 249 100% 78%;
     --meta-orange: 28 96% 62%;           /* Brighter orange */
-    --meta-orange-text: 28 96% 62%;      /* Same for dark mode */
+    --meta-orange-text: 28 96% 62%;
     --meta-pink: 330 94% 78%;            /* Brighter pink */
 
-    /* Panel/card backgrounds - elevated from bg */
-    --panel: 203 24% 20%;                /* meta-gray-900 */
-    --panel-hover: 203 24% 24%;          /* Slightly lighter on hover */
-    --panel-muted: 203 20% 26%;          /* meta-gray-800 */
+    /* Panel/card backgrounds - glass-like on dark */
+    --panel: 220 15% 8%;                 /* Elevated from bg */
+    --panel-hover: 220 15% 12%;          /* Lighter on hover */
+    --panel-muted: 220 15% 10%;
   }
 }
 
@@ -141,6 +87,34 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Clash Display', system-ui, sans-serif;
+  }
+
+  /* Custom scrollbar styling for dark theme */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: transparent;
   }
 }
 

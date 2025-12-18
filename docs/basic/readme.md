@@ -1,3 +1,11 @@
+---
+title: Quick Start Guide
+category: Basics
+description: Optimize your first prompt in 5 minutes with a guided walkthrough
+order: 2
+icon: zap
+---
+
 # Quick Start Guide: Optimizing Prompts in 5 Minutes
 
 ## What You'll Build

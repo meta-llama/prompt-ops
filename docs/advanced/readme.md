@@ -1,3 +1,11 @@
+---
+title: Custom Adapters & Metrics
+category: Advanced
+description: Create custom dataset adapters and evaluation metrics for your use case
+order: 31
+icon: code
+---
+
 # Using prompt-ops for your use case (with Examples)
 
 > **Note:** This guide explains how to add new use cases to prompt-ops by either configuring existing components or creating custom components.

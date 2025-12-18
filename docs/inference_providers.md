@@ -1,3 +1,11 @@
+---
+title: Inference Providers
+category: Advanced
+description: Configure OpenRouter, vLLM, NVIDIA NIMs, Together AI, and other providers
+order: 30
+icon: zap
+---
+
 # Using Different Inference Providers with prompt-ops
 
 This guide demonstrates how to configure prompt-ops to work with various inference providers, including OpenRouter, vLLM, and NVIDIA NIMs. By changing the model configuration in your YAML files, you can easily switch between different backends without modifying your code.

@@ -5,9 +5,12 @@ FastAPI application setup and configuration.
 import importlib
 import logging
 import os
+import re
 import subprocess
 import sys
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+
+import yaml
 
 # Import configuration and utilities
 from config import (
@@ -199,6 +202,25 @@ async def get_configurations():
     }
 
 
+def parse_frontmatter(content: str) -> tuple[Optional[Dict[str, Any]], str]:
+    """
+    Parse YAML frontmatter from markdown content.
+    Returns (frontmatter_dict, remaining_content) or (None, original_content) if no frontmatter.
+    """
+    frontmatter_pattern = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
+    match = frontmatter_pattern.match(content)
+
+    if match:
+        try:
+            frontmatter = yaml.safe_load(match.group(1))
+            remaining_content = content[match.end() :]
+            return frontmatter, remaining_content
+        except yaml.YAMLError:
+            return None, content
+
+    return None, content
+
+
 @app.get("/docs/{file_path:path}")
 async def get_docs_file(file_path: str):
     """Serve documentation files from the docs directory."""
@@ -221,8 +243,9 @@ async def get_docs_file(file_path: str):
         with open(full_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # Return appropriate content type based on file extension
+        # Strip frontmatter from markdown files before serving
         if file_path.endswith(".md"):
+            _, content = parse_frontmatter(content)
             return PlainTextResponse(content, media_type="text/markdown")
         elif file_path.endswith(".json"):
             return PlainTextResponse(content, media_type="application/json")
@@ -235,12 +258,21 @@ async def get_docs_file(file_path: str):
         )
 
 
+def generate_doc_id(path: str) -> str:
+    """Generate a URL-friendly ID from a file path."""
+    # Remove extension and convert path separators to dashes
+    doc_id = os.path.splitext(path)[0].replace("/", "-").replace("\\", "-").lower()
+    # Clean up any double dashes and leading/trailing dashes
+    doc_id = re.sub(r"-+", "-", doc_id).strip("-")
+    return doc_id
+
+
 @app.get("/api/docs/structure")
 async def get_docs_structure():
-    """Get the structure of the documentation directory."""
+    """Get the structure of the documentation directory with frontmatter metadata."""
     try:
         docs_base_path = os.path.join(os.path.dirname(__file__), "..", "..", "docs")
-        structure = []
+        docs = []
 
         def scan_directory(path, relative_path=""):
             items = []
@@ -248,7 +280,7 @@ async def get_docs_structure():
                 return items
 
             for item in os.listdir(path):
-                if item.startswith("."):  # Skip hidden files
+                if item.startswith(".") or item.startswith("_"):  # Skip hidden/private
                     continue
 
                 item_path = os.path.join(path, item)
@@ -260,24 +292,54 @@ async def get_docs_structure():
                     # Recursively scan subdirectories
                     subitems = scan_directory(item_path, item_relative_path)
                     items.extend(subitems)
-                elif item.endswith((".md", ".txt")):
-                    # Get file stats
-                    stat = os.stat(item_path)
-                    items.append(
-                        {
-                            "path": item_relative_path.replace(os.sep, "/"),
-                            "name": os.path.splitext(item)[0],
-                            "type": "file",
-                            "size": stat.st_size,
-                            "modified": stat.st_mtime,
+                elif item.endswith(".md"):
+                    # Read file and parse frontmatter
+                    try:
+                        with open(item_path, "r", encoding="utf-8") as f:
+                            content = f.read()
+
+                        frontmatter, _ = parse_frontmatter(content)
+                        file_path = item_relative_path.replace(os.sep, "/")
+
+                        # Build doc entry with frontmatter metadata or defaults
+                        doc_entry = {
+                            "id": generate_doc_id(file_path),
+                            "path": file_path,
+                            "title": (
+                                frontmatter.get("title")
+                                if frontmatter
+                                else os.path.splitext(item)[0]
+                                .replace("-", " ")
+                                .replace("_", " ")
+                                .title()
+                            ),
+                            "category": (
+                                frontmatter.get("category")
+                                if frontmatter
+                                else relative_path.replace(os.sep, "/").title()
+                                or "General"
+                            ),
+                            "description": (
+                                frontmatter.get("description") if frontmatter else None
+                            ),
+                            "order": (
+                                frontmatter.get("order") if frontmatter else 999
+                            ),
+                            "icon": frontmatter.get("icon") if frontmatter else None,
                         }
-                    )
+                        items.append(doc_entry)
+                    except Exception as e:
+                        logger.warning(f"Failed to parse doc file {item_path}: {e}")
+                        continue
 
             return items
 
-        structure = scan_directory(docs_base_path)
+        docs = scan_directory(docs_base_path)
 
-        return {"success": True, "structure": structure, "total_files": len(structure)}
+        # Sort by order, then by title
+        docs.sort(key=lambda x: (x.get("order", 999), x.get("title", "")))
+
+        return {"success": True, "docs": docs, "total": len(docs)}
 
     except Exception as e:
         raise HTTPException(

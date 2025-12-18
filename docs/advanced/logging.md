@@ -1,3 +1,11 @@
+---
+title: Logging & Telemetry
+category: Advanced
+description: Configure logging levels and export optimization telemetry for analysis
+order: 32
+icon: settings
+---
+
 # Logging and Telemetry
 
 The `prompt-ops` library includes a flexible logging framework to provide insights into the optimization process. You can control the verbosity of the output and export detailed telemetry for analysis.

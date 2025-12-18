@@ -1,3 +1,11 @@
+---
+title: Metric Selection Guide
+category: Guides
+description: Choose the right evaluation metrics for your optimization use case
+order: 10
+icon: settings
+---
+
 # Metric Selection Guide
 
 This guide helps you choose the right evaluation metric for your use case or determine when to create a custom metric.
