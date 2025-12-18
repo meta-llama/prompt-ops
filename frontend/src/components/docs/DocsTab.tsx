@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Book, Search, FileText, Code, Settings, ChevronRight } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import { DocsContent } from './DocsContent';
 import { DocsSidebar } from './DocsSidebar';
 import type { DocItem } from '@/types';
@@ -34,7 +33,7 @@ export const DocsTab = () => {
       script.setAttribute('runllm-position', 'BOTTOM_RIGHT');
       // RunLLM Assistant ID from https://app.runllm.com/assistant/1149
       script.setAttribute('runllm-assistant-id', '1149');
-      script.setAttribute('runllm-theme-color', '#1877f2'); // Facebook blue
+      script.setAttribute('runllm-theme-color', '#0064E0');
       script.setAttribute('runllm-floating-button-text', 'Ask AI');
       script.setAttribute('runllm-disclaimer', 'This AI assistant can help you navigate the prompt-ops documentation.');
       script.async = true;
@@ -123,55 +122,28 @@ export const DocsTab = () => {
   const categories = Array.from(new Set(docsStructure.map(doc => doc.category)));
 
   return (
-    <div className="max-w-7xl mx-auto h-full">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-normal text-meta-gray mb-4 tracking-tight">
-          Documentation
-        </h1>
-        <p className="text-lg text-meta-gray/70 max-w-8xl">
-          Comprehensive guides, API references, and examples to help you get the most out of prompt-ops.
-          <span className="inline-block ml-2 px-2 py-1 bg-meta-blue/10 text-meta-blue text-sm rounded-md font-medium">
-            💬 Ask AI for help (Cmd+J)
-          </span>
-        </p>
+    <div className="h-full flex gap-6 px-8 py-6 max-w-7xl mx-auto">
+      {/* Sidebar */}
+      <div className={`transition-all duration-300 ${sidebarOpen ? 'w-72' : 'w-0'} flex-shrink-0`}>
+        <DocsSidebar
+          docs={filteredDocs}
+          categories={categories}
+          selectedDoc={selectedDoc}
+          onSelectDoc={handleSelectDoc}
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-8">
-        <div className="relative max-w-lg">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-meta-gray/50" />
-          <Input
-            placeholder="Search documentation..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-12 text-lg border-meta-gray-300 focus:border-meta-blue focus:ring-meta-blue/20"
-          />
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex gap-8 h-[calc(100vh-240px)]">
-        {/* Sidebar */}
-        <div className={`transition-all duration-300 ${sidebarOpen ? 'w-80' : 'w-0'} flex-shrink-0`}>
-          <DocsSidebar
-            docs={filteredDocs}
-            categories={categories}
-            selectedDoc={selectedDoc}
-            onSelectDoc={handleSelectDoc}
-            isOpen={sidebarOpen}
-            onToggle={() => setSidebarOpen(!sidebarOpen)}
-          />
-        </div>
-
-        {/* Content Area */}
-        <div className="flex-1 min-w-0">
-          {selectedDoc ? (
-            <DocsContent doc={selectedDoc} />
-          ) : (
-            <DocsOverview docs={docsStructure} onSelectDoc={handleSelectDoc} />
-          )}
-        </div>
+      {/* Content Area */}
+      <div className="flex-1 min-w-0 overflow-hidden">
+        {selectedDoc ? (
+          <DocsContent doc={selectedDoc} />
+        ) : (
+          <DocsOverview docs={docsStructure} onSelectDoc={handleSelectDoc} />
+        )}
       </div>
     </div>
   );
@@ -182,58 +154,67 @@ const DocsOverview = ({ docs, onSelectDoc }: { docs: DocItem[], onSelectDoc: (do
   const categories = Array.from(new Set(docs.map(doc => doc.category)));
 
   return (
-    <div className="space-y-8">
-      <div className="text-center py-8">
-        <Book className="w-16 h-16 text-meta-blue/20 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-meta-gray mb-2">
-          Welcome to the Documentation
-        </h2>
-        <p className="text-meta-gray/70">
-          Select a document from the sidebar or browse by category below.
-        </p>
-      </div>
+    <div className="h-full glass-panel overflow-y-auto p-8 animate-fade-in">
+      <div className="space-y-8">
+        {/* Welcome Header */}
+        <div className="text-center py-6">
+          <div className="w-16 h-16 rounded-2xl bg-white/[0.05] border border-white/[0.1] flex items-center justify-center mx-auto mb-4">
+            <Book className="w-8 h-8 text-[#4da3ff]" />
+          </div>
+          <h2 className="text-2xl font-semibold text-white mb-2">
+            Documentation
+          </h2>
+          <p className="text-white/60 max-w-md mx-auto">
+            Select a document from the sidebar or browse by category below.
+            <span className="block mt-2 text-sm text-[#4da3ff]">
+              Press ⌘J to ask AI for help
+            </span>
+          </p>
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {categories.map(category => {
-          const categoryDocs = docs.filter(doc => doc.category === category);
-          return (
-            <div
-              key={category}
-              className="bg-white rounded-3xl p-6 border border-meta-gray-300/50 hover:border-meta-blue/30 transition-colors"
-            >
-              <h3 className="text-xl font-bold text-meta-gray mb-4 flex items-center gap-2">
-                {category === 'Basics' && <Book className="w-5 h-5 text-meta-blue" />}
-                {category === 'Guides' && <FileText className="w-5 h-5 text-meta-blue" />}
-                {category === 'Intermediate' && <Settings className="w-5 h-5 text-meta-blue" />}
-                {category === 'Advanced' && <Code className="w-5 h-5 text-meta-blue" />}
-                {category}
-              </h3>
-              <div className="space-y-3">
-                {categoryDocs.map(doc => (
-                  <button
-                    key={doc.id}
-                    onClick={() => onSelectDoc(doc)}
-                    className="w-full text-left p-3 rounded-lg hover:bg-meta-gray-100/20 transition-all duration-200 group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium text-meta-gray group-hover:text-meta-blue transition-colors">
-                          {doc.title}
-                        </h4>
-                        {doc.description && (
-                          <p className="text-sm text-meta-gray/60 mt-1">
-                            {doc.description}
-                          </p>
-                        )}
+        {/* Category Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {categories.map(category => {
+            const categoryDocs = docs.filter(doc => doc.category === category);
+            return (
+              <div
+                key={category}
+                className="glass-panel-solid p-5 hover:bg-white/[0.08] transition-all duration-300"
+              >
+                <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+                  {category === 'Basics' && <Book className="w-4 h-4 text-[#4da3ff]" />}
+                  {category === 'Guides' && <FileText className="w-4 h-4 text-[#4da3ff]" />}
+                  {category === 'Intermediate' && <Settings className="w-4 h-4 text-[#4da3ff]" />}
+                  {category === 'Advanced' && <Code className="w-4 h-4 text-[#4da3ff]" />}
+                  {category}
+                </h3>
+                <div className="space-y-1">
+                  {categoryDocs.map(doc => (
+                    <button
+                      key={doc.id}
+                      onClick={() => onSelectDoc(doc)}
+                      className="w-full text-left p-3 rounded-xl hover:bg-white/[0.08] transition-all duration-200 group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium text-white/90 group-hover:text-white transition-colors text-sm">
+                            {doc.title}
+                          </h4>
+                          {doc.description && (
+                            <p className="text-xs text-white/50 mt-0.5 group-hover:text-white/60 transition-colors">
+                              {doc.description}
+                            </p>
+                          )}
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-white/30 group-hover:text-[#4da3ff] group-hover:translate-x-0.5 transition-all" />
                       </div>
-                      <ChevronRight className="w-4 h-4 text-meta-gray/40 group-hover:text-meta-blue transition-colors" />
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
