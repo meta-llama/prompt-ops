@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 export interface DatasetUploaderProps {
   datasetPath: string;
   uploadedFile: File | null;
+  datasetRecordCount?: number;
+  datasetFieldCount?: number;
   useCase: string;
   onUpload: (file: File) => void;
   onRemove: () => void;
@@ -20,6 +22,8 @@ export interface DatasetUploaderProps {
 export const DatasetUploader: React.FC<DatasetUploaderProps> = ({
   datasetPath,
   uploadedFile,
+  datasetRecordCount = 0,
+  datasetFieldCount = 0,
   useCase,
   onUpload,
   onRemove,
@@ -76,6 +80,18 @@ export const DatasetUploader: React.FC<DatasetUploaderProps> = ({
               <p className="font-semibold text-white">{datasetPath}</p>
               <p className="text-sm text-white/60">
                 {uploadedFile ? (uploadedFile.size / 1024).toFixed(2) : "0"} KB
+                {datasetRecordCount > 0 && (
+                  <>
+                    {" • "}
+                    {datasetRecordCount} record{datasetRecordCount !== 1 ? "s" : ""}
+                  </>
+                )}
+                {datasetFieldCount > 0 && (
+                  <>
+                    {" • "}
+                    {datasetFieldCount} field{datasetFieldCount !== 1 ? "s" : ""} detected
+                  </>
+                )}
               </p>
             </div>
             <button

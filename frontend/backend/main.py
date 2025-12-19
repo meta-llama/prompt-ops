@@ -10,6 +10,7 @@ import subprocess
 import sys
 from typing import Any, Dict, Optional
 
+import litellm
 import yaml
 
 # Import configuration and utilities
@@ -28,9 +29,10 @@ from config import (
     STRATEGY_MAPPING,
 )
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
+from litellm import acompletion
 from pydantic import BaseModel
 
 # Import route modules
@@ -98,6 +100,23 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+
+# Exception handlers
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Log HTTPException details before returning response."""
+    logger.error(
+        f"HTTPException: {exc.status_code} - {exc.detail} (path: {request.url.path})"
+    )
+    # Return the standard HTTPException response
+    from fastapi.responses import JSONResponse
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
 
 # Include route modules
 app.include_router(datasets.router)
@@ -219,6 +238,134 @@ def parse_frontmatter(content: str) -> tuple[Optional[Dict[str, Any]], str]:
             return None, content
 
     return None, content
+
+
+class ModelConnectionTestRequest(BaseModel):
+    provider_id: str
+    model_name: str
+    api_base: str
+    api_key: Optional[str] = None
+    custom_headers: Optional[Dict[str, str]] = None
+    auth_method: Optional[str] = "api_key"
+
+
+def _extract_error_message(error: Exception) -> str:
+    """
+    Extract clean, user-friendly error message from LiteLLM exceptions.
+
+    LiteLLM error strings often contain redundant prefixes like:
+    "litellm.AuthenticationError: AuthenticationError: OpenrouterException - {...}"
+
+    This function extracts just the meaningful part.
+    """
+    import json
+    import re
+
+    error_str = str(error)
+
+    # Try to parse JSON error response (common pattern)
+    # Look for {"error":{"message":"..."}} pattern
+    json_match = re.search(r'\{"error":\s*\{"message":\s*"([^"]+)"', error_str)
+    if json_match:
+        return json_match.group(1)
+
+    # Try to find just {"message":"..."} pattern
+    json_match = re.search(r'\{"message":\s*"([^"]+)"', error_str)
+    if json_match:
+        return json_match.group(1)
+
+    # Remove common LiteLLM prefixes
+    # Pattern: "litellm.ExceptionType: ExceptionType: ProviderException - actual message"
+    cleaned = re.sub(r"^litellm\.\w+:\s*", "", error_str)
+    cleaned = re.sub(r"^\w+Error:\s*", "", cleaned)
+    cleaned = re.sub(r"^\w+Exception\s*-\s*", "", cleaned)
+
+    # If we still have JSON, try to pretty print just the error field
+    try:
+        if "{" in cleaned and "}" in cleaned:
+            # Find the JSON portion
+            json_start = cleaned.find("{")
+            json_str = cleaned[json_start:]
+            data = json.loads(json_str)
+
+            # Extract nested error message
+            if isinstance(data, dict):
+                if "error" in data and isinstance(data["error"], dict):
+                    if "message" in data["error"]:
+                        return data["error"]["message"]
+                if "message" in data:
+                    return data["message"]
+    except (json.JSONDecodeError, KeyError, TypeError):
+        pass
+
+    # Return cleaned version or original if cleaning didn't help
+    return cleaned.strip() if cleaned.strip() else error_str
+
+
+@app.post("/api/models/test-connection")
+async def test_model_connection(request: ModelConnectionTestRequest):
+    """Test connection to a model provider using LiteLLM."""
+    try:
+        # Construct the full model name with provider prefix
+        # LiteLLM uses format: provider/model (e.g., "openrouter/meta-llama/llama-3.3-70b")
+        model_name = f"{request.provider_id}/{request.model_name}"
+
+        # Prepare LiteLLM kwargs
+        completion_kwargs = {
+            "model": model_name,
+            "messages": [{"role": "user", "content": "test"}],
+            "max_tokens": 1,
+            "temperature": 0,
+            "timeout": 15.0,
+        }
+
+        # Add API base if provided
+        if request.api_base:
+            completion_kwargs["api_base"] = request.api_base
+
+        # Add API key if provided
+        if request.api_key:
+            completion_kwargs["api_key"] = request.api_key
+
+        # Add custom headers if provided (for custom auth methods)
+        if request.auth_method == "custom_headers" and request.custom_headers:
+            completion_kwargs["extra_headers"] = request.custom_headers
+        elif request.provider_id == "openrouter":
+            # Provider-specific headers for OpenRouter
+            completion_kwargs["extra_headers"] = {
+                "HTTP-Referer": "https://prompt-ops.local",
+                "X-Title": "Prompt Ops",
+            }
+
+        # Make the test request using LiteLLM
+        response = await acompletion(**completion_kwargs)
+
+        # If we get here, connection was successful
+        return {"success": True, "message": "Connection successful!"}
+
+    except litellm.exceptions.Timeout:
+        return {"success": False, "message": "Connection timeout"}
+    except litellm.exceptions.APIConnectionError as e:
+        return {
+            "success": False,
+            "message": f"Cannot connect to API endpoint: {_extract_error_message(e)}",
+        }
+    except litellm.exceptions.AuthenticationError as e:
+        return {
+            "success": False,
+            "message": f"Authentication failed: {_extract_error_message(e)}",
+        }
+    except litellm.exceptions.RateLimitError as e:
+        return {
+            "success": False,
+            "message": f"Rate limit exceeded: {_extract_error_message(e)}",
+        }
+    except litellm.exceptions.BadRequestError as e:
+        return {"success": False, "message": _extract_error_message(e)}
+    except Exception as e:
+        # Catch-all for any other errors
+        logger.error(f"Unexpected error testing model connection: {e}")
+        return {"success": False, "message": _extract_error_message(e)}
 
 
 @app.get("/docs/{file_path:path}")

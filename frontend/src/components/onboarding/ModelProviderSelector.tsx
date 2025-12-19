@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { apiUrl } from "@/lib/config";
 import {
   Check,
   Settings,
@@ -142,6 +143,9 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
   const [connectionStatus, setConnectionStatus] = useState<
     Record<string, "success" | "error" | "untested">
   >({});
+  const [connectionErrors, setConnectionErrors] = useState<
+    Record<string, string>
+  >({});
   const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({});
 
   // Smart defaults based on use case
@@ -270,6 +274,17 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
       );
       return newConfigs;
     });
+
+    // Clear error messages when connection-related fields are changed
+    const connectionFields = ["model_name", "api_key", "api_base", "custom_headers", "auth_method"];
+    if (connectionFields.includes(field)) {
+      const config = configurations.find((c) => c.id === configId);
+      if (config) {
+        const configKey = `${config.provider_id}-${config.role}-${config.id}`;
+        setConnectionStatus((prev) => ({ ...prev, [configKey]: "untested" }));
+        setConnectionErrors((prev) => ({ ...prev, [configKey]: "" }));
+      }
+    }
   };
 
   const addConfiguration = (
@@ -586,31 +601,20 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
       await performActualAPITest(config);
 
       setConnectionStatus((prev) => ({ ...prev, [configKey]: "success" }));
+      setConnectionErrors((prev) => ({ ...prev, [configKey]: "" }));
     } catch (error) {
       console.error("Connection test failed:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Connection test failed";
+
       setConnectionStatus((prev) => ({
         ...prev,
         [configKey]: "error",
       }));
-
-      // Show user-friendly error message
-      const errorMessage =
-        error instanceof Error ? error.message : "Connection test failed";
-      // Don't duplicate "Connection test failed" if the error message is already user-friendly
-      const isUserFriendlyError =
-        error instanceof Error &&
-        (error.message.includes("API key") ||
-          error.message.includes("Access denied") ||
-          error.message.includes("Invalid request") ||
-          error.message.includes("Provider server error") ||
-          error.message.includes("Connection failed") ||
-          error.message.includes("Network error") ||
-          error.message.includes("timeout"));
-
-      const displayMessage = isUserFriendlyError
-        ? errorMessage
-        : `Connection test failed: ${errorMessage}`;
-      alert(displayMessage);
+      setConnectionErrors((prev) => ({
+        ...prev,
+        [configKey]: errorMessage,
+      }));
     } finally {
       setTestingConnections((prev) => ({ ...prev, [configKey]: false }));
     }
@@ -618,173 +622,41 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
 
   const performActualAPITest = async (config: ModelConfig) => {
     const provider = PROVIDER_CONFIGS.find((p) => p.id === config.provider_id);
-    let apiUrl = config.api_base || provider?.api_base || "";
-
-    // Ensure URL ends with proper path
-    if (!apiUrl.endsWith("/")) {
-      apiUrl += "/";
-    }
-
-    // For better API key validation, we'll make a small completion request instead of just checking models
-    // This actually validates the API key works for the intended purpose
-    const testUrl = `${apiUrl}chat/completions`;
-
-    // Prepare headers
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-
-    // Add authentication
-    if (config.auth_method === "custom_headers" && config.custom_headers) {
-      Object.assign(headers, config.custom_headers);
-    } else if (config.auth_method === "bearer_token" && config.api_key) {
-      headers["Authorization"] = `Bearer ${config.api_key}`;
-    } else if (config.api_key) {
-      // Default to Authorization header for most providers
-      headers["Authorization"] = `Bearer ${config.api_key}`;
-    }
-
-    // Add provider-specific headers
-    if (config.provider_id === "openrouter") {
-      headers["HTTP-Referer"] = window.location.origin;
-      headers["X-Title"] = "Prompt Ops";
-    }
-
-    // Prepare test request body - minimal completion request
-    const testBody = {
-      model: config.model_name,
-      messages: [
-        {
-          role: "user",
-          content: "test",
-        },
-      ],
-      max_tokens: 1,
-      temperature: 0,
-      stream: false,
-    };
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
     try {
-      console.log(
-        `Testing connection to ${config.provider_id} with URL: ${testUrl}`
-      );
-      console.log("Headers:", headers);
-      console.log("Body:", testBody);
+      console.log(`Testing connection to ${config.provider_id} via backend proxy`);
 
-      const response = await fetch(testUrl, {
+      // Call the backend endpoint instead of making direct API calls
+      const response = await fetch(apiUrl("/api/models/test-connection"), {
         method: "POST",
-        headers,
-        body: JSON.stringify(testBody),
-        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          provider_id: config.provider_id,
+          model_name: config.model_name,
+          api_base: config.api_base || provider?.api_base || "",
+          api_key: config.api_key,
+          custom_headers: config.custom_headers,
+          auth_method: config.auth_method,
+        }),
       });
 
-      clearTimeout(timeoutId);
+      const result = await response.json();
+      console.log("Backend response:", result);
 
-      console.log(`Response status: ${response.status}`);
-      console.log(
-        "Response headers:",
-        Object.fromEntries(response.headers.entries())
-      );
-
-      if (!response.ok) {
-        // Get the response text for better error messages
-        let errorText = "";
-        try {
-          const errorData = await response.json();
-          errorText =
-            errorData.error?.message ||
-            errorData.message ||
-            JSON.stringify(errorData);
-        } catch {
-          errorText = await response.text();
-        }
-
-        console.log("Error response:", errorText);
-
-        if (response.status === 401) {
-          // Make 401 errors more user-friendly
-          let friendlyMessage = "Incorrect or invalid API key";
-          if (errorText.toLowerCase().includes("no auth")) {
-            friendlyMessage =
-              "API key is missing or invalid - please check your key";
-          } else if (errorText.toLowerCase().includes("unauthorized")) {
-            friendlyMessage = "API key is incorrect or doesn't have access";
-          } else if (errorText.toLowerCase().includes("expired")) {
-            friendlyMessage = "API key has expired - please generate a new one";
-          } else if (
-            errorText.toLowerCase().includes("quota") ||
-            errorText.toLowerCase().includes("limit")
-          ) {
-            friendlyMessage = "API quota exceeded or rate limit reached";
-          }
-          throw new Error(friendlyMessage);
-        } else if (response.status === 403) {
-          let friendlyMessage = "Access denied";
-          if (
-            errorText.toLowerCase().includes("quota") ||
-            errorText.toLowerCase().includes("limit")
-          ) {
-            friendlyMessage = "API quota exceeded or rate limit reached";
-          } else if (errorText.toLowerCase().includes("permission")) {
-            friendlyMessage = "API key doesn't have required permissions";
-          }
-          throw new Error(friendlyMessage);
-        } else if (response.status === 404) {
-          throw new Error("API endpoint not found - check your base URL");
-        } else if (response.status === 422) {
-          let friendlyMessage = "Invalid request";
-          if (errorText.toLowerCase().includes("model")) {
-            friendlyMessage = "Model name is invalid or not available";
-          } else if (errorText.toLowerCase().includes("parameter")) {
-            friendlyMessage = "Invalid request parameters";
-          }
-          throw new Error(friendlyMessage);
-        } else if (response.status >= 500) {
-          throw new Error("Provider server error - please try again later");
-        } else {
-          throw new Error(
-            `Connection failed (${response.status}) - please check your configuration`
-          );
-        }
+      if (!result.success) {
+        throw new Error(result.message);
       }
 
-      // Try to parse response to ensure it's valid
-      const data = await response.json();
-      console.log("Successful response:", data);
-
-      // Verify it looks like a completion response
-      if (!data || (!data.choices && !data.id && !data.object)) {
-        console.warn("Unexpected API response format:", data);
-        // Still consider it successful if we got a 200 response
-      }
-
-      return data;
+      return result;
     } catch (error) {
-      clearTimeout(timeoutId);
       console.error("API test error:", error);
 
       if (error instanceof Error) {
-        if (error.name === "AbortError") {
+        if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
           throw new Error(
-            "Connection timeout - check your internet connection and API endpoint"
-          );
-        } else if (
-          error.message.includes("Failed to fetch") ||
-          error.message.includes("NetworkError") ||
-          error.message.includes("fetch")
-        ) {
-          throw new Error(
-            "Network error - check your internet connection and API endpoint URL"
-          );
-        } else if (
-          error.message.includes("CORS") ||
-          error.message.includes("cors")
-        ) {
-          throw new Error(
-            "CORS error - this API may not support browser requests"
+            "Cannot connect to backend server - make sure the backend is running"
           );
         }
       }
@@ -1615,6 +1487,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                   ))}
                                 </select>
                               )}
+
                               {config.provider_id === "custom" && (
                                 <p className="text-xs text-white/50 mt-1">
                                   Final model will be:{" "}
@@ -1823,8 +1696,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                               <div className="flex items-center space-x-2">
                                 <AlertCircle className="w-4 h-4 text-red-400" />
                                 <span className="text-red-300 text-sm">
-                                  Connection failed. Please check your API key
-                                  and configuration.
+                                  {connectionErrors[configKey] || "Connection failed. Please check your API key and configuration."}
                                 </span>
                               </div>
                             </div>
