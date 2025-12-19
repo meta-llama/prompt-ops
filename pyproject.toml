@@ -3,8 +3,8 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "llama-prompt-ops"
-version = "0.0.7"
+name = "prompt-ops"
+version = "0.0.9"
 description = "A tool for migrating and optimizing prompts"
 readme = "README.md"
 authors = []
@@ -25,11 +25,7 @@ dependencies = [
     "pandas>=2.2.0",
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0.0",
-    "tiktoken>=0.9.0",
-    "openai>=1.65.0",
     "litellm>=1.63.0",
-    "huggingface-hub>=0.29.0",
-    "datasets>=2.21.0",
 ]
 
 [project.optional-dependencies]
@@ -43,14 +39,14 @@ dev = [
 ]
 
 [project.scripts]
-llama-prompt-ops = "llama_prompt_ops.interfaces.cli:cli"
+prompt-ops = "prompt_ops.interfaces.cli:cli"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = ["llama_prompt_ops"]
+packages = ["prompt_ops"]
 
 [tool.setuptools.package-data]
-llama_prompt_ops = ["templates/*"]
+prompt_ops = ["templates/*"]
 
 [tool.black]
 line-length = 88

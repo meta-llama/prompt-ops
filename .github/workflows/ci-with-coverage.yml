@@ -34,7 +34,7 @@ jobs:
 
     - name: Run tests with coverage
       run: |
-        pytest --cov=src/llama_prompt_ops --cov-report=xml tests/
+        pytest --cov=src/prompt_ops --cov-report=xml tests/
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3

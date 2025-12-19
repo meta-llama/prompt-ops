@@ -1,6 +1,6 @@
 """
 Configuration transformer service for converting onboarding wizard data
-to llama-prompt-ops YAML configuration format.
+to prompt-ops YAML configuration format.
 """
 
 import os
@@ -12,29 +12,29 @@ import yaml
 
 class ConfigurationTransformer:
     """
-    Transforms onboarding wizard data into llama-prompt-ops compatible YAML configuration.
+    Transforms onboarding wizard data into prompt-ops compatible YAML configuration.
     """
 
     # Mapping from frontend metric IDs to backend metric classes
     METRIC_ID_MAPPING = {
         "exact_match": {
-            "class": "llama_prompt_ops.core.metrics.ExactMatchMetric",
+            "class": "prompt_ops.core.metrics.ExactMatchMetric",
             "default_params": {},
         },
         "semantic_similarity": {
-            "class": "llama_prompt_ops.core.metrics.DSPyMetricAdapter",
+            "class": "prompt_ops.core.metrics.DSPyMetricAdapter",
             "default_params": {"signature_name": "similarity"},
         },
         "correctness": {
-            "class": "llama_prompt_ops.core.metrics.DSPyMetricAdapter",
+            "class": "prompt_ops.core.metrics.DSPyMetricAdapter",
             "default_params": {"signature_name": "correctness"},
         },
         "json_structured": {
-            "class": "llama_prompt_ops.core.metrics.StandardJSONMetric",
+            "class": "prompt_ops.core.metrics.StandardJSONMetric",
             "default_params": {},
         },
         "facility_metric": {
-            "class": "llama_prompt_ops.core.metrics.FacilityMetric",
+            "class": "prompt_ops.core.metrics.FacilityMetric",
             "default_params": {"strict_json": False},
         },
     }
@@ -49,36 +49,43 @@ class ConfigurationTransformer:
         "custom": "exact_match",
     }
 
+    # Metrics that support output_field/output_fields parameters
+    # ExactMatchMetric and DSPyMetricAdapter do NOT support these
+    METRICS_WITH_OUTPUT_FIELD = {
+        "json_structured",
+        "facility_metric",
+    }
+
     # Mapping from wizard dataset types to adapter configurations
     DATASET_FIELD_MAPPING = {
         "qa": {
-            "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+            "adapter_class": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
             "input_field": "question",
             "golden_output_field": "answer",
         },
         "rag": {
-            "adapter_class": "llama_prompt_ops.core.datasets.RAGJSONAdapter",
+            "adapter_class": "prompt_ops.core.datasets.RAGJSONAdapter",
             "question_field": "query",
             "context_field": "context",
             "golden_answer_field": "answer",
         },
         "classification": {
-            "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+            "adapter_class": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
             "input_field": "text",
             "golden_output_field": "category",
         },
         "summarization": {
-            "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+            "adapter_class": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
             "input_field": "text",
             "golden_output_field": "summary",
         },
         "extraction": {
-            "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+            "adapter_class": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
             "input_field": "text",
             "golden_output_field": "extracted_data",
         },
         "custom": {
-            "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+            "adapter_class": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
             # No default fields - will be populated from user mappings
         },
     }
@@ -259,10 +266,10 @@ class ConfigurationTransformer:
 
         if not models:
             # Default model configuration (no name field, use task_model/proposer_model)
+            # LiteLLM auto-detects provider from model name prefix (e.g., openrouter/)
             return {
                 "task_model": "openrouter/meta-llama/llama-3.3-70b-instruct",
                 "proposer_model": "openrouter/meta-llama/llama-3.3-70b-instruct",
-                "api_base": "https://openrouter.ai/api/v1",
                 "temperature": 0.0,
             }
 
@@ -361,33 +368,42 @@ class ConfigurationTransformer:
         # Add user-configured parameters if available
         if primary_metric_id in metric_configurations:
             user_config = metric_configurations[primary_metric_id]
+            # Filter out output_fields for metrics that don't support it
+            if primary_metric_id not in self.METRICS_WITH_OUTPUT_FIELD:
+                user_config = {
+                    k: v for k, v in user_config.items() if k != "output_fields"
+                }
             metric_config.update(user_config)
 
-        # Determine output field from field mappings
-        dataset_data = wizard_data.get("dataset", {})
-        field_mappings = dataset_data.get("fieldMappings", {})
+        # Only add output_fields for metrics that support it
+        if primary_metric_id in self.METRICS_WITH_OUTPUT_FIELD:
+            # Determine output field from field mappings
+            dataset_data = wizard_data.get("dataset", {})
+            field_mappings = dataset_data.get("fieldMappings", {})
 
-        if field_mappings:
-            # Find the actual output field from field mappings
-            output_candidates = [
-                "answer",
-                "output",
-                "response",
-                "label",
-                "target",
-                "expected_output",
-            ]
+            if field_mappings:
+                # Find the actual output field from field mappings
+                output_candidates = [
+                    "answer",
+                    "output",
+                    "response",
+                    "label",
+                    "target",
+                    "expected_output",
+                ]
 
-            for candidate in output_candidates:
-                if candidate in field_mappings and field_mappings[candidate]:
-                    metric_config["output_field"] = (
-                        candidate  # Use the target field name
-                    )
-                    break
+                for candidate in output_candidates:
+                    if candidate in field_mappings and field_mappings[candidate]:
+                        metric_config["output_fields"] = [
+                            field_mappings[
+                                candidate
+                            ]  # Use the actual source field name
+                        ]
+                        break
 
-        # Ensure output_field is set (fallback to "answer")
-        if "output_field" not in metric_config:
-            metric_config["output_field"] = "answer"
+            # Ensure output_fields is set for metrics that need it (fallback to ["answer"])
+            if "output_fields" not in metric_config:
+                metric_config["output_fields"] = ["answer"]
 
         return metric_config
 
@@ -660,7 +676,7 @@ class ConfigurationTransformer:
 
 ## Project Overview
 
-This project was generated using the llama-prompt-ops onboarding wizard.
+This project was generated using the prompt-ops onboarding wizard.
 
 **Use Case:** {use_case.title()}
 **Optimization Strategy:** {optimizer.title()}
@@ -686,7 +702,7 @@ This project was generated using the llama-prompt-ops onboarding wizard.
    OPENROUTER_API_KEY=your_actual_api_key_here
    ```
 
-2. **Install llama-prompt-ops:**
+2. **Install prompt-ops:**
    ```bash
    pip install llama-prompt-ops
    ```
@@ -721,5 +737,5 @@ The `config.yaml` file contains all the settings for your optimization run:
 
 ## Support
 
-For more information, see the [llama-prompt-ops documentation](https://github.com/meta-llama/llama-prompt-ops).
+For more information, see the [prompt-ops documentation](https://github.com/meta-llama/prompt-ops).
 """

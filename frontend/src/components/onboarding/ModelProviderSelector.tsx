@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { apiUrl } from "@/lib/config";
 import {
   Check,
   Settings,
@@ -14,51 +15,18 @@ import {
   Loader2,
   Plus,
   Trash2,
-  HelpCircle,
   ExternalLink,
-  Cpu,
   Cloud,
   DollarSign,
   Clock,
   Brain,
   Target,
-  ChevronDown,
   Split,
   Merge,
 } from "lucide-react";
-
-interface ProviderConfig {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ReactNode;
-  category: "cloud" | "local" | "enterprise";
-  pricing: "free" | "paid" | "usage";
-  setup_difficulty: "easy" | "medium" | "hard";
-  api_base: string;
-  model_prefix: string;
-  popular_models: string[];
-  pros: string[];
-  cons: string[];
-  docs_url: string;
-  requires_signup: boolean;
-}
-
-interface ModelConfig {
-  id: string; // Unique identifier for this configuration
-  provider_id: string;
-  model_name: string;
-  role: "target" | "optimizer" | "both";
-  api_key?: string;
-  api_base?: string;
-  temperature: number;
-  max_tokens: number;
-  // Custom provider fields
-  custom_provider_name?: string;
-  model_prefix?: string;
-  auth_method?: "api_key" | "bearer_token" | "custom_headers";
-  custom_headers?: Record<string, string>;
-}
+import { RoleBadge } from "@/components/ui/role-badge";
+import { InfoBox } from "@/components/ui/info-box";
+import type { ProviderConfig, ModelConfig, RoleType } from "@/types";
 
 interface ModelProviderSelectorProps {
   useCase: string;
@@ -175,7 +143,31 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
   const [connectionStatus, setConnectionStatus] = useState<
     Record<string, "success" | "error" | "untested">
   >({});
+  const [connectionErrors, setConnectionErrors] = useState<
+    Record<string, string>
+  >({});
   const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({});
+  const [hasDefaultOpenRouterKey, setHasDefaultOpenRouterKey] = useState<boolean>(false);
+  const [defaultKeyMasked, setDefaultKeyMasked] = useState<string>("");
+  const [useDefaultKey, setUseDefaultKey] = useState<Record<string, boolean>>({});
+
+  // Fetch default OpenRouter API key status from backend on mount
+  useEffect(() => {
+    const fetchDefaultKeyStatus = async () => {
+      try {
+        const response = await fetch(apiUrl("/api/api-keys/openrouter"));
+        const data = await response.json();
+        if (data.hasKey) {
+          setHasDefaultOpenRouterKey(true);
+          setDefaultKeyMasked(data.maskedKey || "");
+        }
+      } catch (error) {
+        console.error("Failed to fetch default OpenRouter key status:", error);
+      }
+    };
+
+    fetchDefaultKeyStatus();
+  }, []);
 
   // Smart defaults based on use case
   useEffect(() => {
@@ -205,12 +197,18 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
         if (!provider) return;
 
         // Check if we already have any configuration for this provider
-        const hasExistingConfig = existingConfigs.some(
+        const existingConfig = existingConfigs.find(
           (config) => config.provider_id === providerId
         );
 
+        // If config exists for OpenRouter but doesn't have a key set and default is available,
+        // mark it to use the default (backend will use env var)
+        if (existingConfig && providerId === "openrouter" && !existingConfig.api_key && hasDefaultOpenRouterKey) {
+          setUseDefaultKey(prev => ({ ...prev, [existingConfig.id]: true }));
+        }
+
         // Only add default configuration if none exists for this provider
-        if (!hasExistingConfig) {
+        if (!existingConfig) {
           // Determine the best default role for this provider
           const globalTarget = newConfigs.find(
             (c) => c.role === "target" || c.role === "both"
@@ -247,13 +245,17 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
             return; // Skip adding default config
           }
 
+          // For OpenRouter with default key available: leave api_key empty (backend will use env var)
+          // For other providers or when no default: user must enter their key
+          const defaultApiKey = "";
+
           newConfigs.push({
             id: `${providerId}-${Date.now()}`,
             provider_id: providerId,
             model_name: provider.popular_models[0],
             role: defaultRole,
             api_base: provider.api_base,
-            api_key: "",
+            api_key: defaultApiKey,
             temperature: 0.0,
             max_tokens: 4096,
             // Custom provider fields
@@ -262,17 +264,28 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
             auth_method: providerId === "custom" ? "api_key" : undefined,
             custom_headers: providerId === "custom" ? {} : undefined,
           });
+
+          // Mark OpenRouter configs to use default key if available
+          if (providerId === "openrouter" && hasDefaultOpenRouterKey) {
+            const configId = `${providerId}-${Date.now()}`;
+            setUseDefaultKey(prev => ({ ...prev, [configId]: true }));
+          }
         }
       });
 
       return newConfigs;
     });
-  }, [selectedProviders]);
+  }, [selectedProviders, hasDefaultOpenRouterKey]);
 
   // Notify parent of configuration changes
   useEffect(() => {
-    onConfigurationChange(configurations);
-  }, [configurations]); // Remove onConfigurationChange from dependencies to prevent infinite loop
+    // Merge useDefaultKey flag into each configuration before passing up
+    const configurationsWithDefaultKeyFlag = configurations.map((config) => ({
+      ...config,
+      useDefaultKey: useDefaultKey[config.id] || false,
+    }));
+    onConfigurationChange(configurationsWithDefaultKeyFlag);
+  }, [configurations, useDefaultKey]); // Remove onConfigurationChange from dependencies to prevent infinite loop
 
   const handleProviderToggle = (providerId: string) => {
     setSelectedProviders((prev) => {
@@ -303,6 +316,40 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
       );
       return newConfigs;
     });
+
+    // Handle API key field changes for useDefaultKey flag
+    if (field === "api_key") {
+      const config = configurations.find((c) => c.id === configId);
+      if (value && value.trim()) {
+        // User entered a custom key
+        setUseDefaultKey(prev => ({ ...prev, [configId]: false }));
+      } else if (!value || !value.trim()) {
+        // User cleared the field - if OpenRouter with default available, revert to default
+        if (config?.provider_id === "openrouter" && hasDefaultOpenRouterKey) {
+          setUseDefaultKey(prev => ({ ...prev, [configId]: true }));
+        }
+      }
+    }
+
+    // Clear error messages when connection-related fields are changed
+    const connectionFields = ["model_name", "api_key", "api_base", "custom_headers", "auth_method"];
+    if (connectionFields.includes(field)) {
+      const config = configurations.find((c) => c.id === configId);
+      if (config) {
+        const configKey = `${config.provider_id}-${config.role}-${config.id}`;
+        console.log(`Clearing connection status for ${configKey} (field: ${field})`);
+        setConnectionStatus((prev) => {
+          console.log("Previous status:", prev[configKey]);
+          const newStatus: Record<string, "success" | "error" | "untested"> = {
+            ...prev,
+            [configKey]: "untested" as const
+          };
+          console.log("New status:", newStatus[configKey]);
+          return newStatus;
+        });
+        setConnectionErrors((prev) => ({ ...prev, [configKey]: "" }));
+      }
+    }
   };
 
   const addConfiguration = (
@@ -334,13 +381,16 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
       return;
     }
 
+    // For OpenRouter: leave api_key empty, backend will use env var
+    const defaultApiKey = "";
+
     const newConfig: ModelConfig = {
       id: `${providerId}-${role}-${Date.now()}`,
       provider_id: providerId,
       model_name: provider.popular_models[0],
       role: role,
       api_base: provider.api_base,
-      api_key: "",
+      api_key: defaultApiKey,
       temperature: 0.0,
       max_tokens: 4096,
       // Custom provider fields
@@ -351,6 +401,11 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
     };
 
     setConfigurations((prevConfigs) => [...prevConfigs, newConfig]);
+
+    // Mark OpenRouter configs to use default key if available
+    if (providerId === "openrouter" && hasDefaultOpenRouterKey) {
+      setUseDefaultKey(prev => ({ ...prev, [newConfig.id]: true }));
+    }
   };
 
   const removeConfiguration = (configId: string) => {
@@ -475,137 +530,48 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
     );
   };
 
-  // Role Badge Component
-  const RoleBadge = ({
+  // Helper to compute available roles for a config
+  const getAvailableRolesForConfig = (currentRole: RoleType, configId: string): RoleType[] => {
+    const { hasTarget, hasOptimizer } = getRoleStatus();
+
+    return (["target", "optimizer", "both"] as RoleType[]).filter((r) => {
+      if (r === currentRole) return false;
+
+      // Check if this role is taken by another config (not the current one)
+      const currentConfig = configurations.find(c => c.id === configId);
+      const otherConfigs = configurations.filter(c => c.id !== configId);
+
+      const otherHasTarget = otherConfigs.some(c => c.role === "target" || c.role === "both");
+      const otherHasOptimizer = otherConfigs.some(c => c.role === "optimizer" || c.role === "both");
+
+      if (r === "target" && otherHasTarget) return false;
+      if (r === "optimizer" && otherHasOptimizer) return false;
+      if (r === "both" && (otherHasTarget || otherHasOptimizer)) return false;
+
+      return true;
+    });
+  };
+
+  // Interactive role badge wrapper that handles role changes
+  const InteractiveRoleBadge = ({
     role,
     configId,
     className = "",
   }: {
-    role: "target" | "optimizer" | "both";
+    role: RoleType;
     configId: string;
     className?: string;
   }) => {
-    const [showDropdown, setShowDropdown] = useState(false);
-    const dropdownRef = React.useRef<HTMLDivElement>(null);
-
-    // Close dropdown when clicking outside
-    useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
-        if (
-          dropdownRef.current &&
-          !dropdownRef.current.contains(event.target as Node)
-        ) {
-          setShowDropdown(false);
-        }
-      };
-
-      if (showDropdown) {
-        document.addEventListener("mousedown", handleClickOutside);
-        return () =>
-          document.removeEventListener("mousedown", handleClickOutside);
-      }
-    }, [showDropdown]);
-
-    const getRoleColor = (role: string) => {
-      switch (role) {
-        case "target":
-          return "bg-green-100 text-green-800 border-green-200 hover:bg-green-200";
-        case "optimizer":
-          return "bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200";
-        case "both":
-          return "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200";
-        default:
-          return "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200";
-      }
-    };
-
-    const getRoleIcon = (role: string) => {
-      switch (role) {
-        case "target":
-          return <Target className="w-3 h-3" />;
-        case "optimizer":
-          return <Brain className="w-3 h-3" />;
-        case "both":
-          return (
-            <div className="flex items-center space-x-0.5">
-              <Target className="w-2.5 h-2.5" />
-              <Brain className="w-2.5 h-2.5" />
-            </div>
-          );
-        default:
-          return null;
-      }
-    };
-
-    const getRoleLabel = (role: string) => {
-      switch (role) {
-        case "target":
-          return "Target";
-        case "optimizer":
-          return "Optimizer";
-        case "both":
-          return "Target + Optimizer";
-        default:
-          return role;
-      }
-    };
-
-    const availableRoles = ["target", "optimizer", "both"].filter((r) => {
-      if (r === role) return false;
-
-      const { hasTarget, hasOptimizer } = getRoleStatus();
-      if (r === "target" && hasTarget) return false;
-      if (r === "optimizer" && hasOptimizer) return false;
-      if (r === "both" && (hasTarget || hasOptimizer)) return false;
-
-      return true;
-    });
+    const availableRoles = getAvailableRolesForConfig(role, configId);
 
     return (
-      <div className={`relative ${className}`} ref={dropdownRef}>
-        <button
-          onClick={() => setShowDropdown(!showDropdown)}
-          className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium border transition-colors ${getRoleColor(
-            role
-          )} ${
-            availableRoles.length > 0
-              ? "cursor-pointer"
-              : "cursor-default opacity-75"
-          }`}
-          title={
-            availableRoles.length > 0
-              ? "Click to change role"
-              : "No other roles available"
-          }
-        >
-          {getRoleIcon(role)}
-          <span>{getRoleLabel(role)}</span>
-          {availableRoles.length > 0 && <ChevronDown className="w-3 h-3" />}
-        </button>
-
-        {showDropdown && availableRoles.length > 0 && (
-          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-40">
-            <div className="py-1">
-              {availableRoles.map((availableRole) => (
-                <button
-                  key={availableRole}
-                  onClick={() => {
-                    changeConfigRole(
-                      configId,
-                      availableRole as "target" | "optimizer" | "both"
-                    );
-                    setShowDropdown(false);
-                  }}
-                  className="flex items-center space-x-2 w-full px-3 py-2 text-sm hover:bg-gray-50 transition-colors first:rounded-t-lg last:rounded-b-lg"
-                >
-                  {getRoleIcon(availableRole)}
-                  <span>{getRoleLabel(availableRole)}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      <RoleBadge
+        role={role}
+        interactive
+        availableRoles={availableRoles}
+        onRoleChange={(newRole) => changeConfigRole(configId, newRole)}
+        className={className}
+      />
     );
   };
 
@@ -659,80 +625,57 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
     return { canAddTarget, canAddOptimizer, canAddBoth };
   };
 
+  // Helper to check if Test Connection button should be enabled
+  const canTestConnection = (config: ModelConfig): boolean => {
+    const hasApiKey = config.api_key && config.api_key.length > 0;
+    const provider = PROVIDER_CONFIGS.find((p) => p.id === config.provider_id);
+    const requiresAuth = provider?.requires_signup || config.provider_id === "custom";
+    const usingDefaultOpenRouter =
+      config.provider_id === "openrouter" &&
+      useDefaultKey[config.id] &&
+      hasDefaultOpenRouterKey;
+
+    // For custom headers, check if headers are provided
+    if (config.auth_method === "custom_headers") {
+      return config.custom_headers && Object.keys(config.custom_headers).length > 0;
+    }
+
+    // For custom providers, check required fields
+    if (config.provider_id === "custom") {
+      return !!(config.api_base && config.model_name && config.custom_provider_name && (hasApiKey || !requiresAuth));
+    }
+
+    // For providers requiring auth, need either a custom key or default key
+    if (requiresAuth) {
+      return hasApiKey || usingDefaultOpenRouter;
+    }
+
+    return true;
+  };
+
   const testConnection = async (config: ModelConfig) => {
     const configKey = `${config.provider_id}-${config.role}-${config.id}`;
     setTestingConnections((prev) => ({ ...prev, [configKey]: true }));
 
     try {
-      // Basic validation first
-      const hasApiKey = config.api_key && config.api_key.length > 0;
-      const provider = PROVIDER_CONFIGS.find(
-        (p) => p.id === config.provider_id
-      );
-
-      // Check if authentication is required
-      const requiresAuth =
-        provider?.requires_signup || config.provider_id === "custom";
-
-      if (
-        requiresAuth &&
-        !hasApiKey &&
-        config.auth_method !== "custom_headers"
-      ) {
-        throw new Error("Authentication required - please provide an API key");
-      }
-
-      // For custom headers, check if headers are provided
-      if (
-        config.auth_method === "custom_headers" &&
-        (!config.custom_headers ||
-          Object.keys(config.custom_headers).length === 0)
-      ) {
-        throw new Error("Custom headers required");
-      }
-
-      // For custom providers, check if required fields are filled
-      if (config.provider_id === "custom") {
-        if (
-          !config.api_base ||
-          !config.model_name ||
-          !config.custom_provider_name
-        ) {
-          throw new Error(
-            "Please fill in all required fields for custom provider"
-          );
-        }
-      }
-
       // Perform actual API test
       await performActualAPITest(config);
 
       setConnectionStatus((prev) => ({ ...prev, [configKey]: "success" }));
+      setConnectionErrors((prev) => ({ ...prev, [configKey]: "" }));
     } catch (error) {
       console.error("Connection test failed:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Connection test failed";
+
       setConnectionStatus((prev) => ({
         ...prev,
         [configKey]: "error",
       }));
-
-      // Show user-friendly error message
-      const errorMessage =
-        error instanceof Error ? error.message : "Connection test failed";
-      // Don't duplicate "Connection test failed" if the error message is already user-friendly
-      const isUserFriendlyError =
-        error instanceof Error &&
-        (error.message.includes("API key") ||
-          error.message.includes("Access denied") ||
-          error.message.includes("Invalid request") ||
-          error.message.includes("Provider server error") ||
-          error.message.includes("Connection failed") ||
-          error.message.includes("Network error") ||
-          error.message.includes("timeout"));
-
-      const displayMessage = isUserFriendlyError
-        ? errorMessage
-        : `Connection test failed: ${errorMessage}`;
-      alert(displayMessage);
+      setConnectionErrors((prev) => ({
+        ...prev,
+        [configKey]: errorMessage,
+      }));
     } finally {
       setTestingConnections((prev) => ({ ...prev, [configKey]: false }));
     }
@@ -740,173 +683,41 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
 
   const performActualAPITest = async (config: ModelConfig) => {
     const provider = PROVIDER_CONFIGS.find((p) => p.id === config.provider_id);
-    let apiUrl = config.api_base || provider?.api_base || "";
-
-    // Ensure URL ends with proper path
-    if (!apiUrl.endsWith("/")) {
-      apiUrl += "/";
-    }
-
-    // For better API key validation, we'll make a small completion request instead of just checking models
-    // This actually validates the API key works for the intended purpose
-    const testUrl = `${apiUrl}chat/completions`;
-
-    // Prepare headers
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-
-    // Add authentication
-    if (config.auth_method === "custom_headers" && config.custom_headers) {
-      Object.assign(headers, config.custom_headers);
-    } else if (config.auth_method === "bearer_token" && config.api_key) {
-      headers["Authorization"] = `Bearer ${config.api_key}`;
-    } else if (config.api_key) {
-      // Default to Authorization header for most providers
-      headers["Authorization"] = `Bearer ${config.api_key}`;
-    }
-
-    // Add provider-specific headers
-    if (config.provider_id === "openrouter") {
-      headers["HTTP-Referer"] = window.location.origin;
-      headers["X-Title"] = "Llama Prompt Ops";
-    }
-
-    // Prepare test request body - minimal completion request
-    const testBody = {
-      model: config.model_name,
-      messages: [
-        {
-          role: "user",
-          content: "test",
-        },
-      ],
-      max_tokens: 1,
-      temperature: 0,
-      stream: false,
-    };
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
     try {
-      console.log(
-        `Testing connection to ${config.provider_id} with URL: ${testUrl}`
-      );
-      console.log("Headers:", headers);
-      console.log("Body:", testBody);
+      console.log(`Testing connection to ${config.provider_id} via backend proxy`);
 
-      const response = await fetch(testUrl, {
+      // Call the backend endpoint instead of making direct API calls
+      const response = await fetch(apiUrl("/api/models/test-connection"), {
         method: "POST",
-        headers,
-        body: JSON.stringify(testBody),
-        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          provider_id: config.provider_id,
+          model_name: config.model_name,
+          api_base: config.api_base || provider?.api_base || "",
+          api_key: config.api_key,
+          custom_headers: config.custom_headers,
+          auth_method: config.auth_method,
+        }),
       });
 
-      clearTimeout(timeoutId);
+      const result = await response.json();
+      console.log("Backend response:", result);
 
-      console.log(`Response status: ${response.status}`);
-      console.log(
-        "Response headers:",
-        Object.fromEntries(response.headers.entries())
-      );
-
-      if (!response.ok) {
-        // Get the response text for better error messages
-        let errorText = "";
-        try {
-          const errorData = await response.json();
-          errorText =
-            errorData.error?.message ||
-            errorData.message ||
-            JSON.stringify(errorData);
-        } catch {
-          errorText = await response.text();
-        }
-
-        console.log("Error response:", errorText);
-
-        if (response.status === 401) {
-          // Make 401 errors more user-friendly
-          let friendlyMessage = "Incorrect or invalid API key";
-          if (errorText.toLowerCase().includes("no auth")) {
-            friendlyMessage =
-              "API key is missing or invalid - please check your key";
-          } else if (errorText.toLowerCase().includes("unauthorized")) {
-            friendlyMessage = "API key is incorrect or doesn't have access";
-          } else if (errorText.toLowerCase().includes("expired")) {
-            friendlyMessage = "API key has expired - please generate a new one";
-          } else if (
-            errorText.toLowerCase().includes("quota") ||
-            errorText.toLowerCase().includes("limit")
-          ) {
-            friendlyMessage = "API quota exceeded or rate limit reached";
-          }
-          throw new Error(friendlyMessage);
-        } else if (response.status === 403) {
-          let friendlyMessage = "Access denied";
-          if (
-            errorText.toLowerCase().includes("quota") ||
-            errorText.toLowerCase().includes("limit")
-          ) {
-            friendlyMessage = "API quota exceeded or rate limit reached";
-          } else if (errorText.toLowerCase().includes("permission")) {
-            friendlyMessage = "API key doesn't have required permissions";
-          }
-          throw new Error(friendlyMessage);
-        } else if (response.status === 404) {
-          throw new Error("API endpoint not found - check your base URL");
-        } else if (response.status === 422) {
-          let friendlyMessage = "Invalid request";
-          if (errorText.toLowerCase().includes("model")) {
-            friendlyMessage = "Model name is invalid or not available";
-          } else if (errorText.toLowerCase().includes("parameter")) {
-            friendlyMessage = "Invalid request parameters";
-          }
-          throw new Error(friendlyMessage);
-        } else if (response.status >= 500) {
-          throw new Error("Provider server error - please try again later");
-        } else {
-          throw new Error(
-            `Connection failed (${response.status}) - please check your configuration`
-          );
-        }
+      if (!result.success) {
+        throw new Error(result.message);
       }
 
-      // Try to parse response to ensure it's valid
-      const data = await response.json();
-      console.log("Successful response:", data);
-
-      // Verify it looks like a completion response
-      if (!data || (!data.choices && !data.id && !data.object)) {
-        console.warn("Unexpected API response format:", data);
-        // Still consider it successful if we got a 200 response
-      }
-
-      return data;
+      return result;
     } catch (error) {
-      clearTimeout(timeoutId);
       console.error("API test error:", error);
 
       if (error instanceof Error) {
-        if (error.name === "AbortError") {
+        if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
           throw new Error(
-            "Connection timeout - check your internet connection and API endpoint"
-          );
-        } else if (
-          error.message.includes("Failed to fetch") ||
-          error.message.includes("NetworkError") ||
-          error.message.includes("fetch")
-        ) {
-          throw new Error(
-            "Network error - check your internet connection and API endpoint URL"
-          );
-        } else if (
-          error.message.includes("CORS") ||
-          error.message.includes("cors")
-        ) {
-          throw new Error(
-            "CORS error - this API may not support browser requests"
+            "Cannot connect to backend server - make sure the backend is running"
           );
         }
       }
@@ -915,6 +726,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
     }
   };
 
+  // Smart recommendations based on use case
   const getRecommendedSetup = () => {
     switch (useCase) {
       case "rag":
@@ -930,57 +742,49 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="text-center mb-6">
-        <h2 className="text-4xl md:text-5xl font-black text-facebook-text mb-4 tracking-tight">
-          Choose Your
-          <br />
-          <span className="bg-gradient-to-r from-facebook-blue via-facebook-blue-light to-facebook-blue-dark bg-clip-text text-transparent">
-            AI Models
-          </span>
-        </h2>
-        <p className="text-facebook-text/70 text-lg">
-          Select inference providers and configure models for your optimization
+      <div>
+        <p className="text-white/60 text-sm">
+          Select inference providers and configure models for your optimization.
         </p>
       </div>
 
       {/* Dual Model Explanation */}
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6 mb-4">
+      <div className="bg-white/[0.03] border border-white/[0.1] rounded-xl p-6 mb-4">
         <div className="flex items-start space-x-4">
           <div className="flex-shrink-0">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <Brain className="w-6 h-6 text-blue-600" />
+            <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
+              <Brain className="w-6 h-6 text-blue-400" />
             </div>
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-gray-900 mb-2 text-lg">
+            <h3 className="font-bold text-white mb-2 text-lg">
               🎯 Dual Model Optimization
             </h3>
-            <p className="text-gray-700 mb-3">
-              Llama Prompt Ops uses two AI models working together to optimize
+            <p className="text-white/60 mb-3">
+              Prompt Ops uses two AI models working together to optimize
               your prompts:
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div className="bg-white/60 p-3 rounded-lg border border-blue-100">
+              <div className="bg-white/[0.03] p-3 rounded-lg border border-green-400/30">
                 <div className="flex items-center space-x-2 mb-1">
-                  <Target className="w-4 h-4 text-green-600" />
-                  <span className="font-semibold text-green-800">
+                  <Target className="w-4 h-4 text-green-400" />
+                  <span className="font-semibold text-green-300">
                     Target Model
                   </span>
                 </div>
-                <p className="text-gray-600">
+                <p className="text-white/60">
                   The model you're optimizing FOR - where your prompt will be
                   deployed in production
                 </p>
               </div>
-              <div className="bg-white/60 p-3 rounded-lg border border-purple-100">
+              <div className="bg-white/[0.03] p-3 rounded-lg border border-purple-400/30">
                 <div className="flex items-center space-x-2 mb-1">
-                  <Zap className="w-4 h-4 text-purple-600" />
-                  <span className="font-semibold text-purple-800">
+                  <Zap className="w-4 h-4 text-purple-400" />
+                  <span className="font-semibold text-purple-300">
                     Optimizer Model
                   </span>
                 </div>
-                <p className="text-gray-600">
+                <p className="text-white/60">
                   The AI that generates improved prompt variations during
                   optimization
                 </p>
@@ -990,22 +794,14 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
         </div>
       </div>
 
-      {/* Recommendation */}
-      {/* <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-        <div className="flex items-start space-x-3">
-          <HelpCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-          <div>
-            <h3 className="font-semibold text-yellow-900 mb-1">
-              Smart Recommendation
-            </h3>
-            <p className="text-yellow-800 text-sm">{getRecommendedSetup()}</p>
-          </div>
-        </div>
-      </div> */}
+      {/* Smart Recommendation */}
+      <InfoBox variant="info" title="Smart Recommendation">
+        {getRecommendedSetup()}
+      </InfoBox>
 
       {/* Provider Selection */}
       <div className="space-y-4">
-        <h3 className="text-xl font-bold text-facebook-text">
+        <h3 className="text-xl font-bold text-white">
           1. Select Inference Providers
         </h3>
 
@@ -1014,10 +810,10 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
             <div
               key={provider.id}
               className={cn(
-                "border-2 rounded-xl p-4 cursor-pointer transition-all hover:shadow-lg",
+                "border-2 rounded-2xl p-4 cursor-pointer transition-colors",
                 selectedProviders.includes(provider.id)
-                  ? "border-facebook-blue bg-facebook-blue/5"
-                  : "border-gray-200 hover:border-gray-300"
+                  ? "border-[#4da3ff] bg-[#4da3ff]/10"
+                  : "border-white/[0.1] hover:border-white/[0.2] bg-white/[0.02]"
               )}
               onClick={() => handleProviderToggle(provider.id)}
             >
@@ -1027,31 +823,31 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                     className={cn(
                       "p-2 rounded-lg",
                       provider.category === "cloud"
-                        ? "bg-blue-100 text-blue-600"
+                        ? "bg-blue-500/20 text-blue-400"
                         : provider.category === "local"
-                        ? "bg-green-100 text-green-600"
-                        : "bg-purple-100 text-purple-600"
+                        ? "bg-green-500/20 text-green-400"
+                        : "bg-purple-500/20 text-purple-400"
                     )}
                   >
                     {provider.icon}
                   </div>
                   <div>
-                    <h4 className="font-semibold text-facebook-text">
+                    <h4 className="font-semibold text-white">
                       {provider.name}
                     </h4>
-                    <p className="text-sm text-facebook-text/60">
+                    <p className="text-sm text-white/60">
                       {provider.description}
                     </p>
                   </div>
                 </div>
 
                 {selectedProviders.includes(provider.id) && (
-                  <Check className="w-5 h-5 text-facebook-blue" />
+                  <Check className="w-5 h-5 text-[#4da3ff]" />
                 )}
               </div>
 
               {/* Quick stats */}
-              <div className="flex items-center space-x-4 text-xs text-facebook-text/60">
+              <div className="flex items-center space-x-4 text-xs text-white/50">
                 <div className="flex items-center space-x-1">
                   {provider.category === "cloud" ? (
                     <Cloud className="w-3 h-3" />
@@ -1077,18 +873,18 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
               {/* Pros/Cons */}
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                 <div>
-                  <span className="text-green-600 font-medium">Pros:</span>
-                  <ul className="text-facebook-text/60 mt-1">
+                  <span className="text-green-400 font-medium">Pros:</span>
+                  <ul className="text-white/60 mt-1">
                     {provider.pros.slice(0, 2).map((pro, idx) => (
                       <li key={idx}>• {pro}</li>
                     ))}
                   </ul>
                 </div>
                 <div>
-                  <span className="text-orange-600 font-medium">
+                  <span className="text-orange-400 font-medium">
                     Considerations:
                   </span>
-                  <ul className="text-facebook-text/60 mt-1">
+                  <ul className="text-white/60 mt-1">
                     {provider.cons.slice(0, 2).map((con, idx) => (
                       <li key={idx}>• {con}</li>
                     ))}
@@ -1097,12 +893,12 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
               </div>
 
               {/* Documentation link */}
-              <div className="mt-3 pt-3 border-t border-gray-100">
+              <div className="mt-3 pt-3 border-t border-white/[0.08]">
                 <a
                   href={provider.docs_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-facebook-blue text-xs hover:underline flex items-center space-x-1"
+                  className="text-[#4da3ff] text-xs hover:underline flex items-center space-x-1"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <span>Documentation</span>
@@ -1118,12 +914,12 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
       {selectedProviders.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold text-facebook-text">
+            <h3 className="text-xl font-bold text-white">
               2. Configure Models
             </h3>
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="text-facebook-blue text-sm hover:underline flex items-center space-x-1"
+              className="text-[#4da3ff] text-sm hover:underline flex items-center space-x-1"
             >
               <Settings className="w-4 h-4" />
               <span>{showAdvanced ? "Hide" : "Show"} Advanced Options</span>
@@ -1131,12 +927,12 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
           </div>
 
           {/* Interactive Role Status Overview */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+          <div className="bg-blue-500/10 border border-blue-400/30 rounded-xl p-4 mb-6">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="font-semibold text-blue-900">
+              <h4 className="font-semibold text-blue-300">
                 Model Role Assignment
               </h4>
-              <div className="text-xs text-blue-600">
+              <div className="text-xs text-blue-400">
                 Click role badges below to change assignments
               </div>
             </div>
@@ -1156,43 +952,43 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                     <div
                       className={`p-3 rounded-lg border transition-all ${
                         hasTarget
-                          ? "bg-green-50 border-green-200 shadow-sm"
-                          : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                          ? "bg-green-500/10 border-green-400/30 shadow-sm"
+                          : "bg-white/[0.03] border-white/[0.1] hover:bg-white/[0.05]"
                       }`}
                     >
                       <div className="flex items-center space-x-2 mb-2">
                         <Target
                           className={`w-4 h-4 ${
-                            hasTarget ? "text-green-600" : "text-gray-400"
+                            hasTarget ? "text-green-400" : "text-white/50"
                           }`}
                         />
                         <span
                           className={`font-medium ${
-                            hasTarget ? "text-green-800" : "text-gray-600"
+                            hasTarget ? "text-green-300" : "text-white/50"
                           }`}
                         >
                           Target Model
                         </span>
                         {hasTarget && (
-                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <CheckCircle className="w-4 h-4 text-green-400" />
                         )}
                       </div>
                       {targetConfig ? (
                         <div className="space-y-1">
                           <div className="flex items-center space-x-2">
-                            <RoleBadge
+                            <InteractiveRoleBadge
                               role={targetConfig.role}
                               configId={targetConfig.id}
                               className="z-20"
                             />
                             {targetConfig.role === "both" && (
-                              <span className="text-xs text-blue-600 font-medium">
+                              <span className="text-xs text-blue-400 font-medium">
                                 Also optimizer
                               </span>
                             )}
                           </div>
-                          <div className="text-sm text-gray-600">
-                            <div className="font-medium">
+                          <div className="text-sm text-white/60">
+                            <div className="font-medium text-white">
                               {targetConfig.provider_id === "custom"
                                 ? targetConfig.custom_provider_name
                                 : PROVIDER_CONFIGS.find(
@@ -1206,7 +1002,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                         </div>
                       ) : (
                         <div className="text-center py-2">
-                          <p className="text-sm text-gray-500 mb-2">
+                          <p className="text-sm text-white/50 mb-2">
                             Not configured
                           </p>
                           <button
@@ -1230,43 +1026,43 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                     <div
                       className={`p-3 rounded-lg border transition-all ${
                         hasOptimizer
-                          ? "bg-purple-50 border-purple-200 shadow-sm"
-                          : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                          ? "bg-purple-500/10 border-purple-400/30 shadow-sm"
+                          : "bg-white/[0.03] border-white/[0.1] hover:bg-white/[0.05]"
                       }`}
                     >
                       <div className="flex items-center space-x-2 mb-2">
                         <Brain
                           className={`w-4 h-4 ${
-                            hasOptimizer ? "text-purple-600" : "text-gray-400"
+                            hasOptimizer ? "text-purple-400" : "text-white/50"
                           }`}
                         />
                         <span
                           className={`font-medium ${
-                            hasOptimizer ? "text-purple-800" : "text-gray-600"
+                            hasOptimizer ? "text-purple-300" : "text-white/50"
                           }`}
                         >
                           Optimizer Model
                         </span>
                         {hasOptimizer && (
-                          <CheckCircle className="w-4 h-4 text-purple-600" />
+                          <CheckCircle className="w-4 h-4 text-purple-400" />
                         )}
                       </div>
                       {optimizerConfig ? (
                         <div className="space-y-1">
                           <div className="flex items-center space-x-2">
-                            <RoleBadge
+                            <InteractiveRoleBadge
                               role={optimizerConfig.role}
                               configId={optimizerConfig.id}
                               className="z-20"
                             />
                             {optimizerConfig.role === "both" && (
-                              <span className="text-xs text-green-600 font-medium">
+                              <span className="text-xs text-green-400 font-medium">
                                 Also target
                               </span>
                             )}
                           </div>
-                          <div className="text-sm text-gray-600">
-                            <div className="font-medium">
+                          <div className="text-sm text-white/60">
+                            <div className="font-medium text-white">
                               {optimizerConfig.provider_id === "custom"
                                 ? optimizerConfig.custom_provider_name
                                 : PROVIDER_CONFIGS.find(
@@ -1280,7 +1076,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                         </div>
                       ) : (
                         <div className="text-center py-2">
-                          <p className="text-sm text-gray-500 mb-2">
+                          <p className="text-sm text-white/50 mb-2">
                             Not configured
                           </p>
                           <button
@@ -1304,25 +1100,25 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                     <div
                       className={`p-3 rounded-lg border ${
                         hasTarget && hasOptimizer
-                          ? "bg-blue-50 border-blue-200"
+                          ? "bg-blue-500/10 border-blue-400/30"
                           : hasBoth
-                          ? "bg-blue-50 border-blue-200"
-                          : "bg-yellow-50 border-yellow-200"
+                          ? "bg-blue-500/10 border-blue-400/30"
+                          : "bg-yellow-500/10 border-yellow-400/30"
                       }`}
                     >
                       <div className="flex items-center space-x-2 mb-1">
                         <Settings
                           className={`w-4 h-4 ${
                             (hasTarget && hasOptimizer) || hasBoth
-                              ? "text-blue-600"
-                              : "text-yellow-600"
+                              ? "text-blue-400"
+                              : "text-yellow-400"
                           }`}
                         />
                         <span
                           className={`font-medium ${
                             (hasTarget && hasOptimizer) || hasBoth
-                              ? "text-blue-800"
-                              : "text-yellow-800"
+                              ? "text-blue-300"
+                              : "text-yellow-300"
                           }`}
                         >
                           Setup Status
@@ -1330,31 +1126,31 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                       </div>
                       {hasTarget && hasOptimizer ? (
                         <div className="space-y-1">
-                          <p className="text-sm text-blue-600 font-medium">
-                            ✅ Ready for optimization
+                          <p className="text-sm text-blue-400 font-medium">
+                            Ready for optimization
                           </p>
-                          <p className="text-xs text-blue-500">
+                          <p className="text-xs text-blue-400/70">
                             Using separate models for each role
                           </p>
                         </div>
                       ) : hasBoth ? (
                         <div className="space-y-1">
-                          <p className="text-sm text-blue-600 font-medium">
-                            ✅ Ready for optimization
+                          <p className="text-sm text-blue-400 font-medium">
+                            Ready for optimization
                           </p>
-                          <p className="text-xs text-blue-500">
+                          <p className="text-xs text-blue-400/70">
                             Using single model for both roles
                           </p>
                         </div>
                       ) : (
                         <div className="space-y-1">
-                          <p className="text-sm text-yellow-700">
+                          <p className="text-sm text-yellow-300">
                             ⚠️ Configure {!hasTarget ? "target" : ""}{" "}
                             {!hasTarget && !hasOptimizer ? " & " : ""}{" "}
                             {!hasOptimizer ? "optimizer" : ""} model
                             {!hasTarget && !hasOptimizer ? "s" : ""}
                           </p>
-                          <p className="text-xs text-yellow-600">
+                          <p className="text-xs text-yellow-400/70">
                             Select a provider above to get started
                           </p>
                         </div>
@@ -1377,20 +1173,20 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
 
               if (!provider) return null;
 
-              return (
-                <div
-                  key={providerId}
-                  className="bg-white/90 backdrop-blur-xl rounded-xl p-6 shadow-xl border border-facebook-border"
-                >
+                return (
+                  <div
+                    key={providerId}
+                    className="bg-white/[0.03] rounded-2xl p-6 border border-white/[0.1]"
+                  >
                   {/* Provider Header */}
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center space-x-3">
-                      {provider.icon}
+                      <span className="text-white/80">{provider.icon}</span>
                       <div>
-                        <h4 className="font-semibold text-facebook-text text-lg">
+                        <h4 className="font-semibold text-white text-lg">
                           {provider.name}
                         </h4>
-                        <p className="text-sm text-facebook-text/60">
+                        <p className="text-sm text-white/60">
                           {providerConfigs.length} configuration
                           {providerConfigs.length !== 1 ? "s" : ""}
                         </p>
@@ -1411,13 +1207,16 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                             {canAddBoth && (
                               <button
                                 onClick={() => {
+                                  // For OpenRouter: leave api_key empty, backend will use env var
+                                  const defaultApiKey = "";
+
                                   const newConfig: ModelConfig = {
                                     id: `${providerId}-both-${Date.now()}`,
                                     provider_id: providerId,
                                     model_name: provider.popular_models[0],
                                     role: "both",
                                     api_base: provider.api_base,
-                                    api_key: "",
+                                    api_key: defaultApiKey,
                                     temperature: 0.0,
                                     max_tokens: 4096,
                                     custom_provider_name:
@@ -1437,8 +1236,13 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                     ...prev,
                                     newConfig,
                                   ]);
+
+                                  // Mark OpenRouter configs to use default key if available
+                                  if (providerId === "openrouter" && hasDefaultOpenRouterKey) {
+                                    setUseDefaultKey(prev => ({ ...prev, [newConfig.id]: true }));
+                                  }
                                 }}
-                                className="text-sm bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-1"
+                                className="text-sm bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600 transition-colors flex items-center space-x-1"
                               >
                                 <Plus className="w-3 h-3" />
                                 <div className="flex items-center space-x-1">
@@ -1455,7 +1259,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                 onClick={() =>
                                   addConfiguration(providerId, "target")
                                 }
-                                className="text-sm bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600 transition-colors flex items-center space-x-1"
+                                className="text-sm bg-green-500 text-white px-3 py-1 rounded-full hover:bg-green-600 transition-colors flex items-center space-x-1"
                               >
                                 <Plus className="w-3 h-3" />
                                 <Target className="w-3 h-3" />
@@ -1469,7 +1273,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                 onClick={() =>
                                   addConfiguration(providerId, "optimizer")
                                 }
-                                className="text-sm bg-purple-500 text-white px-3 py-1 rounded-lg hover:bg-purple-600 transition-colors flex items-center space-x-1"
+                                className="text-sm bg-purple-500 text-white px-3 py-1 rounded-full hover:bg-purple-600 transition-colors flex items-center space-x-1"
                               >
                                 <Plus className="w-3 h-3" />
                                 <Brain className="w-3 h-3" />
@@ -1503,11 +1307,11 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
 
                     if (hasBothConfig) {
                       return (
-                        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="mb-4 p-3 bg-blue-500/10 border border-blue-400/30 rounded-lg">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
-                              <Split className="w-4 h-4 text-blue-600" />
-                              <span className="text-sm font-medium text-blue-800">
+                              <Split className="w-4 h-4 text-blue-400" />
+                              <span className="text-sm font-medium text-blue-300">
                                 Using one model for both roles
                               </span>
                             </div>
@@ -1519,7 +1323,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                 if (bothConfig)
                                   splitConfiguration(bothConfig.id);
                               }}
-                              className="text-sm bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-1"
+                              className="text-sm bg-blue-600 text-white px-3 py-1 rounded-full hover:bg-blue-700 transition-colors flex items-center space-x-1"
                             >
                               <Split className="w-3 h-3" />
                               <span>Use Different Models</span>
@@ -1529,17 +1333,17 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                       );
                     } else if (hasTargetAndOptimizer) {
                       return (
-                        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="mb-4 p-3 bg-green-500/10 border border-green-400/30 rounded-lg">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
-                              <Merge className="w-4 h-4 text-green-600" />
-                              <span className="text-sm font-medium text-green-800">
+                              <Merge className="w-4 h-4 text-green-400" />
+                              <span className="text-sm font-medium text-green-300">
                                 Using separate models for each role
                               </span>
                             </div>
                             <button
                               onClick={() => mergeConfigurations(providerId)}
-                              className="text-sm bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-1"
+                              className="text-sm bg-green-600 text-white px-3 py-1 rounded-full hover:bg-green-700 transition-colors flex items-center space-x-1"
                             >
                               <Merge className="w-3 h-3" />
                               <span>Use Same Model</span>
@@ -1559,15 +1363,15 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                       return (
                         <div
                           key={config.id}
-                          className="bg-gray-50 rounded-lg p-4 border border-gray-200"
+                          className="bg-white/[0.03] rounded-lg p-4 border border-white/[0.1]"
                         >
                           <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center space-x-3">
-                              <RoleBadge
+                              <InteractiveRoleBadge
                                 role={config.role}
                                 configId={config.id}
                               />
-                              <h5 className="font-medium text-facebook-text">
+                              <h5 className="font-medium text-white">
                                 Model Configuration
                               </h5>
                             </div>
@@ -1584,8 +1388,9 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
 
                               <button
                                 onClick={() => testConnection(config)}
-                                disabled={testingConnections[configKey]}
-                                className="text-sm bg-facebook-blue text-white px-3 py-1 rounded-lg hover:bg-facebook-blue-dark transition-colors disabled:opacity-50"
+                                disabled={testingConnections[configKey] || !canTestConnection(config)}
+                                className="text-sm bg-meta-blue text-white px-3 py-1 rounded-full hover:bg-meta-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={!canTestConnection(config) ? "Please provide an API key or ensure all required fields are filled" : ""}
                               >
                                 {testingConnections[configKey]
                                   ? "Testing..."
@@ -1607,9 +1412,9 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                             {/* Custom Provider Name (for custom providers) */}
                             {config.provider_id === "custom" && (
                               <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-facebook-text mb-2">
+                                <label className="block text-sm font-medium text-white mb-2">
                                   Provider Name
-                                  <span className="text-red-500 ml-1">*</span>
+                                  <span className="text-red-400 ml-1">*</span>
                                 </label>
                                 <input
                                   type="text"
@@ -1622,7 +1427,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                     )
                                   }
                                   placeholder="e.g., Azure AI Studio, My Custom API"
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-facebook-blue"
+                                  className="w-full p-3 border border-white/[0.1] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4da3ff]/30 focus:border-[#4da3ff]/50 bg-white/[0.05] text-white placeholder:text-white/40"
                                 />
                               </div>
                             )}
@@ -1631,9 +1436,9 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                             {(config.provider_id === "custom" ||
                               config.provider_id === "vllm") && (
                               <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-facebook-text mb-2">
+                                <label className="block text-sm font-medium text-white mb-2">
                                   API Base URL
-                                  <span className="text-red-500 ml-1">*</span>
+                                  <span className="text-red-400 ml-1">*</span>
                                 </label>
                                 <input
                                   type="url"
@@ -1650,7 +1455,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                       ? "e.g., http://localhost:8000"
                                       : "e.g., https://your-endpoint.eastus2.inference.ai.azure.com/"
                                   }
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-facebook-blue"
+                                  className="w-full p-3 border border-white/[0.1] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4da3ff]/30 focus:border-[#4da3ff]/50 bg-white/[0.05] text-white placeholder:text-white/40"
                                 />
                               </div>
                             )}
@@ -1658,7 +1463,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                             {/* Model Prefix (for custom providers) */}
                             {config.provider_id === "custom" && (
                               <div>
-                                <label className="block text-sm font-medium text-facebook-text mb-2">
+                                <label className="block text-sm font-medium text-white mb-2">
                                   Model Prefix (LiteLLM format)
                                 </label>
                                 <input
@@ -1672,9 +1477,9 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                     )
                                   }
                                   placeholder="e.g., azure_ai/, custom/"
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-facebook-blue"
+                                  className="w-full p-3 border border-white/[0.1] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4da3ff]/30 focus:border-[#4da3ff]/50 bg-white/[0.05] text-white placeholder:text-white/40"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-white/50 mt-1">
                                   Leave empty for direct model names
                                 </p>
                               </div>
@@ -1683,7 +1488,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                             {/* Authentication Method (for custom providers) */}
                             {config.provider_id === "custom" && (
                               <div>
-                                <label className="block text-sm font-medium text-facebook-text mb-2">
+                                <label className="block text-sm font-medium text-white mb-2">
                                   Authentication Method
                                 </label>
                                 <select
@@ -1698,7 +1503,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                         | "custom_headers"
                                     )
                                   }
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-facebook-blue"
+                                  className="w-full p-3 border border-white/[0.1] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4da3ff]/30 focus:border-[#4da3ff]/50 bg-white/[0.05] text-white"
                                 >
                                   <option value="api_key">API Key</option>
                                   <option value="bearer_token">
@@ -1713,10 +1518,10 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
 
                             {/* Model Selection */}
                             <div>
-                              <label className="block text-sm font-medium text-facebook-text mb-2">
+                              <label className="block text-sm font-medium text-white mb-2">
                                 Model
                                 {config.provider_id === "custom" && (
-                                  <span className="text-red-500 ml-1">*</span>
+                                  <span className="text-red-400 ml-1">*</span>
                                 )}
                               </label>
                               {config.provider_id === "custom" ? (
@@ -1731,7 +1536,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                     )
                                   }
                                   placeholder="e.g., command-r-plus, mistral-large-latest"
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-facebook-blue"
+                                  className="w-full p-3 border border-white/[0.1] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4da3ff]/30 focus:border-[#4da3ff]/50 bg-white/[0.05] text-white placeholder:text-white/40"
                                 />
                               ) : (
                                 <select
@@ -1743,7 +1548,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                       e.target.value
                                     )
                                   }
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-facebook-blue"
+                                  className="w-full p-3 border border-white/[0.1] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4da3ff]/30 focus:border-[#4da3ff]/50 bg-white/[0.05] text-white"
                                 >
                                   {provider?.popular_models.map((model) => (
                                     <option key={model} value={model}>
@@ -1752,8 +1557,9 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                   ))}
                                 </select>
                               )}
+
                               {config.provider_id === "custom" && (
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-white/50 mt-1">
                                   Final model will be:{" "}
                                   {config.model_prefix || ""}
                                   {config.model_name}
@@ -1765,7 +1571,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                             {(provider?.requires_signup ||
                               config.provider_id === "custom") && (
                               <div>
-                                <label className="block text-sm font-medium text-facebook-text mb-2">
+                                <label className="block text-sm font-medium text-white mb-2">
                                   {config.provider_id === "custom"
                                     ? config.auth_method === "bearer_token"
                                       ? "Bearer Token"
@@ -1773,12 +1579,12 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                       ? "Authentication"
                                       : "API Key"
                                     : "API Key"}
-                                  <span className="text-red-500 ml-1">*</span>
+                                  <span className="text-red-400 ml-1">*</span>
                                 </label>
                                 {config.provider_id === "custom" &&
                                 config.auth_method === "custom_headers" ? (
                                   <div className="space-y-2">
-                                    <p className="text-xs text-gray-500">
+                                    <p className="text-xs text-white/50">
                                       Configure custom headers for
                                       authentication
                                     </p>
@@ -1807,7 +1613,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
   "X-API-Key": "your-api-key"
 }`}
                                       rows={4}
-                                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-facebook-blue font-mono text-sm"
+                                      className="w-full p-3 border border-white/[0.1] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4da3ff]/30 focus:border-[#4da3ff]/50 bg-white/[0.05] text-white font-mono text-sm placeholder:text-white/40"
                                     />
                                   </div>
                                 ) : (
@@ -1818,7 +1624,19 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                           ? "text"
                                           : "password"
                                       }
-                                      value={config.api_key || ""}
+                                      value={
+                                        config.api_key ||
+                                        (config.provider_id === "openrouter" && useDefaultKey[config.id] && defaultKeyMasked
+                                          ? defaultKeyMasked
+                                          : "")
+                                      }
+                                      onFocus={(e) => {
+                                        // When user focuses to override default, clear the masked value
+                                        if (config.provider_id === "openrouter" && useDefaultKey[config.id] && !config.api_key) {
+                                          // Don't actually clear yet, just select all so they can type to replace
+                                          e.target.select();
+                                        }
+                                      }}
                                       onChange={(e) => {
                                         handleConfigChange(
                                           config.id,
@@ -1832,9 +1650,11 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                             "bearer_token"
                                             ? "Enter your bearer token"
                                             : "Enter your API key"
+                                          : config.provider_id === "openrouter" && useDefaultKey[config.id] && defaultKeyMasked
+                                          ? "Click to override default key"
                                           : "Enter your API key"
                                       }
-                                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-facebook-blue pr-10"
+                                      className="w-full p-3 border border-white/[0.1] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4da3ff]/30 focus:border-[#4da3ff]/50 bg-white/[0.05] text-white pr-10 placeholder:text-white/40"
                                     />
                                     <button
                                       type="button"
@@ -1844,7 +1664,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                           [configKey]: !prev[configKey],
                                         }))
                                       }
-                                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white"
                                     >
                                       {showApiKeys[configKey] ? (
                                         <EyeOff className="w-4 h-4" />
@@ -1854,6 +1674,52 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                     </button>
                                   </div>
                                 )}
+                                {/* Helper text for OpenRouter default key */}
+                                {config.provider_id === "openrouter" && (
+                                  <div className="text-xs mt-2 flex items-center justify-between">
+                                    <div className="flex items-center space-x-1">
+                                      {useDefaultKey[config.id] && !config.api_key && hasDefaultOpenRouterKey ? (
+                                        <>
+                                          <CheckCircle className="w-3 h-3 text-green-400" />
+                                          <span className="text-green-400/70">
+                                            Using default API key from backend .env
+                                          </span>
+                                        </>
+                                      ) : config.api_key ? (
+                                        <>
+                                          <CheckCircle className="w-3 h-3 text-blue-400" />
+                                          <span className="text-blue-400/70">
+                                            Using custom API key (overriding default)
+                                          </span>
+                                        </>
+                                      ) : hasDefaultOpenRouterKey ? (
+                                        <>
+                                          <CheckCircle className="w-3 h-3 text-green-400" />
+                                          <span className="text-green-400/70">
+                                            Ready to use default API key from backend .env
+                                          </span>
+                                        </>
+                                      ) : (
+                                        <span className="text-yellow-400/70">
+                                          No API key configured - enter your OpenRouter API key
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Reset to Default button - only show when using custom key and default is available */}
+                                    {config.api_key && hasDefaultOpenRouterKey && (
+                                      <button
+                                        onClick={() => {
+                                          handleConfigChange(config.id, "api_key", "");
+                                          setUseDefaultKey(prev => ({ ...prev, [config.id]: true }));
+                                        }}
+                                        className="text-xs bg-white/[0.05] hover:bg-white/[0.1] text-white/70 hover:text-white px-2 py-1 rounded border border-white/[0.1] hover:border-white/[0.2] transition-all flex items-center space-x-1"
+                                      >
+                                        <span>Reset to Default</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             )}
 
@@ -1861,7 +1727,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                             {showAdvanced && (
                               <>
                                 <div>
-                                  <label className="block text-sm font-medium text-facebook-text mb-2">
+                                  <label className="block text-sm font-medium text-white mb-2">
                                     Temperature
                                   </label>
                                   <input
@@ -1877,12 +1743,12 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                         parseFloat(e.target.value)
                                       )
                                     }
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-facebook-blue"
+                                    className="w-full p-3 border border-white/[0.1] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4da3ff]/30 focus:border-[#4da3ff]/50 bg-white/[0.05] text-white"
                                   />
                                 </div>
 
                                 <div>
-                                  <label className="block text-sm font-medium text-facebook-text mb-2">
+                                  <label className="block text-sm font-medium text-white mb-2">
                                     Max Tokens
                                   </label>
                                   <input
@@ -1897,13 +1763,13 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                         parseInt(e.target.value)
                                       )
                                     }
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-facebook-blue"
+                                    className="w-full p-3 border border-white/[0.1] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4da3ff]/30 focus:border-[#4da3ff]/50 bg-white/[0.05] text-white"
                                   />
                                 </div>
 
                                 {selectedProviders.length > 1 && (
                                   <div>
-                                    <label className="block text-sm font-medium text-facebook-text mb-2">
+                                    <label className="block text-sm font-medium text-white mb-2">
                                       Role Assignment
                                     </label>
                                     <select
@@ -1918,7 +1784,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                             | "both"
                                         )
                                       }
-                                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-facebook-blue"
+                                      className="w-full p-3 border border-white/[0.1] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4da3ff]/30 focus:border-[#4da3ff]/50 bg-white/[0.05] text-white"
                                     >
                                       <option value="both">
                                         🔄 Both (Target + Optimizer)
@@ -1934,7 +1800,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                 )}
 
                                 <div>
-                                  <label className="block text-sm font-medium text-facebook-text mb-2">
+                                  <label className="block text-sm font-medium text-white mb-2">
                                     API Base URL
                                   </label>
                                   <input
@@ -1947,7 +1813,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                         e.target.value
                                       )
                                     }
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-facebook-blue"
+                                    className="w-full p-3 border border-white/[0.1] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4da3ff]/30 focus:border-[#4da3ff]/50 bg-white/[0.05] text-white"
                                   />
                                 </div>
                               </>
@@ -1956,12 +1822,11 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
 
                           {/* Connection error message */}
                           {connectionStatus[configKey] === "error" && (
-                            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <div className="mt-4 p-3 bg-red-500/10 border border-red-400/30 rounded-lg">
                               <div className="flex items-center space-x-2">
-                                <AlertCircle className="w-4 h-4 text-red-600" />
-                                <span className="text-red-800 text-sm">
-                                  Connection failed. Please check your API key
-                                  and configuration.
+                                <AlertCircle className="w-4 h-4 text-red-400" />
+                                <span className="text-red-300 text-sm">
+                                  {connectionErrors[configKey] || "Connection failed. Please check your API key and configuration."}
                                 </span>
                               </div>
                             </div>
@@ -1982,11 +1847,11 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
         const provider = PROVIDER_CONFIGS.find((p) => p.id === id);
         return provider?.setup_difficulty !== "easy";
       }) && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-          <h4 className="font-semibold text-yellow-900 mb-2">
+        <div className="bg-yellow-500/10 border border-yellow-400/30 rounded-xl p-4">
+          <h4 className="font-semibold text-yellow-300 mb-2">
             Setup Instructions
           </h4>
-          <div className="space-y-2 text-sm text-yellow-800">
+          <div className="space-y-2 text-sm text-yellow-200">
             {selectedProviders.map((id) => {
               const provider = PROVIDER_CONFIGS.find((p) => p.id === id);
               if (provider?.setup_difficulty === "easy") return null;
@@ -1998,13 +1863,13 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                     <div className="ml-4 mt-1">
                       <p>
                         1. Install vLLM:{" "}
-                        <code className="bg-yellow-100 px-1 rounded">
+                        <code className="bg-yellow-400/20 px-1 rounded">
                           pip install vllm
                         </code>
                       </p>
                       <p>
                         2. Start server:{" "}
-                        <code className="bg-yellow-100 px-1 rounded">
+                        <code className="bg-yellow-400/20 px-1 rounded">
                           vllm serve{" "}
                           {configurations
                             .find((c) => c.provider_id === "vllm")
@@ -2031,18 +1896,18 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                       <p>1. Set up your Azure AI Studio endpoint</p>
                       <p>
                         2. Use format:{" "}
-                        <code className="bg-yellow-100 px-1 rounded text-xs">
+                        <code className="bg-yellow-400/20 text-yellow-200 px-1 rounded text-xs">
                           azure_ai/
                         </code>{" "}
                         as model prefix
                       </p>
                       <p>
                         3. Model example:{" "}
-                        <code className="bg-yellow-100 px-1 rounded text-xs">
+                        <code className="bg-yellow-400/20 text-yellow-200 px-1 rounded text-xs">
                           command-r-plus
                         </code>{" "}
                         → Final:{" "}
-                        <code className="bg-yellow-100 px-1 rounded text-xs">
+                        <code className="bg-yellow-400/20 text-yellow-200 px-1 rounded text-xs">
                           azure_ai/command-r-plus
                         </code>
                       </p>
@@ -2054,7 +1919,7 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                         <a
                           href="https://docs.litellm.ai/docs/providers"
                           target="_blank"
-                          className="text-blue-600 hover:underline"
+                          className="text-blue-400 hover:underline"
                         >
                           LiteLLM docs
                         </a>{" "}

@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   Check,
-  Info,
   Settings,
   Zap,
   Target,
@@ -12,6 +11,8 @@ import {
   AlertCircle,
   HelpCircle,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { InfoBox } from "@/components/ui/info-box";
 
 // Helper components for complex parameter types
 const ArrayInput: React.FC<{
@@ -48,7 +49,7 @@ const ArrayInput: React.FC<{
       value={inputValue}
       onChange={handleChange}
       placeholder={placeholder}
-      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+      className="w-full p-2 border border-white/[0.1] rounded-md focus:ring-2 focus:ring-[#4da3ff]/30 focus:border-[#4da3ff]/50 bg-white/[0.05] text-white placeholder:text-white/40"
     />
   );
 };
@@ -94,50 +95,12 @@ const FieldMappingInput: React.FC<{
       value={inputValue}
       onChange={handleChange}
       placeholder={placeholder}
-      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+      className="w-full p-2 border border-white/[0.1] rounded-md focus:ring-2 focus:ring-[#4da3ff]/30 focus:border-[#4da3ff]/50 bg-white/[0.05] text-white placeholder:text-white/40"
     />
   );
 };
 
-interface MetricConfig {
-  id: string;
-  name: string;
-  description: string;
-  type: "exact" | "semantic" | "structured" | "custom";
-  icon: React.ReactNode;
-  useCases: string[];
-  dataRequirements: string[];
-  parameters?: {
-    [key: string]: {
-      type:
-        | "boolean"
-        | "number"
-        | "string"
-        | "select"
-        | "array"
-        | "object"
-        | "fieldMapping";
-      default: any;
-      description: string;
-      options?: string[];
-      arrayType?: "string" | "number";
-      objectSchema?: {
-        [key: string]: {
-          type: "string" | "number" | "boolean";
-          required?: boolean;
-        };
-      };
-    };
-  };
-  examples: {
-    input: string;
-    output: string;
-    score: string;
-  }[];
-  pros: string[];
-  cons: string[];
-  recommendedFor: string[];
-}
+import type { MetricConfig } from "@/types";
 
 interface MetricsSelectorProps {
   useCase: string;
@@ -436,22 +399,22 @@ const METRIC_TYPE_INFO = {
   exact: {
     name: "Exact Matching",
     description: "Fast, deterministic comparison",
-    color: "bg-green-100 text-green-800",
+    color: "bg-green-500/20 text-green-300 border border-green-400/30",
   },
   semantic: {
     name: "AI-Powered",
     description: "Understands meaning and context",
-    color: "bg-blue-100 text-blue-800",
+    color: "bg-blue-500/20 text-blue-300 border border-blue-400/30",
   },
   structured: {
     name: "Structured Data",
     description: "Perfect for JSON and structured outputs",
-    color: "bg-purple-100 text-purple-800",
+    color: "bg-purple-500/20 text-purple-300 border border-purple-400/30",
   },
   custom: {
     name: "Custom Logic",
     description: "Domain-specific evaluation",
-    color: "bg-orange-100 text-orange-800",
+    color: "bg-orange-500/20 text-orange-300 border border-orange-400/30",
   },
 };
 
@@ -539,55 +502,56 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
 
     return (
       <div
+        onClick={() => handleMetricToggle(metric.id)}
         className={cn(
-          "border rounded-xl p-6 transition-all duration-200",
+          "border rounded-xl p-6 transition-all duration-200 cursor-pointer",
           isSelected
-            ? "border-facebook-blue bg-facebook-blue/5"
-            : "border-gray-300 hover:border-gray-400"
+            ? "border-[#4da3ff] bg-[#4da3ff]/10"
+            : "border-white/[0.1] hover:border-white/[0.2] bg-white/[0.02]"
         )}
       >
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-start space-x-3">
-            <button
-              onClick={() => handleMetricToggle(metric.id)}
+            <div
               className={cn(
                 "w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 transition-colors",
                 isSelected
-                  ? "border-facebook-blue bg-facebook-blue"
-                  : "border-gray-300 hover:border-facebook-blue"
+                  ? "border-[#4da3ff] bg-[#4da3ff]"
+                  : "border-white/[0.2]"
               )}
             >
               {isSelected && <Check className="w-3 h-3 text-white" />}
-            </button>
+            </div>
 
             <div className="flex-1">
               <div className="flex items-center space-x-2 mb-2">
-                {metric.icon}
-                <h3 className="font-semibold text-lg text-gray-900">
+                <span className="text-white/80">{metric.icon}</span>
+                <h3 className="font-semibold text-lg text-white">
                   {metric.name}
                 </h3>
                 {isRecommended && (
-                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                    Recommended
-                  </span>
+                  <Badge variant="success">Recommended</Badge>
                 )}
                 <span
                   className={cn(
-                    "text-xs px-2 py-1 rounded-full",
+                    "text-xs px-2 py-1 rounded-md",
                     typeInfo.color
                   )}
                 >
                   {typeInfo.name}
                 </span>
               </div>
-              <p className="text-gray-600 text-sm">{metric.description}</p>
+              <p className="text-white/60 text-sm">{metric.description}</p>
             </div>
           </div>
 
           <button
-            onClick={() => setExpandedMetric(isExpanded ? null : metric.id)}
-            className="text-gray-400 hover:text-gray-600"
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpandedMetric(isExpanded ? null : metric.id);
+            }}
+            className="text-white/50 hover:text-white"
           >
             <HelpCircle className="w-5 h-5" />
           </button>
@@ -595,23 +559,23 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
 
         {/* Expanded Details */}
         {isExpanded && (
-          <div className="space-y-4 border-t pt-4">
+          <div className="space-y-4 border-t border-white/[0.1] pt-4" onClick={(e) => e.stopPropagation()}>
             {/* Examples */}
             <div>
-              <h4 className="font-medium text-gray-900 mb-2">Examples</h4>
+              <h4 className="font-medium text-white mb-2">Examples</h4>
               <div className="space-y-2">
                 {metric.examples.map((example, index) => (
                   <div
                     key={index}
-                    className="bg-gray-50 p-3 rounded-lg text-sm"
+                    className="bg-white/[0.05] p-3 rounded-lg text-sm"
                   >
-                    <div className="font-medium text-gray-700 mb-1">
+                    <div className="font-medium text-white mb-1">
                       Input: {example.input}
                     </div>
-                    <div className="text-gray-600 mb-1">
+                    <div className="text-white/60 mb-1">
                       Output: {example.output}
                     </div>
-                    <div className="text-green-600 font-medium">
+                    <div className="text-green-400 font-medium">
                       Score: {example.score}
                     </div>
                   </div>
@@ -622,18 +586,18 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
             {/* Pros and Cons */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <h4 className="font-medium text-green-800 mb-2">
+                <h4 className="font-medium text-green-400 mb-2">
                   ✓ Advantages
                 </h4>
-                <ul className="text-sm text-gray-600 space-y-1">
+                <ul className="text-sm text-white/60 space-y-1">
                   {metric.pros.map((pro, index) => (
                     <li key={index}>• {pro}</li>
                   ))}
                 </ul>
               </div>
               <div>
-                <h4 className="font-medium text-red-800 mb-2">⚠ Limitations</h4>
-                <ul className="text-sm text-gray-600 space-y-1">
+                <h4 className="font-medium text-red-400 mb-2">⚠ Limitations</h4>
+                <ul className="text-sm text-white/60 space-y-1">
                   {metric.cons.map((con, index) => (
                     <li key={index}>• {con}</li>
                   ))}
@@ -643,10 +607,10 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
 
             {/* Data Requirements */}
             <div>
-              <h4 className="font-medium text-gray-900 mb-2">
+              <h4 className="font-medium text-white mb-2">
                 Data Requirements
               </h4>
-              <ul className="text-sm text-gray-600 space-y-1">
+              <ul className="text-sm text-white/60 space-y-1">
                 {metric.dataRequirements.map((req, index) => (
                   <li key={index}>• {req}</li>
                 ))}
@@ -657,20 +621,20 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
 
         {/* Parameters Configuration */}
         {isSelected && metric.parameters && (
-          <div className="mt-4 pt-4 border-t">
-            <h4 className="font-medium text-gray-900 mb-3 flex items-center">
+          <div className="mt-4 pt-4 border-t border-white/[0.1]" onClick={(e) => e.stopPropagation()}>
+            <h4 className="font-medium text-white mb-3 flex items-center">
               <Settings className="w-4 h-4 mr-2" />
               Configuration
             </h4>
             <div className="space-y-3">
               {Object.entries(metric.parameters).map(([paramName, param]) => (
                 <div key={paramName}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-white mb-1">
                     {paramName
                       .replace(/_/g, " ")
                       .replace(/\b\w/g, (l) => l.toUpperCase())}
                   </label>
-                  <p className="text-xs text-gray-500 mb-2">
+                  <p className="text-xs text-white/50 mb-2">
                     {param.description}
                   </p>
 
@@ -689,9 +653,9 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
                             e.target.checked
                           )
                         }
-                        className="rounded border-gray-300 text-facebook-blue focus:ring-facebook-blue"
+                        className="rounded border-white/[0.2] bg-white/[0.05] text-[#4da3ff] focus:ring-[#4da3ff]/30"
                       />
-                      <span className="ml-2 text-sm text-gray-600">
+                      <span className="ml-2 text-sm text-white/60">
                         {configurations[metric.id]?.[paramName] ?? param.default
                           ? "Enabled"
                           : "Disabled"}
@@ -709,7 +673,7 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
                           e.target.value
                         )
                       }
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                      className="w-full p-2 border border-white/[0.1] rounded-md focus:ring-2 focus:ring-[#4da3ff]/30 focus:border-[#4da3ff]/50 bg-white/[0.05] text-white"
                     >
                       {param.options?.map((option) => (
                         <option key={option} value={option}>
@@ -755,7 +719,7 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
                             : e.target.value
                         )
                       }
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                      className="w-full p-2 border border-white/[0.1] rounded-md focus:ring-2 focus:ring-[#4da3ff]/30 focus:border-[#4da3ff]/50 bg-white/[0.05] text-white placeholder:text-white/40"
                     />
                   )}
                 </div>
@@ -770,26 +734,17 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
   return (
     <div className={cn("space-y-6", className)}>
       {/* Header */}
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Success Metrics
-        </h2>
-        <p className="text-gray-600">
-          Choose how to evaluate your optimized prompt's performance
+      <div>
+        <p className="text-white/60 text-sm">
+          Choose how to evaluate your optimized prompt's performance. Select one or more metrics below.
         </p>
       </div>
 
       {/* Smart Recommendations */}
       {recommendedMetrics.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-          <div className="flex items-center mb-3">
-            <BarChart3 className="w-5 h-5 text-blue-600 mr-2" />
-            <h3 className="font-semibold text-blue-900">
-              Smart Recommendations
-            </h3>
-          </div>
-          <p className="text-blue-800 text-sm mb-3">
-            Based on your {useCase} use case and field mappings, we recommend:
+        <div>
+          <p className="text-sm text-white/60 mb-3">
+            Based on your <span className="font-semibold text-white bg-[#4da3ff]/20 px-2 py-0.5 rounded">{useCase.toUpperCase()}</span> use case, we recommend:
           </p>
           <div className="flex flex-wrap gap-2">
             {recommendedMetrics.map((metricId) => {
@@ -799,12 +754,13 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
                   key={metricId}
                   onClick={() => handleMetricToggle(metricId)}
                   className={cn(
-                    "px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                    "px-3 py-2 rounded-lg text-sm font-medium transition-colors border flex items-center gap-2",
                     selectedMetrics.includes(metricId)
-                      ? "bg-blue-600 text-white"
-                      : "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                      ? "bg-[#4da3ff] text-white border-[#4da3ff]"
+                      : "bg-white/[0.05] text-white border-white/[0.1] hover:border-[#4da3ff]"
                   )}
                 >
+                  {React.cloneElement(metric.icon as React.ReactElement, { className: "w-4 h-4" })}
                   {metric.name}
                 </button>
               ) : null;
@@ -822,8 +778,8 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
 
       {/* Selected Summary */}
       {selectedMetrics.length > 0 && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-6">
-          <h3 className="font-semibold text-green-900 mb-3">
+        <div className="bg-green-500/10 border border-green-400/30 rounded-xl p-6">
+          <h3 className="font-semibold text-green-300 mb-3">
             Selected Metrics Summary
           </h3>
           <div className="space-y-2">
@@ -832,11 +788,11 @@ export const MetricsSelector: React.FC<MetricsSelectorProps> = ({
               return metric ? (
                 <div
                   key={metricId}
-                  className="flex items-center text-sm text-green-800"
+                  className="flex items-center text-sm text-green-300"
                 >
                   <Check className="w-4 h-4 mr-2" />
                   <span className="font-medium">{metric.name}</span>
-                  <span className="text-green-600 ml-2">
+                  <span className="text-green-400/80 ml-2">
                     - {metric.description}
                   </span>
                 </div>

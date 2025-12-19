@@ -17,10 +17,11 @@ model:
 
 # Metric configuration (simplified but maintains compatibility)
 metric:
-  class: "llama_prompt_ops.core.metrics.FacilityMetric"
+  class: "prompt_ops.core.metrics.FacilityMetric"
   strict_json: false
   output_field: "answer"
 
 # Optimization settings
 optimization:
   strategy: "llama"
+  compute_baseline: true

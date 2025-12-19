@@ -9,23 +9,23 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Available models (these would be configured based on your available models)
+# Available models - format: provider/model (e.g., openrouter/meta-llama/...)
 MODEL_MAPPING = {
-    "Llama 3.3 70B": "meta-llama/llama-3.3-70b-instruct",
-    "Llama 3.1 8B": "meta-llama/llama-3.1-8b-instruct",
-    "Llama 3.1 70B": "meta-llama/llama-3.1-70b-instruct",
+    "Llama 3.3 70B": "openrouter/meta-llama/llama-3.3-70b-instruct",
+    "Llama 3.1 8B": "openrouter/meta-llama/llama-3.1-8b-instruct",
+    "Llama 3.1 70B": "openrouter/meta-llama/llama-3.1-70b-instruct",
     "GPT-4o": "openai/gpt-4o",
     "GPT-4o-mini": "openai/gpt-4o-mini",
 }
 
-# Available metrics from llama-prompt-ops
+# Available metrics from prompt-ops
 METRIC_MAPPING = {
     "exact_match": {
-        "class": "llama_prompt_ops.core.metrics.ExactMatchMetric",
+        "class": "prompt_ops.core.metrics.ExactMatchMetric",
         "params": {"output_field": "answer"},
     },
     "semantic_similarity": {
-        "class": "llama_prompt_ops.core.metrics.DSPyMetricAdapter",
+        "class": "prompt_ops.core.metrics.DSPyMetricAdapter",
         "params": {
             "signature_name": "similarity",
             "score_range": (1, 10),
@@ -33,7 +33,7 @@ METRIC_MAPPING = {
         },
     },
     "correctness": {
-        "class": "llama_prompt_ops.core.metrics.DSPyMetricAdapter",
+        "class": "prompt_ops.core.metrics.DSPyMetricAdapter",
         "params": {
             "signature_name": "correctness",
             "score_range": (1, 10),
@@ -41,7 +41,7 @@ METRIC_MAPPING = {
         },
     },
     "json_structured": {
-        "class": "llama_prompt_ops.core.metrics.StandardJSONMetric",
+        "class": "prompt_ops.core.metrics.StandardJSONMetric",
         "params": {
             "output_field": "answer",
             "evaluation_mode": "selected_fields_comparison",
@@ -50,33 +50,33 @@ METRIC_MAPPING = {
     },
     # Legacy mappings for backward compatibility
     "Facility Support": {
-        "class": "llama_prompt_ops.core.metrics.FacilityMetric",
+        "class": "prompt_ops.core.metrics.FacilityMetric",
         "params": {"output_field": "answer", "strict_json": False},
     },
     "HotpotQA": {
-        "class": "llama_prompt_ops.datasets.hotpotqa.HotpotQAMetric",
+        "class": "prompt_ops.datasets.hotpotqa.HotpotQAMetric",
         "params": {"output_field": "answer"},
     },
     "Standard JSON": {
-        "class": "llama_prompt_ops.core.metrics.StandardJSONMetric",
+        "class": "prompt_ops.core.metrics.StandardJSONMetric",
         "params": {"output_field": "answer"},
     },
     "Exact Match": {
-        "class": "llama_prompt_ops.core.metrics.ExactMatchMetric",
+        "class": "prompt_ops.core.metrics.ExactMatchMetric",
         "params": {},
     },
 }
 
-# Available dataset adapters from llama-prompt-ops
+# Available dataset adapters from prompt-ops
 DATASET_ADAPTER_MAPPING = {
     "standard_json": {
-        "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+        "adapter_class": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
         "description": "Standard JSON format with customizable field mappings",
         "example_fields": {"input": "string", "output": "string"},
         "params": {"input_field": "input", "golden_output_field": "output"},
     },
     "hotpotqa": {
-        "adapter_class": "llama_prompt_ops.datasets.hotpotqa.adapter.HotPotQAAdapter",
+        "adapter_class": "prompt_ops.datasets.hotpotqa.adapter.HotPotQAAdapter",
         "description": "Multi-hop reasoning dataset for question answering",
         "example_fields": {
             "question": "string",
@@ -90,7 +90,7 @@ DATASET_ADAPTER_MAPPING = {
         },
     },
     "facility": {
-        "adapter_class": "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter",
+        "adapter_class": "prompt_ops.core.datasets.ConfigurableJSONAdapter",
         "description": "Facility support and maintenance dataset with nested field structure",
         "example_fields": {"fields": "object", "answer": "string"},
         "params": {
@@ -101,13 +101,13 @@ DATASET_ADAPTER_MAPPING = {
     },
 }
 
-# Available optimization strategies from llama-prompt-ops
+# Available optimization strategies from prompt-ops
 STRATEGY_MAPPING = {
     "Basic": "basic",
 }
 
-# System message for OpenRouter operations
-ENHANCE_SYSTEM_MESSAGE = """
+# System prompt for prompt enhancement
+ENHANCE_SYSTEM_PROMPT = """
     You are a highly advanced language model, capable of complex reasoning and problem-solving.
     Your goal is to provide accurate and informative responses to the given input, following a    structured approach.
             Here is the input you'll work with:
@@ -144,6 +144,25 @@ ENHANCE_SYSTEM_MESSAGE = """
             Answer: [Provide a brief answer]
             By following this structured approach, you will be able to provide accurate and informative responses to the given input, demonstrating your ability to think critically and solve complex problems."""
 
-# Environment settings
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+# ==============================================================================
+# APPLICATION SETTINGS
+# ==============================================================================
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploaded_datasets")
+
+# Server settings
+BACKEND_HOST = os.getenv("BACKEND_HOST", "0.0.0.0")
+BACKEND_PORT = int(os.getenv("BACKEND_PORT", "8001"))
+
+# Behavior
+FAIL_ON_ERROR = (
+    False  # If True, raise errors instead of falling back on optimization failure
+)
+DEBUG_MODE = False
+
+# Model defaults
+DEFAULT_MODEL = "openrouter/meta-llama/llama-3.3-70b-instruct"
+DEFAULT_TEMPERATURE = 0.0
+
+# Dataset split defaults
+DEFAULT_TRAIN_SIZE = 0.7
+DEFAULT_VAL_SIZE = 0.15

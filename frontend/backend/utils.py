@@ -8,11 +8,11 @@ import json
 import logging
 import os
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-import openai
-from config import OPENROUTER_API_KEY, UPLOAD_DIR
+from config import UPLOAD_DIR
 from fastapi import WebSocket
+from litellm import completion
 
 
 def load_class_dynamically(class_path: str):
@@ -22,44 +22,92 @@ def load_class_dynamically(class_path: str):
     return getattr(module, class_name)
 
 
-def create_openrouter_client(api_key: str = None):
-    """Create OpenRouter client with the provided API key."""
-    key_to_use = api_key or OPENROUTER_API_KEY
-    if not key_to_use:
-        raise ValueError("OpenRouter API key is required")
+def create_llm_completion(
+    model: str,
+    messages: list,
+    api_key: Optional[str] = None,
+    api_base: Optional[str] = None,
+    temperature: float = 0.7,
+    **kwargs,
+):
+    """
+    Create a completion using LiteLLM.
 
-    return openai.OpenAI(
-        api_key=key_to_use,
-        base_url="https://openrouter.ai/api/v1",
+    LiteLLM automatically reads API keys from environment variables based on the
+    model provider prefix (e.g., openrouter/* uses OPENROUTER_API_KEY).
+
+    Args:
+        model: Model name with provider prefix (e.g., "openrouter/llama-3.3-70b")
+        messages: List of message dicts with 'role' and 'content'
+        api_key: Optional API key to override environment (for user-provided keys)
+        api_base: Optional base URL override
+        temperature: Sampling temperature
+        **kwargs: Additional arguments passed to litellm.completion
+
+    Returns:
+        LiteLLM completion response
+    """
+    completion_kwargs = {
+        "model": model,
+        "messages": messages,
+        "temperature": temperature,
+        **kwargs,
+    }
+
+    # Only pass api_key if explicitly provided (e.g., from UI)
+    # Otherwise, let LiteLLM read from environment automatically
+    if api_key:
+        completion_kwargs["api_key"] = api_key
+
+    # Add api_base if provided
+    if api_base:
+        completion_kwargs["api_base"] = api_base
+
+    # Note: Using print here instead of logger to avoid circular import
+    # This function is called early in initialization
+    import logging
+
+    logging.getLogger(__name__).debug(
+        f"LiteLLM completion - Model: {model}, API Base: {api_base or 'default'}"
     )
+
+    return completion(**completion_kwargs)
 
 
 def get_uploaded_datasets():
-    """Get list of uploaded datasets."""
-    datasets = []
+    """Get list of uploaded datasets with metadata."""
+    uploaded_datasets = []
     if os.path.exists(UPLOAD_DIR):
         for filename in os.listdir(UPLOAD_DIR):
             if filename.endswith(".json"):
-                filepath = os.path.join(UPLOAD_DIR, filename)
+                dataset_path = os.path.join(UPLOAD_DIR, filename)
                 try:
-                    with open(filepath, "r") as f:
-                        data = json.load(f)
+                    with open(dataset_path, "r") as file:
+                        dataset_content = json.load(file)
                         # Get first few records for preview
-                        preview = data[:3] if isinstance(data, list) else []
-                        datasets.append(
+                        preview_records = (
+                            dataset_content[:3]
+                            if isinstance(dataset_content, list)
+                            else []
+                        )
+                        uploaded_datasets.append(
                             {
                                 "name": f"Uploaded: {filename}",
                                 "filename": filename,
-                                "path": filepath,
-                                "preview": preview,
+                                "path": dataset_path,
+                                "preview": preview_records,
                                 "total_records": (
-                                    len(data) if isinstance(data, list) else 0
+                                    len(dataset_content)
+                                    if isinstance(dataset_content, list)
+                                    else 0
                                 ),
                             }
                         )
                 except Exception as e:
-                    print(f"Error reading dataset {filename}: {e}")
-    return datasets
+                    logging.getLogger(__name__).warning(
+                        f"Error reading dataset {filename}: {e}"
+                    )
+    return uploaded_datasets
 
 
 def generate_unique_project_name(base_name: str, base_dir: str) -> str:
@@ -104,32 +152,59 @@ class StreamingLogHandler(logging.Handler):
         super().__init__()
         self.websocket = websocket
         self.formatter = logging.Formatter("%(levelname)s - %(name)s - %(message)s")
+        self._closed = False
 
     def emit(self, record):
         """Send log record to WebSocket client."""
+        # Skip if we've marked this handler as closed
+        if self._closed:
+            return
+
         try:
             log_entry = self.format(record)
             # Create task to send message (non-blocking) only if there's an event loop
             try:
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
-                    asyncio.create_task(
-                        self.websocket.send_json(
-                            {
-                                "type": "log",
-                                "message": log_entry,
-                                "level": record.levelname,
-                                "logger": record.name,
-                                "timestamp": record.created,
-                            }
-                        )
-                    )
+                    asyncio.create_task(self._send_log_safe(log_entry, record))
             except RuntimeError:
                 # No event loop running, skip WebSocket logging
                 pass
         except Exception as e:
             # Avoid infinite recursion by not logging this error
             pass
+
+    async def _send_log_safe(self, log_entry: str, record):
+        """Safely send log message, catching WebSocket closure errors."""
+        if self._closed:
+            return
+
+        try:
+            # Check if WebSocket client_state indicates it's still connected
+            if hasattr(self.websocket, "client_state"):
+                from starlette.websockets import WebSocketState
+
+                if self.websocket.client_state != WebSocketState.CONNECTED:
+                    self._closed = True
+                    return
+
+            await self.websocket.send_json(
+                {
+                    "type": "log",
+                    "message": log_entry,
+                    "level": record.levelname,
+                    "logger": record.name,
+                    "timestamp": record.created,
+                }
+            )
+        except (RuntimeError, Exception):
+            # WebSocket is closed or errored, mark as closed and stop trying to send
+            self._closed = True
+
+    def close(self):
+        """Mark the handler as closed."""
+        self._closed = True
+        super().close()
 
 
 class OptimizationManager:
@@ -172,8 +247,7 @@ class OptimizationManager:
         # Add handler to multiple loggers to capture all output
         loggers_to_stream = [
             logging.getLogger(),  # Root logger
-            logging.getLogger("prompt_ops"),  # llama-prompt-ops logger
-            logging.getLogger("llama_prompt_ops"),  # Alternative logger name
+            logging.getLogger("prompt_ops"),  # prompt-ops logger
             logging.getLogger("dspy"),  # DSPy optimization logs
             logging.getLogger("LiteLLM"),  # LiteLLM API call logs
         ]
@@ -187,7 +261,6 @@ class OptimizationManager:
             loggers_to_cleanup = [
                 logging.getLogger(),
                 logging.getLogger("prompt_ops"),
-                logging.getLogger("llama_prompt_ops"),
                 logging.getLogger("dspy"),
                 logging.getLogger("LiteLLM"),
             ]

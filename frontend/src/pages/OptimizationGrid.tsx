@@ -288,10 +288,6 @@ const OptimizationGrid = () => {
 
   return (
     <div className="min-h-screen w-full bg-background relative overflow-hidden">
-      {/* Background styling */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white via-facebook-gray/30 to-facebook-blue/5"></div>
-      <div className="absolute inset-0 opacity-[0.02] bg-[radial-gradient(circle_at_50%_50%,hsl(var(--facebook-text))_1px,transparent_1px)] bg-[length:24px_24px]"></div>
-
       {/* Navigation */}
       <Sidebar />
 
@@ -301,66 +297,63 @@ const OptimizationGrid = () => {
           {/* Header */}
           <div className="text-center mb-6">
             <div className="flex items-center justify-center gap-4 mb-4">
-              <h1 className="text-4xl md:text-5xl font-black text-facebook-text tracking-tight">
-                Optimize your{" "}
-                <span className="bg-gradient-to-r from-facebook-blue via-facebook-blue-light to-facebook-blue-dark bg-clip-text text-transparent">
-                  prompt
-                </span>
+              <h1 className="text-2xl md:text-3xl font-normal text-white tracking-tight">
+                Optimize your prompt
               </h1>
               {/* Testing Toggle Button */}
               <Button
                 onClick={toggleMockData}
-                variant="outline"
-                size="sm"
-                className="text-xs border-orange-500 text-orange-600 hover:bg-orange-50"
+                variant="outlinedGray"
+                size="medium"
               >
                 {isFormValid() ? "Clear All" : "Fill All"}
               </Button>
             </div>
-            <p className="text-sm text-facebook-text/60">
+            <p className="text-sm text-white/60">
               Configure your optimization workflow visually
             </p>
           </div>
 
-          {/* Mode Selector - Matching MainContent style */}
+          {/* Mode Selector - Glassmorphism style */}
           <div className="flex justify-center mb-6">
-            <div className="bg-white p-1 rounded-xl shadow-lg border border-facebook-border relative">
+            <div className="bg-white/[0.08] backdrop-blur-xl p-1.5 rounded-full border border-white/[0.15] relative shadow-[0_8px_32px_rgba(0,0,0,0.12)] ring-1 ring-white/[0.05] ring-inset">
               <div className="grid grid-cols-2 gap-1 relative">
-                {/* Sliding indicator with Facebook blue gradient */}
+                {/* Sliding indicator - frosted glass style */}
                 <div
-                  className={`absolute top-0 bottom-0 rounded-lg transition-all duration-300 ease-in-out ${
+                  className={`absolute top-0.5 bottom-0.5 rounded-full transition-all duration-300 ease-out bg-white/[0.15] backdrop-blur-md border border-white/[0.2] shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] ${
                     activeMode === "migrate"
-                      ? "left-0 right-1/2 mr-0.5"
-                      : "left-1/2 right-0 ml-0.5"
+                      ? "left-0.5 right-1/2 mr-0.5"
+                      : "left-1/2 right-0 mr-0.5"
                   }`}
-                  style={{
-                    background:
-                      "linear-gradient(135deg, hsl(var(--facebook-blue)), hsl(var(--facebook-blue-light)))",
-                  }}
                 />
 
                 <Button
                   onClick={() => setActiveMode("migrate")}
                   variant="ghost"
-                  className={`relative w-full px-8 py-3 text-lg font-medium z-10 transition-all duration-300 rounded-lg hover:bg-transparent ${
+                  className={`relative w-full px-8 py-2.5 text-sm font-medium z-10 transition-all duration-200 rounded-full hover:bg-transparent ${
                     activeMode === "migrate"
                       ? "text-white hover:text-white"
-                      : "text-facebook-text hover:text-facebook-text"
+                      : "text-white/50 hover:text-white/80"
                   }`}
                 >
-                  Migrate
+                  Optimize
                 </Button>
 
                 <Button
                   onClick={() => setActiveMode("enhance")}
                   variant="ghost"
-                  className={`relative w-full px-8 py-3 text-lg font-medium z-10 transition-all duration-300 rounded-lg hover:bg-transparent ${
+                  className={`relative w-full px-8 py-2.5 text-sm font-medium z-10 transition-all duration-200 rounded-full hover:bg-transparent ${
                     activeMode === "enhance"
                       ? "text-white hover:text-white"
-                      : "text-facebook-text hover:text-facebook-text"
+                      : "text-white/50 hover:text-white/80"
                   }`}
                 >
-                  Enhance
+                  <div className="flex items-center justify-center gap-2">
+                    Enhance
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-white/[0.1] text-white/60 border border-white/[0.1]">
+                      Beta
+                    </span>
+                  </div>
                 </Button>
               </div>
             </div>
@@ -471,87 +464,34 @@ const OptimizationGrid = () => {
           {/* Review & Start Button */}
           <div className="mt-6">
             {isFormValid() ? (
-              <div className="relative">
-                {/* Glowing background layer */}
-                <div
-                  className="absolute inset-0 rounded-xl blur-md animate-gradient-rotate"
-                  style={{
-                    background:
-                      "linear-gradient(90deg, hsl(var(--facebook-blue)), #42a5f5, #60a5fa, #42a5f5, hsl(var(--facebook-blue)))",
-                    backgroundSize: "200% 200%",
-                    opacity: 0.6,
-                  }}
-                />
-
-                {/* Sharp border layer */}
-                <div
-                  className="relative rounded-xl p-[3px] animate-gradient-rotate"
-                  style={{
-                    background:
-                      "linear-gradient(90deg, hsl(var(--facebook-blue)), #42a5f5, #60a5fa, #42a5f5, hsl(var(--facebook-blue)))",
-                    backgroundSize: "200% 200%",
-                  }}
-                >
-                  {/* Inner button */}
-                  <Button
-                    onClick={handleStartOptimization}
-                    className="w-full h-12 text-lg font-semibold text-white relative z-10 bg-facebook-blue hover:bg-facebook-blue-light transition-colors rounded-xl"
-                    size="lg"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, hsl(var(--facebook-blue)), hsl(var(--facebook-blue-light)))",
-                    }}
-                  >
-                    <Play className="w-6 h-6 mr-2" />
-                    Optimize
-                  </Button>
-                </div>
-              </div>
+              <Button
+                onClick={handleStartOptimization}
+                variant="filled"
+                className="w-full h-12 text-lg font-medium rounded-full"
+                size="large"
+              >
+                <Play className="w-6 h-6 mr-2" />
+                Optimize
+              </Button>
             ) : (
               <Button
                 onClick={handleStartOptimization}
                 disabled={true}
-                className="w-full h-12 text-lg font-semibold text-white opacity-50 cursor-not-allowed"
-                size="lg"
-                style={{
-                  background:
-                    "linear-gradient(135deg, hsl(var(--facebook-gray)), hsl(var(--facebook-gray)))",
-                }}
+                variant="filled"
+                className="w-full h-12 text-lg font-medium rounded-xl"
+                size="large"
               >
                 <Play className="w-6 h-6 mr-2" />
                 Optimize
               </Button>
             )}
             {!isFormValid() && (
-              <p className="text-sm text-facebook-text/60 text-center mt-2">
+              <p className="text-sm text-white/60 text-center mt-2">
                 Complete all required fields to start optimization
               </p>
             )}
           </div>
 
-          {/* Add keyframe animation styles */}
-          <style>{`
-            @keyframes gradient-rotate {
-              0% {
-                background-position: 0% 50%;
-              }
-              50% {
-                background-position: 100% 50%;
-              }
-              100% {
-                background-position: 0% 50%;
-              }
-            }
-
-            .animate-gradient-rotate {
-              background-size: 200% 200%;
-              animation: gradient-rotate 3s ease infinite;
-            }
-
-            .blur-md {
-              filter: blur(12px);
-            }
-          `}</style>
         </GridLayout>
       </div>
 

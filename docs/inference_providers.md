@@ -1,34 +1,45 @@
-# Using Different Inference Providers with llama-prompt-ops
+---
+title: Inference Providers
+category: Advanced
+description: Configure OpenRouter, vLLM, NVIDIA NIMs, Together AI, and other providers
+order: 30
+icon: zap
+---
 
-This guide demonstrates how to configure llama-prompt-ops to work with various inference providers, including OpenRouter, vLLM, and NVIDIA NIMs. By changing the model configuration in your YAML files, you can easily switch between different backends without modifying your code.
+# Using Different Inference Providers with prompt-ops
+
+This guide demonstrates how to configure prompt-ops to work with various inference providers, including OpenRouter, vLLM, and NVIDIA NIMs. By changing the model configuration in your YAML files, you can easily switch between different backends without modifying your code.
 
 ## Understanding Model Configuration
 
-In llama-prompt-ops, model configuration is specified in the `model` section of your YAML configuration file. The basic configuration looks like this:
+In prompt-ops, model configuration is specified in the `model` section of your YAML configuration file. The basic configuration looks like this:
 
 ```yaml
 model:
   name: "openrouter/meta-llama/llama-3.1-8b-instruct"
-  api_base: "https://openrouter.ai/api/v1"
   temperature: 0.0
   max_tokens: 40960
 ```
 
-This configuration uses OpenRouter as the inference provider. Behind the scenes, llama-prompt-ops uses LiteLLM to handle the API calls, which provides a unified interface to various LLM providers.
+**prompt-ops uses [LiteLLM](https://docs.litellm.ai/docs/) as the unified API client** to handle all LLM API calls. LiteLLM provides automatic provider detection based on the model name prefix (e.g., `openrouter/`, `groq/`, `together_ai/`) and looks for the corresponding environment variable (e.g., `OPENROUTER_API_KEY`, `GROQ_API_KEY`, `TOGETHERAI_API_KEY`).
 
 ## Available Inference Providers
 
-### 1. OpenRouter (Default)
+### 1. OpenRouter
 
-[OpenRouter](https://openrouter.ai/) provides access to a wide range of models from different providers through a unified API. This is the default configuration in llama-prompt-ops.
+[OpenRouter](https://openrouter.ai/) provides access to a wide range of models from different providers through a unified API.
 
 ```yaml
 model:
   name: "openrouter/meta-llama/llama-3.1-8b-instruct"
-  api_base: "https://openrouter.ai/api/v1"
-  api_key: "${OPENROUTER_API_KEY}"  # Set via environment variable
   temperature: 0.0
   max_tokens: 40960
+```
+
+Set your API key as an environment variable (LiteLLM will auto-detect it):
+
+```bash
+export OPENROUTER_API_KEY=your_openrouter_api_key_here
 ```
 
 ### 2. vLLM
@@ -86,8 +97,6 @@ docker run -it --rm --name=nim \
 ```yaml
 model:
   name: "together_ai/meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"
-  api_base: "https://api.together.xyz/v1"
-  api_key: "${TOGETHER_API_KEY}"
   temperature: 0.0
   max_tokens: 4096
 ```
@@ -96,23 +105,43 @@ To use Together AI, you'll need to:
 
 1. Sign up for an account at [Together AI](https://www.together.ai/)
 2. Generate an API key from your account dashboard
-3. Set the API key as an environment variable:
+3. Set the API key as an environment variable (LiteLLM will auto-detect it):
 
 ```bash
-export TOGETHER_API_KEY=your_api_key_here
+export TOGETHERAI_API_KEY=your_api_key_here
 ```
 
 Then run the optimization:
 
 ```bash
-llama-prompt-ops migrate --api-key-env TOGETHER_API_KEY
+prompt-ops migrate
+```
+
+### 5. Groq
+
+
+```yaml
+model:
+  task_model: groq/meta-llama/llama-4-maverick-17b-128e-instruct
+  proposer_model: groq/meta-llama/llama-4-maverick-17b-128e-instruct
+  api_base: https://api.groq.com/openai/v1
+```
+
+```bash
+export GROQ_API_KEY=your_api_key_here
+```
+
+Then run the optimization:
+
+```bash
+prompt-ops migrate
 ```
 
 ## Advanced Configuration
 
 ### Using Different Models for Task and Proposer
 
-llama-prompt-ops allows you to specify different models for the task execution and the prompt proposal process:
+prompt-ops allows you to specify different models for the task execution and the prompt proposal process:
 
 ```yaml
 model:
@@ -123,20 +152,20 @@ model:
   max_tokens: 4096
 ```
 
-## Running llama-prompt-ops with Different Providers
+## Running prompt-ops with Different Providers
 
-To run llama-prompt-ops with your configuration:
+To run prompt-ops with your configuration:
 
 ```bash
-# With OpenRouter
-export OPENROUTER_API_KEY=your_api_key_here
-llama-prompt-ops migrate --config configs/hotpotqa_openrouter.yaml
+# Set your provider-specific API key
+export OPENROUTER_API_KEY=your_key  # For OpenRouter models (openrouter/...)
+export GROQ_API_KEY=your_key        # For Groq models (groq/...)
+export TOGETHERAI_API_KEY=your_key  # For Together AI models (together_ai/...)
 
-# With vLLM (after starting the vLLM server)
-llama-prompt-ops migrate --config configs/hotpotqa_vllm.yaml
-
-# With NVIDIA NIMs (after starting the NIM container)
-llama-prompt-ops migrate --config configs/hotpotqa_nim.yaml
+# Run with any configuration
+prompt-ops migrate --config configs/your_config.yaml
 ```
 
-For more information on other model provider configuration options, refer to the [LiteLLM documentation](https://docs.litellm.ai/docs/).
+**How LiteLLM Works:** LiteLLM automatically detects the provider from your model name prefix (e.g., `openrouter/model`, `groq/model`, `together_ai/model`) and looks for the corresponding environment variable (`OPENROUTER_API_KEY`, `GROQ_API_KEY`, `TOGETHERAI_API_KEY`). No manual API routing required!
+
+For more information on supported providers, environment variables, and configuration options, refer to the [LiteLLM documentation](https://docs.litellm.ai/docs/set_keys).

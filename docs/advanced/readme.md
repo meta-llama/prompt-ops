@@ -1,12 +1,20 @@
-# Using llama-prompt-ops for your use case (with Examples)
+---
+title: Custom Adapters & Metrics
+category: Advanced
+description: Create custom dataset adapters and evaluation metrics for your use case
+order: 31
+icon: code
+---
 
-> **Note:** This guide explains how to add new use cases to llama-prompt-ops by either configuring existing components or creating custom components.
+# Using prompt-ops for your use case (with Examples)
+
+> **Note:** This guide explains how to add new use cases to prompt-ops by either configuring existing components or creating custom components.
 
 ## Overview
 
-When adding your use case to llama-prompt-ops, you'll need to handle two key aspects:
+When adding your use case to prompt-ops, you'll need to handle two key aspects:
 
-1. **Dataset Processing** - Converting your data into the standardized format that llama-prompt-ops can work with
+1. **Dataset Processing** - Converting your data into the standardized format that prompt-ops can work with
 2. **Evaluation** - Measuring how well model outputs match expected results
 
 For each aspect, you have two options:
@@ -177,7 +185,7 @@ class MyCustomMetric(MetricBase):
 
 ### Standardized Format
 
-The `DatasetAdapter.adapt()` method transforms your custom dataset into a standardized format that llama-prompt-ops can work with. This standardized format is a list of dictionaries, where each dictionary represents a single example with the following structure:
+The `DatasetAdapter.adapt()` method transforms your custom dataset into a standardized format that prompt-ops can work with. This standardized format is a list of dictionaries, where each dictionary represents a single example with the following structure:
 
 ```python
 {
@@ -200,7 +208,7 @@ The `DatasetAdapter.adapt()` method transforms your custom dataset into a standa
 }
 ```
 
-The standardized format enables llama-prompt-ops to:
+The standardized format enables prompt-ops to:
 
 1. Format inputs consistently for different models
 2. Compare model outputs against expected outputs
@@ -209,7 +217,7 @@ The standardized format enables llama-prompt-ops to:
 
 ## Real-World Example: Customer Service Classification
 
-Let's walk through a complete example of adding a customer service classification use case to llama-prompt-ops.
+Let's walk through a complete example of adding a customer service classification use case to prompt-ops.
 
 ### Step 1: Analyze Your Dataset
 
@@ -389,19 +397,19 @@ prompt:
     {"urgency": "...", "sentiment": "...", "categories": {"category1": true, ...}}
 ```
 
-### Step 4: Run llama-prompt-ops
+### Step 4: Run prompt-ops
 
 ```bash
 # Set your API key
 export OPENROUTER_API_KEY=your_key_here
 
-# Run llama-prompt-ops with your configuration
-llama-prompt-ops migrate --config path/to/customer_service_config.yaml
+# Run prompt-ops with your configuration
+prompt-ops migrate --config path/to/customer_service_config.yaml
 ```
 
 ## Conclusion
 
-When adding a new use case to llama-prompt-ops, you have two approaches:
+When adding a new use case to prompt-ops, you have two approaches:
 
 1. **Configure existing components** - Simpler and sufficient for most common use cases
 2. **Create custom components** - For specialized requirements that need custom processing

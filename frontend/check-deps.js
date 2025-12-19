@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Dependencies checker for llama-prompt-ops frontend
+ * Dependencies checker for prompt-ops frontend
  * Checks for required system dependencies and environment setup
  */
 
@@ -105,7 +105,7 @@ function checkPythonVersion() {
 }
 
 function main() {
-  log('blue', '🔍 Checking llama-prompt-ops frontend dependencies...\n');
+  log('blue', '🔍 Checking prompt-ops frontend dependencies...\n');
 
   let allChecksPass = true;
 

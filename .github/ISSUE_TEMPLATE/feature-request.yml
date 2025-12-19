@@ -1,28 +1,35 @@
-name: 🚀 Feature request
-description: Request a new llama-stack feature
+name: 🚀 Feature Request
+description: Suggest a new feature for prompt-ops
 labels: ["enhancement"]
 body:
 - type: textarea
-  id: feature-pitch
+  id: feature-description
   attributes:
-    label: 🚀 Describe the new functionality needed
-    description: >
-      A clear and concise description of _what_ needs to be built.
+    label: What feature would you like?
+    description: A clear description of the feature you'd like to see.
+    placeholder: |
+      I'd like to be able to...
+
+      This would help with...
   validations:
     required: true
 
 - type: textarea
-  id: feature-motivation
+  id: use-case
   attributes:
-    label: 💡 Why is this needed? What if we don't build it?
-    description: >
-      A clear and concise description of _why_ this functionality is needed.
+    label: What's your use case?
+    description: How would you use this feature? What problem does it solve?
+    placeholder: |
+      I'm working on optimizing prompts for customer support and need...
   validations:
     required: true
 
 - type: textarea
-  id: other-thoughts
+  id: additional-context
   attributes:
-    label: Other thoughts
-    description: >
-      Any thoughts about how this may result in complexity in the codebase, or other trade-offs.
+    label: Additional context
+    description: Any other details, examples, or screenshots that might help.
+    placeholder: |
+      Here's an example of what I'm trying to achieve...
+  validations:
+    required: false

@@ -17,113 +17,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-# Pydantic models
-class QuickStartResponse(BaseModel):
-    success: bool
-    dataset: Dict[str, Any]
-    prompt: str
-    config: Dict[str, Any]
-    message: str
-
-
-@router.post("/api/quick-start-demo", response_model=QuickStartResponse)
-async def quick_start_demo():
-    """Load the facility support analyzer demo with dataset, prompt, and optimal configuration."""
-    try:
-        # Define paths to demo files
-        demo_dataset_path = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "..",
-            "..",
-            "use-cases",
-            "facility-support-analyzer",
-            "dataset.json",
-        )
-        demo_prompt_path = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "..",
-            "..",
-            "use-cases",
-            "facility-support-analyzer",
-            "facility_prompt_sys.txt",
-        )
-
-        # Check if demo files exist
-        if not os.path.exists(demo_dataset_path):
-            raise HTTPException(status_code=404, detail="Demo dataset file not found")
-        if not os.path.exists(demo_prompt_path):
-            raise HTTPException(status_code=404, detail="Demo prompt file not found")
-
-        # Ensure upload directory exists
-        os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-        # Copy demo dataset to uploaded datasets directory
-        demo_filename = "facility_support_demo.json"
-        destination_path = os.path.join(UPLOAD_DIR, demo_filename)
-
-        # Remove existing demo file if it exists
-        if os.path.exists(destination_path):
-            os.remove(destination_path)
-
-        import shutil
-
-        shutil.copy2(demo_dataset_path, destination_path)
-
-        # Load and validate the dataset
-        import json
-
-        with open(destination_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        if not isinstance(data, list):
-            raise HTTPException(
-                status_code=400, detail="Demo dataset must be a JSON array"
-            )
-
-        # Create preview (first 3 records)
-        preview = data[:3] if len(data) > 3 else data
-
-        # Load the demo prompt
-        with open(demo_prompt_path, "r", encoding="utf-8") as f:
-            demo_prompt = f.read().strip()
-
-        # Define optimal configuration for facility support analyzer
-        optimal_config = {
-            "datasetAdapter": "facility",
-            "metrics": "Exact Match",  # Temporarily use simpler metric for debugging
-            "model": "Llama 3.3 70B",
-            "proposer": "Llama 3.3 70B",
-            "strategy": "Basic",
-            "useLlamaTips": True,
-        }
-
-        # Create dataset response
-        dataset_response = {
-            "filename": demo_filename,
-            "path": destination_path,
-            "preview": preview,
-            "total_records": len(data),
-        }
-
-        logger.info(f"Quick start demo loaded successfully: {len(data)} records")
-
-        return QuickStartResponse(
-            success=True,
-            dataset=dataset_response,
-            prompt=demo_prompt,
-            config=optimal_config,
-            message=f"Demo loaded successfully! Facility Support Analyzer with {len(data)} sample records ready for optimization.",
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error loading quick start demo: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to load demo: {str(e)}")
-
-
 @router.post("/generate-config")
 async def generate_config(request: dict):
     """Generate YAML configuration from onboarding wizard data."""
@@ -214,5 +107,59 @@ async def download_config(project_name: str):
             media_type="application/x-yaml",
             filename=f"{project_name}-config.yaml",
         )
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Error downloading config for project {project_name}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/api/projects")
+async def list_projects():
+    """List all available projects in the uploads directory."""
+    try:
+        uploads_dir = UPLOAD_DIR
+
+        # Return empty list if directory doesn't exist yet
+        if not os.path.exists(uploads_dir):
+            return {"success": True, "projects": []}
+
+        projects = []
+
+        # List all directories in the uploads folder
+        for item in os.listdir(uploads_dir):
+            item_path = os.path.join(uploads_dir, item)
+
+            # Only include directories (skip individual files)
+            if os.path.isdir(item_path):
+                config_path = os.path.join(item_path, "config.yaml")
+                prompt_path = os.path.join(item_path, "prompts", "prompt.txt")
+                dataset_path = os.path.join(item_path, "data", "dataset.json")
+
+                # Get creation/modification time
+                created_at = os.path.getctime(item_path)
+                modified_at = os.path.getmtime(item_path)
+
+                project_info = {
+                    "name": item,
+                    "path": item_path,
+                    "hasConfig": os.path.exists(config_path),
+                    "hasPrompt": os.path.exists(prompt_path),
+                    "hasDataset": os.path.exists(dataset_path),
+                    "createdAt": created_at,
+                    "modifiedAt": modified_at,
+                }
+
+                projects.append(project_info)
+
+        # Sort by modification time (most recent first)
+        projects.sort(key=lambda x: x["modifiedAt"], reverse=True)
+
+        logger.info(f"Found {len(projects)} projects")
+        return {"success": True, "projects": projects}
+
+    except Exception as e:
+        logger.error(f"Error listing projects: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to list projects: {str(e)}"
+        )

@@ -1,3 +1,11 @@
+---
+title: Metric Selection Guide
+category: Guides
+description: Choose the right evaluation metrics for your optimization use case
+order: 10
+icon: settings
+---
+
 # Metric Selection Guide
 
 This guide helps you choose the right evaluation metric for your use case or determine when to create a custom metric.
@@ -112,4 +120,4 @@ metric:
 
 For more complex evaluation needs, you can implement specialized metrics. For example:
 
-- The [HotpotQA Metric](src/llama_prompt_ops/datasets/hotpotqa/metric.py) shows how to implement specialized evaluation for multi-hop question answering, handling answer correctness and supporting fact verification.
+- The [HotpotQA Metric](src/prompt_ops/datasets/hotpotqa/metric.py) shows how to implement specialized evaluation for multi-hop question answering, handling answer correctness and supporting fact verification.

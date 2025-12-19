@@ -1,5 +1,5 @@
 """
-Basic tests for the llama-prompt-ops frontend backend
+Basic tests for the prompt-ops frontend backend
 """
 
 import json

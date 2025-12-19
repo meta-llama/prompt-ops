@@ -121,11 +121,12 @@ async def upload_dataset(file: UploadFile = File(...)):
             "total_records": len(data) if isinstance(data, list) else 0,
         }
     except HTTPException:
-        # Re-raise HTTPExceptions to preserve status codes
         raise
     except Exception as e:
         logger.error(f"Error uploading dataset: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500, detail=f"Failed to upload dataset: {str(e)}"
+        )
 
 
 @router.get("/api/datasets", response_model=DatasetListResponse)
@@ -146,7 +147,10 @@ async def delete_dataset(filename: str):
         os.remove(file_path)
         return {"message": f"Dataset {filename} deleted successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error deleting dataset {filename}: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to delete dataset: {str(e)}"
+        )
 
 
 @router.post("/api/datasets/analyze/{filename}", response_model=DatasetAnalysisResponse)
@@ -174,7 +178,9 @@ async def analyze_dataset(filename: str):
 
     except Exception as e:
         logger.error(f"Error analyzing dataset {filename}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to analyze dataset: {str(e)}"
+        )
 
 
 @router.post(
@@ -204,7 +210,9 @@ async def preview_transformation(request: PreviewTransformationRequest):
 
     except Exception as e:
         logger.error(f"Error previewing transformation: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Preview failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to preview transformation: {str(e)}"
+        )
 
 
 @router.post("/api/datasets/save-mapping")
@@ -242,4 +250,6 @@ async def save_field_mapping(request: FieldMappingRequest):
 
     except Exception as e:
         logger.error(f"Error saving field mapping: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to save mapping: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to save field mapping: {str(e)}"
+        )

@@ -1,0 +1,49 @@
+# PDO (Prompt Duel Optimizer) Configuration for Web of Lies
+# This config uses dueling bandit optimization for prompt evolution on the logical reasoning task
+
+system_prompt:
+  file: prompts/prompt.txt
+  inputs:
+    - question
+  outputs:
+    - answer
+
+dataset:
+  path: data/web_of_lies.json
+  input_field:
+    - input
+  golden_output_field: answer
+
+model:
+  task_model: openrouter/meta-llama/llama-3.3-70b-instruct
+  proposer_model: openrouter/meta-llama/llama-3.3-70b-instruct
+
+optimization:
+  strategy: "pdo"
+  task_type: close_ended            # Explicitly set task type (default is close_ended)
+  answer_choices: ["Yes", "No"]   # Choices used only for close-ended tasks
+
+  # Core PDO parameters
+  total_rounds: 30                    # Number of optimization rounds
+  gen_new_prompt_round_frequency: 10  # How often to generate new prompts (in rounds)
+  num_duels_per_round: 50             # Number of duels per round
+  num_eval_examples_per_duel: 1       # Examples evaluated per duel
+  num_initial_instructions: 20        # Initial instruction pool size
+
+  # Thompson sampling parameters
+  thompson_alpha: 1.2                 # Alpha parameter for confidence bounds
+  ranking_method: copeland            # Ranking method: copeland (default) or aggregate
+
+  # Instruction evolution parameters
+  num_top_prompts_to_combine: 3       # Top prompts to use for mutation (n_top)
+  num_new_prompts_to_generate: 10     # New prompts per update (n_new)
+  num_to_prune_each_round: 10         # Prompts to remove per update (n_prune)
+
+  # Execution parameters
+  max_concurrent_threads: 4           # Parallel execution threads
+  use_labels: false                   # Use supervised learning when available
+
+metric:
+  class: "prompt_ops.core.metrics.StandardJSONMetric"
+  strict_json: false
+  output_field: answer

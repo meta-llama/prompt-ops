@@ -1,4 +1,4 @@
-# Contributing to llama-prompt-ops
+# Contributing to prompt-ops
 We want to make contributing to this project as easy and transparent as
 possible.
 
@@ -23,4 +23,4 @@ We use GitHub issues to track public bugs. Please ensure your description is cle
 Facebook has a [bounty program](https://www.facebook.com/whitehat/) for the safe disclosure of security bugs. In those cases, please go through the process outlined on that page and do not file a public issue.
 
 ## License
-By contributing to llama-prompt-ops, you agree that your contributions will be licensed under the LICENSE file in the root directory of this source tree.
+By contributing to prompt-ops, you agree that your contributions will be licensed under the LICENSE file in the root directory of this source tree.

@@ -5,21 +5,34 @@ FastAPI application setup and configuration.
 import importlib
 import logging
 import os
+import re
 import subprocess
 import sys
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+
+import litellm
+import yaml
 
 # Import configuration and utilities
 from config import (
+    BACKEND_HOST,
+    BACKEND_PORT,
     DATASET_ADAPTER_MAPPING,
+    DEBUG_MODE,
+    DEFAULT_MODEL,
+    DEFAULT_TEMPERATURE,
+    DEFAULT_TRAIN_SIZE,
+    DEFAULT_VAL_SIZE,
+    FAIL_ON_ERROR,
     METRIC_MAPPING,
     MODEL_MAPPING,
     STRATEGY_MAPPING,
 )
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
+from litellm import acompletion
 from pydantic import BaseModel
 
 # Import route modules
@@ -36,47 +49,48 @@ logger = logging.getLogger(__name__)
 # Load environment variables from .env file
 load_dotenv()
 
-# Install required dependencies if missing
-required_packages = ["scipy", "llama-prompt-ops==0.0.7"]
+# Check for WebSocket support
 try:
-    for package in required_packages:
-        try:
-            # Handle special case for llama-prompt-ops
-            if "llama-prompt-ops" in package:
-                module_name = "llama_prompt_ops"
-            else:
-                module_name = package.replace("-", "_")
+    import websockets as websockets_lib
 
-            importlib.import_module(module_name)
-            print(f"✓ {package} is already installed")
-        except ImportError:
-            print(f"Installing {package}...")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-            print(f"✓ {package} installed successfully")
-except Exception as e:
-    print(f"Warning: Failed to install dependencies: {e}")
+    logger.info("WebSocket support is available")
+    WEBSOCKETS_AVAILABLE = True
+except ImportError:
+    logger.warning("WebSocket support not available!")
+    logger.warning("Install with: pip install websockets")
+    logger.warning("WebSocket endpoints will not work until this is installed.")
+    WEBSOCKETS_AVAILABLE = False
 
-# Add llama-prompt-ops to Python path
-llama_prompt_ops_path = os.path.abspath(
+# Check for required dependencies
+# Note: prompt-ops should be installed via 'pip install -e .' from the repo root
+required_packages = ["scipy", "prompt_ops"]
+for package in required_packages:
+    try:
+        importlib.import_module(package)
+        logger.info(f"✓ {package} is available")
+    except ImportError:
+        if package == "prompt_ops":
+            logger.warning(
+                f"⚠ {package} not found. Install it with: pip install -e . (from repo root)"
+            )
+        else:
+            logger.warning(
+                f"⚠ {package} not found. Install it with: pip install {package}"
+            )
+
+# Add prompt-ops to Python path
+prompt_ops_path = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "src")
 )
-if llama_prompt_ops_path not in sys.path:
-    sys.path.insert(0, llama_prompt_ops_path)
-    print(f"Added {llama_prompt_ops_path} to Python path")
+if prompt_ops_path not in sys.path:
+    sys.path.insert(0, prompt_ops_path)
+    logger.info(f"Added {prompt_ops_path} to Python path")
 
-# Try to import core modules
-try:
-    from llama_prompt_ops.core.migrator import PromptMigrator
-
-    print("✓ Successfully imported llama_prompt_ops core modules")
-    LLAMA_PROMPT_OPS_AVAILABLE = True
-except ImportError as e:
-    print(f"Warning: Could not import llama_prompt_ops: {e}")
-    print("The /api/migrate-prompt endpoint will fall back to OpenRouter")
-    LLAMA_PROMPT_OPS_AVAILABLE = False
+# Import shared core module with availability checks
+from core import PROMPT_OPS_AVAILABLE
 
 # FastAPI Application Setup
-app = FastAPI(title="Llama Prompt Ops API")
+app = FastAPI(title="Prompt Ops API")
 
 # CORS for local development
 app.add_middleware(
@@ -86,6 +100,23 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+
+# Exception handlers
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Log HTTPException details before returning response."""
+    logger.error(
+        f"HTTPException: {exc.status_code} - {exc.detail} (path: {request.url.path})"
+    )
+    # Return the standard HTTPException response
+    from fastapi.responses import JSONResponse
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
 
 # Include route modules
 app.include_router(datasets.router)
@@ -106,17 +137,110 @@ class ConfigResponse(BaseModel):
 @app.options("/api/enhance-prompt")
 @app.options("/api/migrate-prompt")
 @app.options("/api/configurations")
+@app.options("/api/settings")
 @app.options("/api/datasets/upload")
 @app.options("/api/datasets")
 @app.options("/api/datasets/{filename}")
 @app.options("/api/datasets/analyze/{filename}")
 @app.options("/api/datasets/preview-transformation")
 @app.options("/api/datasets/save-mapping")
-@app.options("/api/quick-start-demo")
 @app.options("/api/docs/structure")
 @app.options("/docs/{file_path:path}")
 async def options_route():
     return {"status": "OK"}
+
+
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint to verify backend dependencies."""
+    issues = []
+
+    if not WEBSOCKETS_AVAILABLE:
+        issues.append(
+            {
+                "component": "websockets",
+                "status": "missing",
+                "message": "WebSocket support not available. Install with: pip install websockets",
+                "severity": "error",
+            }
+        )
+
+    if not PROMPT_OPS_AVAILABLE:
+        issues.append(
+            {
+                "component": "prompt-ops",
+                "status": "missing",
+                "message": "prompt-ops not available. Some features may not work.",
+                "severity": "warning",
+            }
+        )
+
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        issues.append(
+            {
+                "component": "api_key",
+                "status": "missing",
+                "message": "OPENROUTER_API_KEY not set in environment",
+                "severity": "warning",
+            }
+        )
+
+    return {
+        "status": "healthy" if len(issues) == 0 else "degraded",
+        "websockets_available": WEBSOCKETS_AVAILABLE,
+        "prompt_ops_available": PROMPT_OPS_AVAILABLE,
+        "api_key_configured": bool(api_key),
+        "issues": issues,
+    }
+
+
+@app.get("/api/settings")
+async def get_settings():
+    """Return current environment-configurable settings."""
+    return {
+        "failOnError": FAIL_ON_ERROR,
+        "debugMode": DEBUG_MODE,
+        "defaultModel": DEFAULT_MODEL,
+        "defaultTemperature": DEFAULT_TEMPERATURE,
+        "defaultTrainSize": DEFAULT_TRAIN_SIZE,
+        "defaultValSize": DEFAULT_VAL_SIZE,
+        "hasOpenRouterKey": bool(os.getenv("OPENROUTER_API_KEY")),
+        "hasTogetherKey": bool(os.getenv("TOGETHER_API_KEY")),
+        # Return actual API keys for prefilling (local dev tool, keys stay local)
+        "apiKeys": {
+            "openrouter": os.getenv("OPENROUTER_API_KEY", ""),
+            "together": os.getenv("TOGETHER_API_KEY", ""),
+        },
+    }
+
+
+@app.get("/api/api-keys/openrouter")
+async def get_openrouter_key():
+    """
+    Return the OpenRouter API key status from environment (masked for security).
+    Frontend uses this to indicate default key is available, but never receives the actual key.
+    Backend will use the env var when frontend doesn't provide an explicit key.
+    """
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        return {
+            "hasKey": False,
+            "maskedKey": None,
+        }
+
+    # Mask the key: show first 7 and last 4 characters for user feedback
+    if len(api_key) <= 11:
+        masked = api_key[:3] + "*" * (len(api_key) - 3)
+    else:
+        masked = api_key[:7] + "*" * (len(api_key) - 11) + api_key[-4:]
+
+    return {
+        "hasKey": True,
+        "maskedKey": masked,
+        # NOTE: We deliberately do NOT send the full key for security reasons.
+        # Backend routes will use os.getenv("OPENROUTER_API_KEY") when no key is provided.
+    }
 
 
 @app.get("/api/configurations", response_model=ConfigResponse)
@@ -128,6 +252,168 @@ async def get_configurations():
         "dataset_adapters": DATASET_ADAPTER_MAPPING,
         "strategies": STRATEGY_MAPPING,
     }
+
+
+def parse_frontmatter(content: str) -> tuple[Optional[Dict[str, Any]], str]:
+    """
+    Parse YAML frontmatter from markdown content.
+    Returns (frontmatter_dict, remaining_content) or (None, original_content) if no frontmatter.
+    """
+    frontmatter_pattern = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
+    match = frontmatter_pattern.match(content)
+
+    if match:
+        try:
+            frontmatter = yaml.safe_load(match.group(1))
+            remaining_content = content[match.end() :]
+            return frontmatter, remaining_content
+        except yaml.YAMLError:
+            return None, content
+
+    return None, content
+
+
+class ModelConnectionTestRequest(BaseModel):
+    provider_id: str
+    model_name: str
+    api_base: str
+    api_key: Optional[str] = None
+    custom_headers: Optional[Dict[str, str]] = None
+    auth_method: Optional[str] = "api_key"
+
+
+def _extract_error_message(error: Exception) -> str:
+    """
+    Extract clean, user-friendly error message from LiteLLM exceptions.
+
+    LiteLLM error strings often contain redundant prefixes like:
+    "litellm.AuthenticationError: AuthenticationError: OpenrouterException - {...}"
+
+    This function extracts just the meaningful part.
+    """
+    import json
+    import re
+
+    error_str = str(error)
+
+    # Try to parse JSON error response (common pattern)
+    # Look for {"error":{"message":"..."}} pattern
+    json_match = re.search(r'\{"error":\s*\{"message":\s*"([^"]+)"', error_str)
+    if json_match:
+        return json_match.group(1)
+
+    # Try to find just {"message":"..."} pattern
+    json_match = re.search(r'\{"message":\s*"([^"]+)"', error_str)
+    if json_match:
+        return json_match.group(1)
+
+    # Remove common LiteLLM prefixes
+    # Pattern: "litellm.ExceptionType: ExceptionType: ProviderException - actual message"
+    cleaned = re.sub(r"^litellm\.\w+:\s*", "", error_str)
+    cleaned = re.sub(r"^\w+Error:\s*", "", cleaned)
+    cleaned = re.sub(r"^\w+Exception\s*-\s*", "", cleaned)
+
+    # If we still have JSON, try to pretty print just the error field
+    try:
+        if "{" in cleaned and "}" in cleaned:
+            # Find the JSON portion
+            json_start = cleaned.find("{")
+            json_str = cleaned[json_start:]
+            data = json.loads(json_str)
+
+            # Extract nested error message
+            if isinstance(data, dict):
+                if "error" in data and isinstance(data["error"], dict):
+                    if "message" in data["error"]:
+                        return data["error"]["message"]
+                if "message" in data:
+                    return data["message"]
+    except (json.JSONDecodeError, KeyError, TypeError):
+        pass
+
+    # Return cleaned version or original if cleaning didn't help
+    return cleaned.strip() if cleaned.strip() else error_str
+
+
+@app.post("/api/models/test-connection")
+async def test_model_connection(request: ModelConnectionTestRequest):
+    """Test connection to a model provider using LiteLLM."""
+    try:
+        # Construct the full model name with provider prefix
+        # LiteLLM uses format: provider/model (e.g., "openrouter/meta-llama/llama-3.3-70b")
+        model_name = f"{request.provider_id}/{request.model_name}"
+
+        # Prepare LiteLLM kwargs
+        completion_kwargs = {
+            "model": model_name,
+            "messages": [{"role": "user", "content": "test"}],
+            "max_tokens": 1,
+            "temperature": 0,
+            "timeout": 15.0,
+        }
+
+        # Add API base if provided
+        if request.api_base:
+            completion_kwargs["api_base"] = request.api_base
+
+        # Add API key if provided (and not empty), otherwise fallback to env var for OpenRouter
+        # Important: We must explicitly set the API key to test the provided one,
+        # as LiteLLM may fallback to environment variables automatically
+        if request.api_key and request.api_key.strip():
+            completion_kwargs["api_key"] = request.api_key
+        elif request.provider_id == "openrouter":
+            # Use environment variable if no explicit key provided
+            env_key = os.getenv("OPENROUTER_API_KEY")
+            if env_key:
+                completion_kwargs["api_key"] = env_key
+            else:
+                return {
+                    "success": False,
+                    "message": "Authentication required - please provide an API key",
+                }
+
+        # Add custom headers if provided (for custom auth methods)
+        if request.auth_method == "custom_headers" and request.custom_headers:
+            completion_kwargs["extra_headers"] = request.custom_headers
+        elif request.provider_id == "openrouter":
+            # Provider-specific headers for OpenRouter
+            completion_kwargs["extra_headers"] = {
+                "HTTP-Referer": "https://prompt-ops.local",
+                "X-Title": "Prompt Ops",
+            }
+
+        # Disable caching for test connections - we need fresh results every time
+        completion_kwargs["cache"] = {"no-cache": True}
+
+        # Make the test request using LiteLLM
+        response = await acompletion(**completion_kwargs)
+
+        # If we get here, connection was successful
+        return {"success": True, "message": "Connection successful!"}
+
+    except litellm.exceptions.Timeout as e:
+        return {"success": False, "message": "Connection timeout"}
+    except litellm.exceptions.APIConnectionError as e:
+        return {
+            "success": False,
+            "message": f"Cannot connect to API endpoint: {_extract_error_message(e)}",
+        }
+    except litellm.exceptions.AuthenticationError as e:
+        return {
+            "success": False,
+            "message": f"Authentication failed: {_extract_error_message(e)}",
+        }
+    except litellm.exceptions.RateLimitError as e:
+        return {
+            "success": False,
+            "message": f"Rate limit exceeded: {_extract_error_message(e)}",
+        }
+    except litellm.exceptions.BadRequestError as e:
+        return {"success": False, "message": _extract_error_message(e)}
+    except Exception as e:
+        # Catch-all for any other errors
+        logger.error(f"Unexpected error testing connection: {type(e).__name__}: {e}")
+        return {"success": False, "message": _extract_error_message(e)}
 
 
 @app.get("/docs/{file_path:path}")
@@ -152,8 +438,9 @@ async def get_docs_file(file_path: str):
         with open(full_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # Return appropriate content type based on file extension
+        # Strip frontmatter from markdown files before serving
         if file_path.endswith(".md"):
+            _, content = parse_frontmatter(content)
             return PlainTextResponse(content, media_type="text/markdown")
         elif file_path.endswith(".json"):
             return PlainTextResponse(content, media_type="application/json")
@@ -166,12 +453,21 @@ async def get_docs_file(file_path: str):
         )
 
 
+def generate_doc_id(path: str) -> str:
+    """Generate a URL-friendly ID from a file path."""
+    # Remove extension and convert path separators to dashes
+    doc_id = os.path.splitext(path)[0].replace("/", "-").replace("\\", "-").lower()
+    # Clean up any double dashes and leading/trailing dashes
+    doc_id = re.sub(r"-+", "-", doc_id).strip("-")
+    return doc_id
+
+
 @app.get("/api/docs/structure")
 async def get_docs_structure():
-    """Get the structure of the documentation directory."""
+    """Get the structure of the documentation directory with frontmatter metadata."""
     try:
         docs_base_path = os.path.join(os.path.dirname(__file__), "..", "..", "docs")
-        structure = []
+        docs = []
 
         def scan_directory(path, relative_path=""):
             items = []
@@ -179,7 +475,7 @@ async def get_docs_structure():
                 return items
 
             for item in os.listdir(path):
-                if item.startswith("."):  # Skip hidden files
+                if item.startswith(".") or item.startswith("_"):  # Skip hidden/private
                     continue
 
                 item_path = os.path.join(path, item)
@@ -191,24 +487,52 @@ async def get_docs_structure():
                     # Recursively scan subdirectories
                     subitems = scan_directory(item_path, item_relative_path)
                     items.extend(subitems)
-                elif item.endswith((".md", ".txt")):
-                    # Get file stats
-                    stat = os.stat(item_path)
-                    items.append(
-                        {
-                            "path": item_relative_path.replace(os.sep, "/"),
-                            "name": os.path.splitext(item)[0],
-                            "type": "file",
-                            "size": stat.st_size,
-                            "modified": stat.st_mtime,
+                elif item.endswith(".md"):
+                    # Read file and parse frontmatter
+                    try:
+                        with open(item_path, "r", encoding="utf-8") as f:
+                            content = f.read()
+
+                        frontmatter, _ = parse_frontmatter(content)
+                        file_path = item_relative_path.replace(os.sep, "/")
+
+                        # Build doc entry with frontmatter metadata or defaults
+                        doc_entry = {
+                            "id": generate_doc_id(file_path),
+                            "path": file_path,
+                            "title": (
+                                frontmatter.get("title")
+                                if frontmatter
+                                else os.path.splitext(item)[0]
+                                .replace("-", " ")
+                                .replace("_", " ")
+                                .title()
+                            ),
+                            "category": (
+                                frontmatter.get("category")
+                                if frontmatter
+                                else relative_path.replace(os.sep, "/").title()
+                                or "General"
+                            ),
+                            "description": (
+                                frontmatter.get("description") if frontmatter else None
+                            ),
+                            "order": (frontmatter.get("order") if frontmatter else 999),
+                            "icon": frontmatter.get("icon") if frontmatter else None,
                         }
-                    )
+                        items.append(doc_entry)
+                    except Exception as e:
+                        logger.warning(f"Failed to parse doc file {item_path}: {e}")
+                        continue
 
             return items
 
-        structure = scan_directory(docs_base_path)
+        docs = scan_directory(docs_base_path)
 
-        return {"success": True, "structure": structure, "total_files": len(structure)}
+        # Sort by order, then by title
+        docs.sort(key=lambda x: (x.get("order", 999), x.get("title", "")))
+
+        return {"success": True, "docs": docs, "total": len(docs)}
 
     except Exception as e:
         raise HTTPException(
@@ -220,4 +544,4 @@ async def get_docs_structure():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host=BACKEND_HOST, port=BACKEND_PORT, reload=True)

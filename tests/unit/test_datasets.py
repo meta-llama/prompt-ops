@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from llama_prompt_ops.core.datasets import (
+from prompt_ops.core.datasets import (
     ConfigurableJSONAdapter,
     DatasetAdapter,
     load_dataset,
@@ -23,9 +23,10 @@ def simple_data_file():
     with open(temp_file.name, "w") as f:
         json.dump(test_data, f)
 
-    yield temp_file, test_data
+    yield temp_file.name, test_data
 
     # Clean up the temporary file
+    temp_file.close()
     os.unlink(temp_file.name)
 
 
@@ -46,9 +47,10 @@ def nested_data_file():
     with open(temp_file.name, "w") as f:
         json.dump(nested_data, f)
 
-    yield temp_file, nested_data
+    yield temp_file.name, nested_data
 
     # Clean up the temporary file
+    temp_file.close()
     os.unlink(temp_file.name)
 
 
@@ -73,7 +75,7 @@ def test_load_data_simple_fields(simple_data_file):
 
     # Test with simple field names
     adapter = ConfigurableJSONAdapter(
-        dataset_path=temp_file.name,
+        dataset_path=temp_file,
         input_field="question",
         golden_output_field="answer",
     )
@@ -97,7 +99,7 @@ def test_load_data_nested_fields(nested_data_file):
 
     # Test with nested field paths
     adapter = ConfigurableJSONAdapter(
-        dataset_path=temp_file.name,
+        dataset_path=temp_file,
         input_field=["fields", "input"],
         golden_output_field=["output", "text"],
     )
@@ -125,7 +127,7 @@ def test_transform_functions(simple_data_file):
         return text.upper()
 
     adapter = ConfigurableJSONAdapter(
-        dataset_path=temp_file.name,
+        dataset_path=temp_file,
         input_field="question",
         golden_output_field="answer",
         input_transform=input_transform,
@@ -163,3 +165,22 @@ def test_custom_split_ratios(mock_dataset_adapter):
     assert len(train) == 70
     assert len(val) == 20
     assert len(test) == 10
+
+
+def test_minimum_records_in_dataset(simple_data_file):
+    try:
+        from prompt_ops.interfaces.cli import validate_min_records_in_dataset
+    except ImportError as e:
+        pytest.skip(f"Skipping test because module import failed: {str(e)}")
+
+    # Sample data file has just 2 records
+    temp_file, _ = simple_data_file
+
+    dataset_adapter = ConfigurableJSONAdapter(
+        dataset_path=temp_file,
+        input_field="question",
+        golden_output_field="answer",
+    )
+
+    with pytest.raises(ValueError, match="Dataset must contain at least 4 records"):
+        validate_min_records_in_dataset(dataset_adapter)

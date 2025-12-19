@@ -1,24 +1,8 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { FileQuestion, Database, Settings, Check } from 'lucide-react';
-
-interface UseCase {
-  id: string;
-  title: string;
-  description: string;
-  examples: string[];
-  expectedFormat?: {
-    title: string;
-    structure: string;
-  };
-  icon: React.ReactNode;
-  config: {
-    datasetAdapter?: string;
-    metrics?: string;
-    optimizer?: string;
-    model?: string;
-  };
-}
+import { FileQuestion, Database, Settings } from 'lucide-react';
+import { SelectableCard } from '@/components/ui/selectable-card';
+import type { UseCase } from '@/types';
 
 interface UseCaseSelectorProps {
   selectedUseCase?: string;
@@ -105,100 +89,54 @@ export const UseCaseSelector: React.FC<UseCaseSelectorProps> = ({
   return (
     <div className={cn("space-y-4", className)}>
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <h3 className="text-lg font-semibold text-white mb-2">
           Select Your Use Case
         </h3>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-white/60 mb-4">
           Choose the type that best matches your project to get relevant options in the next steps
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {useCases.map((useCase) => (
-          <button
+          <SelectableCard
             key={useCase.id}
+            selected={selectedUseCase === useCase.id}
             onClick={() => onSelectUseCase(useCase.id, useCase.config)}
-            className={cn(
-              "relative p-6 rounded-xl border-2",
-              "text-left transition-all duration-200",
-              "hover:shadow-lg hover:-translate-y-1",
-              selectedUseCase === useCase.id
-                ? "border-facebook-blue bg-facebook-blue/5"
-                : "border-gray-300 bg-white hover:border-gray-400"
-            )}
+            icon={useCase.icon}
+            title={useCase.title}
+            description={useCase.description}
           >
-            {/* Selection indicator */}
-            {selectedUseCase === useCase.id && (
-              <div className="absolute top-3 right-3 w-6 h-6 bg-facebook-blue rounded-full flex items-center justify-center">
-                <Check className="w-4 h-4 text-white" />
-              </div>
-            )}
-
-            {/* Icon */}
-            <div className={cn(
-              "w-12 h-12 rounded-lg flex items-center justify-center mb-4",
-              selectedUseCase === useCase.id
-                ? "bg-facebook-blue text-white"
-                : "bg-gray-100 text-gray-600"
-            )}>
-              {useCase.icon}
-            </div>
-
-            {/* Content */}
-            <h4 className="font-semibold text-gray-900 mb-2">
-              {useCase.title}
-            </h4>
-            <p className="text-sm text-gray-700 mb-3">
-              {useCase.description}
-            </p>
-
             {/* Use case examples */}
             <div className="space-y-1">
-              <p className="text-xs font-medium text-gray-600 mb-2">
+              <p className="text-xs font-medium text-white/50 mb-2">
                 Common applications:
               </p>
               {useCase.examples.slice(0, 4).map((example, index) => (
-                <p key={index} className="text-xs text-gray-700 flex items-center">
-                  <span className="w-1 h-1 bg-facebook-blue rounded-full mr-2 flex-shrink-0"></span>
+                <p key={index} className="text-xs text-white/60 flex items-center">
+                  <span className="w-1 h-1 bg-[#4da3ff] rounded-full mr-2 flex-shrink-0"></span>
                   {example}
                 </p>
               ))}
               {useCase.examples.length > 4 && (
-                <p className="text-xs text-gray-500 italic">
+                <p className="text-xs text-white/40 italic">
                   +{useCase.examples.length - 4} more...
                 </p>
               )}
             </div>
-          </button>
+          </SelectableCard>
         ))}
       </div>
 
       {/* Expected Format Section */}
       {selectedUseCase && useCases.find(uc => uc.id === selectedUseCase)?.expectedFormat && (
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <h4 className="text-sm font-semibold text-gray-900 mb-3">
+        <div className="mt-4 p-4 bg-white/[0.05] rounded-lg border border-white/[0.1]">
+          <h4 className="text-sm font-semibold text-white mb-3">
             {useCases.find(uc => uc.id === selectedUseCase)?.expectedFormat?.title}
           </h4>
-          <pre className="text-xs text-gray-700 bg-white p-3 rounded border overflow-x-auto">
+          <pre className="text-xs text-white/70 bg-white/[0.03] p-3 rounded border border-white/[0.08] overflow-x-auto">
             <code>{useCases.find(uc => uc.id === selectedUseCase)?.expectedFormat?.structure}</code>
           </pre>
-        </div>
-      )}
-
-      {/* Helper text based on selection */}
-      {selectedUseCase && (
-        <div className={cn(
-          "mt-4 p-4 rounded-lg",
-          "bg-blue-50 border border-blue-200"
-        )}>
-          <p className="text-sm">
-            {selectedUseCase === 'custom'
-              ? "You'll configure all settings manually in the following steps based on your specific requirements."
-              : `Perfect! We'll show you the most relevant options for ${
-                  useCases.find(uc => uc.id === selectedUseCase)?.title
-                } applications in the next steps.`
-            }
-          </p>
         </div>
       )}
     </div>

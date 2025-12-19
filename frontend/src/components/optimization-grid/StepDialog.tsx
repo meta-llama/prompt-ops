@@ -76,7 +76,7 @@ export const StepDialog: React.FC<StepDialogProps> = ({
 
         {!hideSaveButton && (
           <div className="flex gap-2 justify-end mt-6 pt-4 border-t">
-            <Button variant="outline" onClick={handleCancel}>
+            <Button variant="outlinedGray" size="medium" onClick={handleCancel}>
               Cancel
             </Button>
             <Button onClick={handleSave}>Save & Close</Button>

@@ -1,3 +1,11 @@
+---
+title: Dataset Adapter Guide
+category: Guides
+description: Configure dataset adapters for different data formats and structures
+order: 11
+icon: file-text
+---
+
 # Dataset Adapter Selection Guide
 
 This guide helps you choose the right dataset adapter for your use case or determine when to create a custom adapter.

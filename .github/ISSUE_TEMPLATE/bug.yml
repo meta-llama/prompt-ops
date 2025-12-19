@@ -1,77 +1,61 @@
 name: 🐛 Bug Report
-description: Create a report to help us reproduce and fix the bug
+description: Report a bug to help us improve prompt-ops
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: >
-        #### Before submitting a bug, please make sure the issue hasn't been already addressed by searching through [the
-        existing and past issues](https://github.com/meta-llama/llama-stack/issues).
-
-  - type: textarea
-    id: system-info
-    attributes:
-      label: System Info
-      description: |
-        Please share your system info with us. You can use the following command to capture your environment information
-        python -m "torch.utils.collect_env"
-
-      placeholder: |
-        PyTorch version, CUDA version, GPU type, #num of GPUs...
-    validations:
-      required: true
-
-  - type: checkboxes
-    id: information-scripts-examples
-    attributes:
-      label: Information
-      description: 'The problem arises when using:'
-      options:
-        - label: "The official example scripts"
-        - label: "My own modified scripts"
+        Thanks for taking the time to report a bug! Please search [existing issues](https://github.com/meta-llama/prompt-ops/issues) first to avoid duplicates.
 
   - type: textarea
     id: bug-description
     attributes:
-      label: 🐛 Describe the bug
-      description: |
-        Please provide a clear and concise description of what the bug is.
-
-        Please also paste or describe the results you observe instead of the expected results.
+      label: What happened?
+      description: A clear description of the bug and what you expected to happen instead.
       placeholder: |
-        A clear and concise description of what the bug is.
+        I was trying to optimize prompts using the facility dataset, but...
 
-        ```llama stack
-        # Command that you used for running the examples
-        ```
-        Description of the results
+        Expected: The optimization should complete successfully
+        Actual: Got an error about missing configuration
     validations:
       required: true
 
   - type: textarea
+    id: reproduction
     attributes:
-      label: Error logs
-      description: |
-       If you observe an error, please paste the error message including the **full** traceback of the exception. It may be relevant to wrap error messages in ```` ```triple quotes blocks``` ````.
-
+      label: How to reproduce
+      description: Steps to reproduce the issue, including any commands or code.
       placeholder: |
-        ```
-        The error message you got, with the full traceback.
-        ```
+        1. Run `prompt-ops optimize --config configs/facility.yaml`
+        2. See error...
 
+        ```bash
+        # Your command here
+        ```
     validations:
       required: true
-
 
   - type: textarea
-    id: expected-behavior
+    id: environment
+    attributes:
+      label: Environment
+      description: Your Python version and any relevant system info.
+      placeholder: |
+        - Python version: 3.9.0
+        - prompt-ops version: 0.0.8
+        - OS: macOS 14.0
     validations:
-      required: true
-    attributes:
-      label: Expected behavior
-      description: "A clear and concise description of what you would expect to happen."
+      required: false
 
-  - type: markdown
+  - type: textarea
+    id: error-logs
     attributes:
-      value: >
-        Thanks for contributing 🎉!
+      label: Error logs (if any)
+      description: Paste any error messages or stack traces.
+      placeholder: |
+        ```
+        Traceback (most recent call last):
+          ...
+        ```
+    validations:
+      required: false

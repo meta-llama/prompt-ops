@@ -13,21 +13,35 @@ from utils import OptimizationManager, load_class_dynamically
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Check for llama-prompt-ops availability
-try:
-    from llama_prompt_ops.core.metrics import DSPyMetricAdapter
-    from llama_prompt_ops.core.migrator import PromptMigrator
-    from llama_prompt_ops.core.model import setup_model
-    from llama_prompt_ops.core.model_strategies import LlamaStrategy
-
-    LLAMA_PROMPT_OPS_AVAILABLE = True
-except ImportError:
-    LLAMA_PROMPT_OPS_AVAILABLE = False
+# Import shared core module with availability checks
+from core import (
+    PROMPT_OPS_AVAILABLE,
+    BasicOptimizationStrategy,
+    DSPyMetricAdapter,
+    PromptMigrator,
+    setup_model,
+)
 
 
 @router.websocket("/ws/optimize/{project_name}")
 async def optimize_with_streaming(websocket: WebSocket, project_name: str):
     """WebSocket endpoint for real-time optimization with streaming logs."""
+    # Check for websockets library availability before accepting connection
+    try:
+        import websockets as ws_lib
+    except ImportError:
+        logger.error("WebSocket library not available - cannot accept connection")
+        # Note: We can't send a proper error before accepting, so we'll accept then close
+        await websocket.accept()
+        await websocket.send_json(
+            {
+                "type": "error",
+                "message": "WebSocket support not available on server. Install with: pip install websockets",
+            }
+        )
+        await websocket.close()
+        return
+
     await websocket.accept()
 
     # Initialize optimization manager
@@ -66,11 +80,9 @@ async def optimize_with_streaming(websocket: WebSocket, project_name: str):
 
         await manager.send_status("Setting up models and dataset...", "setup")
 
-        # Check if llama-prompt-ops is available
-        if not LLAMA_PROMPT_OPS_AVAILABLE:
-            await manager.send_error(
-                "llama-prompt-ops is not available. Please install it."
-            )
+        # Check if prompt-ops is available
+        if not PROMPT_OPS_AVAILABLE:
+            await manager.send_error("prompt-ops is not available. Please install it.")
             return
 
         # Get API key from config or environment
@@ -91,8 +103,10 @@ async def optimize_with_streaming(websocket: WebSocket, project_name: str):
         optimization_config = config_dict.get("optimization", {})
 
         # Setup models
+        # Check for task_model first, then fall back to name, then default
         task_model_name = model_config.get(
-            "task_model", "openrouter/meta-llama/llama-3.3-70b-instruct"
+            "task_model",
+            model_config.get("name", "openrouter/meta-llama/llama-3.3-70b-instruct"),
         )
         proposer_model_name = model_config.get("proposer_model", task_model_name)
 
@@ -120,7 +134,7 @@ async def optimize_with_streaming(websocket: WebSocket, project_name: str):
         await manager.send_progress("metric", 75, "Setting up evaluation metric...")
 
         metric_class_path = metric_config.get(
-            "class", "llama_prompt_ops.core.metrics.ExactMatchMetric"
+            "class", "prompt_ops.core.metrics.ExactMatchMetric"
         )
         metric_cls = load_class_dynamically(metric_class_path)
         metric_params = {k: v for k, v in metric_config.items() if k != "class"}
@@ -134,7 +148,7 @@ async def optimize_with_streaming(websocket: WebSocket, project_name: str):
         await manager.send_progress("dataset", 85, "Loading dataset...")
 
         adapter_class_path = dataset_config.get(
-            "adapter_class", "llama_prompt_ops.core.datasets.ConfigurableJSONAdapter"
+            "adapter_class", "prompt_ops.core.datasets.ConfigurableJSONAdapter"
         )
         adapter_cls = load_class_dynamically(adapter_class_path)
 
@@ -151,7 +165,7 @@ async def optimize_with_streaming(websocket: WebSocket, project_name: str):
             "setup", 95, "Initializing optimization strategy..."
         )
 
-        strategy = LlamaStrategy(
+        strategy = BasicOptimizationStrategy(
             model_name=task_model_name,
             metric=metric,
             auto=optimization_config.get("strategy", "basic"),
@@ -198,7 +212,6 @@ async def optimize_with_streaming(websocket: WebSocket, project_name: str):
             trainset=trainset,
             valset=valset,
             testset=testset,
-            use_llama_tips=optimization_config.get("use_llama_tips", True),
         )
 
         # Extract results

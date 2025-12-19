@@ -1,45 +1,27 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
   Check,
   Settings,
   Zap,
-  Brain,
   Target,
   ChevronDown,
   ChevronUp,
   HelpCircle,
   AlertCircle,
-  Cpu,
   Clock,
   BarChart3,
-  GitBranch,
-  Layers,
   Sparkles,
+  Cpu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-interface OptimizerConfig {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ReactNode;
-  category: "basic" | "advanced" | "experimental";
-  complexity: "low" | "medium" | "high";
-  execution_time: "fast" | "medium" | "slow";
-  optimization_quality: "good" | "better" | "best";
-  features: string[];
-  use_cases: string[];
-  pros: string[];
-  cons: string[];
-  technical_details: string[];
-  parameters: CustomParameters;
-}
+import { SectionTitle } from "@/components/ui/section-title";
+import { getStatusColor, getSpeedColor, getQualityColor } from "@/lib/status-colors";
+import type { OptimizerConfig, CustomParameters } from "@/types";
 
 interface OptimizerSelectorProps {
   selectedOptimizer?: string;
@@ -48,62 +30,36 @@ interface OptimizerSelectorProps {
   useCase?: string;
 }
 
-interface CustomParameters {
-  auto_mode: "basic" | "intermediate" | "advanced";
-  max_bootstrapped_demos: number;
-  max_labeled_demos: number;
-  num_candidates: number;
-  num_threads: number;
-  max_errors: number;
-  seed: number;
-  init_temperature: number;
-  track_stats: boolean;
-  log_dir?: string;
-  metric_threshold?: number;
-  num_trials?: number;
-  minibatch: boolean;
-  minibatch_size: number;
-  minibatch_full_eval_steps: number;
-  program_aware_proposer: boolean;
-  data_aware_proposer: boolean;
-  view_data_batch_size: number;
-  tip_aware_proposer: boolean;
-  fewshot_aware_proposer: boolean;
-  use_llama_tips: boolean;
-}
-
 const OPTIMIZER_CONFIGS: OptimizerConfig[] = [
   {
     id: "basic",
-    name: "Basic Optimization",
-    description: "Fast optimization using DSPy's MIPROv2 with basic auto mode for quick improvements",
+    name: "Standard Optimization",
+    description: "Smart prompt refinement with format improvements and example-based learning",
     icon: <Zap className="w-6 h-6" />,
     category: "basic",
     complexity: "low",
     execution_time: "fast",
     optimization_quality: "good",
     features: [
-      "Format and style adjustments",
-      "Quick optimization rounds",
-      "Lightweight processing",
-      "Good for most use cases"
+      "Format and style refinement",
+      "Example-based learning",
+      "Instruction optimization",
+      "Works with any model"
     ],
     use_cases: [
-      "Quick prompt improvements",
-      "Initial optimization experiments",
-      "Resource-constrained environments",
-      "Simple classification tasks"
+      "General prompt improvement",
+      "Q&A and classification tasks",
+      "RAG applications",
+      "Any LLM workflow"
     ],
     pros: [
       "Fast execution (5-10 minutes)",
-      "Low resource usage",
-      "Good baseline improvements",
+      "Works with all models",
+      "Reliable improvements",
       "Simple to configure"
     ],
     cons: [
-      "Limited restructuring",
-      "May miss complex optimizations",
-      "Basic instruction generation"
+      "May need multiple runs for complex prompts"
     ],
     technical_details: [
       "Uses DSPy MIPROv2 optimizer",
@@ -135,69 +91,6 @@ const OPTIMIZER_CONFIGS: OptimizerConfig[] = [
       use_llama_tips: true
     }
   },
-  {
-    id: "llama",
-    name: "Llama-Optimized Strategy",
-    description: "Advanced Llama-specific optimization with preprocessing and model-aware improvements",
-    icon: <Brain className="w-6 h-6" />,
-    category: "advanced",
-    complexity: "medium",
-    execution_time: "medium",
-    optimization_quality: "better",
-    features: [
-      "Llama-specific formatting",
-      "Model-aware optimization",
-      "Chain of responsibility processing",
-      "Advanced instruction generation"
-    ],
-    use_cases: [
-      "Llama model optimization",
-      "Complex reasoning tasks",
-      "Production deployments",
-      "Quality-focused optimization"
-    ],
-    pros: [
-      "Llama-specific improvements",
-      "Better quality results",
-      "Model-aware processing",
-      "Advanced preprocessing"
-    ],
-    cons: [
-      "Longer execution time",
-      "More complex configuration",
-      "Requires Llama models"
-    ],
-    technical_details: [
-      "Wraps BasicOptimizationStrategy",
-      "Applies Llama-specific preprocessing",
-      "Uses prompt processing chains",
-      "Includes model-specific tips"
-    ],
-    parameters: {
-      auto_mode: "intermediate",
-      max_bootstrapped_demos: 4,
-      max_labeled_demos: 5,
-      num_candidates: 10,
-      num_threads: 18,
-      max_errors: 10,
-      seed: 9,
-      init_temperature: 0.5,
-      track_stats: true,
-      log_dir: undefined,
-      metric_threshold: undefined,
-      num_trials: undefined,
-      minibatch: true,
-      minibatch_size: 25,
-      minibatch_full_eval_steps: 10,
-      program_aware_proposer: true,
-      data_aware_proposer: true,
-      view_data_batch_size: 10,
-      tip_aware_proposer: true,
-      fewshot_aware_proposer: true,
-      use_llama_tips: true
-    }
-  },
-
 ];
 
 export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
@@ -210,12 +103,20 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
   const [showTechnicalConfig, setShowTechnicalConfig] = useState<string | null>(null);
   const [customParameters, setCustomParameters] = useState<Record<string, CustomParameters>>({});
 
+  // Auto-select the basic optimizer on mount if none selected
+  useEffect(() => {
+    if (!selectedOptimizer) {
+      const basicConfig = OPTIMIZER_CONFIGS.find(c => c.id === "basic");
+      if (basicConfig) {
+        onOptimizerChange("basic", basicConfig, basicConfig.parameters);
+      }
+    }
+  }, []);
+
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case "basic":
         return <Zap className="w-4 h-4" />;
-      case "advanced":
-        return <Brain className="w-4 h-4" />;
       case "experimental":
         return <Sparkles className="w-4 h-4" />;
       default:
@@ -226,60 +127,16 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
   const getCategoryColor = (category: string) => {
     switch (category) {
       case "basic":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "advanced":
-        return "bg-blue-100 text-blue-800 border-blue-200";
+        return "bg-green-500/20 text-green-300 border-green-400/30";
       case "experimental":
-        return "bg-purple-100 text-purple-800 border-purple-200";
+        return "bg-purple-500/20 text-purple-300 border-purple-400/30";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
-
-  const getComplexityColor = (complexity: string) => {
-    switch (complexity) {
-      case "low":
-        return "text-green-600";
-      case "medium":
-        return "text-yellow-600";
-      case "high":
-        return "text-red-600";
-      default:
-        return "text-gray-600";
-    }
-  };
-
-  const getExecutionTimeColor = (time: string) => {
-    switch (time) {
-      case "fast":
-        return "text-green-600";
-      case "medium":
-        return "text-yellow-600";
-      case "slow":
-        return "text-red-600";
-      default:
-        return "text-gray-600";
-    }
-  };
-
-  const getQualityColor = (quality: string) => {
-    switch (quality) {
-      case "good":
-        return "text-green-600";
-      case "better":
-        return "text-blue-600";
-      case "best":
-        return "text-purple-600";
-      default:
-        return "text-gray-600";
+        return "bg-white/[0.05] text-white/70 border-white/[0.1]";
     }
   };
 
   const getRecommendedOptimizer = () => {
-    if (useCase === "qa" || useCase === "rag") {
-      return "llama"; // Recommended for Q&A and RAG tasks
-    }
-    return "basic"; // Default recommendation
+    return "basic";
   };
 
   const getEffectiveParameters = (optimizerId: string): CustomParameters => {
@@ -344,30 +201,11 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="text-center mb-6">
-        <h2 className="text-4xl md:text-5xl font-black text-facebook-text mb-4 tracking-tight">
-          Choose Your
-          <br />
-          <span className="bg-gradient-to-r from-facebook-blue via-facebook-blue-light to-facebook-blue-dark bg-clip-text text-transparent">
-            Optimizer
-          </span>
-        </h2>
-        <p className="text-facebook-text/70 text-lg">
-          Select the optimization strategy that best fits your use case and quality requirements
-        </p>
-      </div>
+      <SectionTitle
+        title="Optimization Settings"
+        subtitle="Review the optimizer configuration or expand to customize advanced parameters"
+      />
 
-      {/* Recommendation Alert */}
-      {useCase && (
-        <Alert className="border-facebook-blue/20 bg-facebook-blue/5">
-          <AlertCircle className="h-4 w-4 text-facebook-blue" />
-          <AlertDescription className="text-facebook-text">
-            <strong>Recommendation:</strong> For your <strong>{useCase.toUpperCase()}</strong> use case,
-            we recommend the <strong>{OPTIMIZER_CONFIGS.find(o => o.id === getRecommendedOptimizer())?.name}</strong> optimizer
-            for optimal results.
-          </AlertDescription>
-        </Alert>
-      )}
 
       <div className="grid grid-cols-1 gap-6">
         {OPTIMIZER_CONFIGS.map((optimizer) => {
@@ -380,16 +218,16 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
               key={optimizer.id}
               className={cn(
                 "relative rounded-2xl border-2 transition-all duration-300",
-                "bg-white/90 backdrop-blur-xl shadow-lg",
+                "bg-white/[0.02]",
                 isSelected
-                  ? "border-facebook-blue bg-facebook-blue/5 shadow-facebook-blue/20"
-                  : "border-facebook-border hover:border-facebook-blue/50 hover:shadow-xl"
+                  ? "border-[#4da3ff] bg-[#4da3ff]/10 shadow-[#4da3ff]/20"
+                  : "border-white/[0.1] hover:border-[#4da3ff]/30"
               )}
             >
               {/* Recommended Badge */}
               {isRecommended && (
                 <div className="absolute -top-3 left-6 z-10">
-                  <Badge className="bg-gradient-to-r from-facebook-blue to-facebook-blue-light text-white px-3 py-1 font-semibold">
+                  <Badge variant="accent" className="px-3 py-1">
                     <Target className="w-3 h-3 mr-1" />
                     Recommended
                   </Badge>
@@ -398,7 +236,7 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
 
               {/* Selection indicator */}
               {isSelected && (
-                <div className="absolute top-4 right-4 w-8 h-8 bg-facebook-blue rounded-full flex items-center justify-center shadow-lg">
+                <div className="absolute top-4 right-4 w-8 h-8 bg-[#4da3ff] rounded-full flex items-center justify-center">
                   <Check className="w-5 h-5 text-white" />
                 </div>
               )}
@@ -413,8 +251,8 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
                   <div className={cn(
                     "w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0",
                     isSelected
-                      ? "bg-facebook-blue text-white"
-                      : "bg-facebook-gray text-facebook-text"
+                      ? "bg-[#4da3ff] text-white"
+                      : "bg-white/[0.08] text-white/70"
                   )}>
                     {optimizer.icon}
                   </div>
@@ -423,7 +261,7 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
                   <div className="flex-1 min-w-0">
                     {/* Title and badges */}
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <h3 className="text-xl font-bold text-facebook-text">
+                      <h3 className="text-xl font-bold text-white">
                         {optimizer.name}
                       </h3>
                       <Badge className={cn("text-xs font-medium border", getCategoryColor(optimizer.category))}>
@@ -433,40 +271,40 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
                     </div>
 
                     {/* Description */}
-                    <p className="text-facebook-text/70 mb-4 leading-relaxed">
+                    <p className="text-white/60 mb-4 leading-relaxed">
                       {optimizer.description}
                     </p>
 
                     {/* Quick stats */}
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                       <div className="flex items-center gap-2">
-                        <BarChart3 className="w-4 h-4 text-facebook-text/50" />
+                        <BarChart3 className="w-4 h-4 text-white/30" />
                         <div>
-                          <p className="text-xs text-facebook-text/50 uppercase tracking-wide font-medium">
+                          <p className="text-xs text-white/50 uppercase tracking-wide font-medium">
                             Complexity
                           </p>
-                          <p className={cn("font-semibold capitalize", getComplexityColor(optimizer.complexity))}>
+                          <p className={cn("font-semibold capitalize", getStatusColor(optimizer.complexity))}>
                             {optimizer.complexity}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-facebook-text/50" />
+                        <Clock className="w-4 h-4 text-white/30" />
                         <div>
-                          <p className="text-xs text-facebook-text/50 uppercase tracking-wide font-medium">
+                          <p className="text-xs text-white/50 uppercase tracking-wide font-medium">
                             Speed
                           </p>
-                          <p className={cn("font-semibold capitalize", getExecutionTimeColor(optimizer.execution_time))}>
+                          <p className={cn("font-semibold capitalize", getSpeedColor(optimizer.execution_time))}>
                             {optimizer.execution_time}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <Target className="w-4 h-4 text-facebook-text/50" />
+                        <Target className="w-4 h-4 text-white/30" />
                         <div>
-                          <p className="text-xs text-facebook-text/50 uppercase tracking-wide font-medium">
+                          <p className="text-xs text-white/50 uppercase tracking-wide font-medium">
                             Quality
                           </p>
                           <p className={cn("font-semibold capitalize", getQualityColor(optimizer.optimization_quality))}>
@@ -482,17 +320,22 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
                         <Badge
                           key={index}
                           variant="outline"
-                          className="text-xs bg-facebook-gray/50 border-facebook-border text-facebook-text"
+                          className="text-xs bg-white/[0.05] border-white/[0.1] text-white/60"
                         >
                           {feature}
                         </Badge>
                       ))}
                       {optimizer.features.length > 3 && (
-                        <Badge variant="outline" className="text-xs bg-facebook-gray/50 border-facebook-border text-facebook-text">
+                        <Badge variant="default">
                           +{optimizer.features.length - 3} more
                         </Badge>
                       )}
                     </div>
+
+                    {/* Subtle technical attribution */}
+                    <p className="text-[11px] text-white/30 mt-3">
+                      Built on DSPy MIPROv2
+                    </p>
                   </div>
                 </div>
 
@@ -504,7 +347,7 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
                   <CollapsibleTrigger asChild>
                     <Button
                       variant="ghost"
-                      className="w-full mt-4 flex items-center justify-center gap-2 text-facebook-text/70 hover:text-facebook-text hover:bg-facebook-gray/50"
+                      className="w-full mt-4 flex items-center justify-center gap-2 text-white/60 hover:text-white hover:bg-white/[0.05]"
                     >
                       {isExpanded ? (
                         <>
@@ -520,18 +363,18 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
                     </Button>
                   </CollapsibleTrigger>
 
-                  <CollapsibleContent className="mt-4 pt-4 border-t border-facebook-border">
+                  <CollapsibleContent className="mt-4 pt-4 border-t border-white/[0.1]">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Use Cases */}
                       <div>
-                        <h4 className="font-semibold text-facebook-text mb-2 flex items-center gap-2">
+                        <h4 className="font-semibold text-white mb-2 flex items-center gap-2">
                           <Target className="w-4 h-4" />
                           Best For
                         </h4>
                         <ul className="space-y-1">
                           {optimizer.use_cases.map((useCase, index) => (
-                            <li key={index} className="text-sm text-facebook-text/70 flex items-start gap-2">
-                              <Check className="w-3 h-3 mt-0.5 text-green-500 flex-shrink-0" />
+                            <li key={index} className="text-sm text-white/60 flex items-start gap-2">
+                              <Check className="w-3 h-3 mt-0.5 text-green-400 flex-shrink-0" />
                               {useCase}
                             </li>
                           ))}
@@ -540,28 +383,28 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
 
                       {/* Pros & Cons */}
                       <div>
-                        <h4 className="font-semibold text-facebook-text mb-2 flex items-center gap-2">
+                        <h4 className="font-semibold text-white mb-2 flex items-center gap-2">
                           <BarChart3 className="w-4 h-4" />
                           Trade-offs
                         </h4>
                         <div className="space-y-3">
                           <div>
-                            <p className="text-xs font-medium text-green-600 uppercase tracking-wide mb-1">Advantages</p>
+                            <p className="text-xs font-medium text-green-400 uppercase tracking-wide mb-1">Advantages</p>
                             <ul className="space-y-1">
                               {optimizer.pros.slice(0, 2).map((pro, index) => (
-                                <li key={index} className="text-sm text-facebook-text/70 flex items-start gap-2">
-                                  <Check className="w-3 h-3 mt-0.5 text-green-500 flex-shrink-0" />
+                                <li key={index} className="text-sm text-white/60 flex items-start gap-2">
+                                  <Check className="w-3 h-3 mt-0.5 text-green-400 flex-shrink-0" />
                                   {pro}
                                 </li>
                               ))}
                             </ul>
                           </div>
                           <div>
-                            <p className="text-xs font-medium text-orange-600 uppercase tracking-wide mb-1">Considerations</p>
+                            <p className="text-xs font-medium text-orange-400 uppercase tracking-wide mb-1">Considerations</p>
                             <ul className="space-y-1">
                               {optimizer.cons.slice(0, 2).map((con, index) => (
-                                <li key={index} className="text-sm text-facebook-text/70 flex items-start gap-2">
-                                  <AlertCircle className="w-3 h-3 mt-0.5 text-orange-500 flex-shrink-0" />
+                                <li key={index} className="text-sm text-white/60 flex items-start gap-2">
+                                  <AlertCircle className="w-3 h-3 mt-0.5 text-orange-400 flex-shrink-0" />
                                   {con}
                                 </li>
                               ))}
@@ -572,19 +415,19 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
                     </div>
 
                     {/* Technical Details */}
-                    <div className="mt-6 p-4 bg-facebook-gray/30 rounded-xl">
-                      <h4 className="font-semibold text-facebook-text mb-2 flex items-center gap-2">
+                    <div className="mt-6 p-4 bg-white/[0.03] rounded-xl">
+                      <h4 className="font-semibold text-white mb-2 flex items-center gap-2">
                         <Cpu className="w-4 h-4" />
                         Technical Configuration
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
-                          <p className="text-facebook-text/60"><strong>Auto Mode:</strong> {optimizer.parameters.auto_mode}</p>
-                          <p className="text-facebook-text/60"><strong>Max Demos:</strong> {optimizer.parameters.max_labeled_demos}</p>
+                          <p className="text-white/60"><strong className="text-white">Auto Mode:</strong> {optimizer.parameters.auto_mode}</p>
+                          <p className="text-white/60"><strong className="text-white">Max Demos:</strong> {optimizer.parameters.max_labeled_demos}</p>
                         </div>
                         <div>
-                          <p className="text-facebook-text/60"><strong>Candidates:</strong> {optimizer.parameters.num_candidates}</p>
-                          <p className="text-facebook-text/60"><strong>Threads:</strong> {optimizer.parameters.num_threads}</p>
+                          <p className="text-white/60"><strong className="text-white">Candidates:</strong> {optimizer.parameters.num_candidates}</p>
+                          <p className="text-white/60"><strong className="text-white">Threads:</strong> {optimizer.parameters.num_threads}</p>
                         </div>
                       </div>
                     </div>
@@ -593,15 +436,16 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
 
                 {/* Technical Configuration */}
                 {isSelected && (
-                  <div className="mt-4 pt-4 border-t border-facebook-border">
+                  <div className="mt-4 pt-4 border-t border-white/[0.1]">
                     <Collapsible
                       open={showTechnicalConfig === optimizer.id}
                       onOpenChange={(open) => setShowTechnicalConfig(open ? optimizer.id : null)}
                     >
                       <CollapsibleTrigger asChild>
                         <Button
-                          variant="outline"
-                          className="w-full flex items-center justify-center gap-2 text-facebook-text hover:bg-facebook-blue/5 border-facebook-blue/20"
+                          variant="outlinedGray"
+                          size="medium"
+                          className="w-full"
                         >
                           <Settings className="w-4 h-4" />
                           {showTechnicalConfig === optimizer.id ? (
@@ -619,19 +463,19 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
                       </CollapsibleTrigger>
 
                       <CollapsibleContent className="mt-4">
-                        <div className="bg-facebook-gray/20 rounded-xl p-4">
-                          <h5 className="font-semibold text-facebook-text mb-3 flex items-center gap-2">
+                        <div className="bg-white/[0.03] rounded-xl p-4">
+                          <h5 className="font-semibold text-white mb-3 flex items-center gap-2">
                             <Cpu className="w-4 h-4" />
                             Technical Parameters
                           </h5>
-                          <p className="text-sm text-facebook-text/60 mb-4">
+                          <p className="text-sm text-white/60 mb-4">
                             Customize the optimization parameters. Leave defaults if unsure.
                           </p>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Max Candidates */}
                             <div className="space-y-2">
-                              <Label className="text-sm font-medium text-facebook-text">
+                              <Label className="text-sm font-medium text-white">
                                 Number of Candidates
                               </Label>
                               <Input
@@ -640,14 +484,14 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
                                 max="50"
                                 value={getEffectiveParameters(optimizer.id).num_candidates}
                                 onChange={(e) => updateParameter(optimizer.id, 'num_candidates', parseInt(e.target.value))}
-                                className="border-facebook-border"
+                                className="border-white/[0.1] bg-white/[0.05] text-white focus:border-[#4da3ff]/50 focus:ring-[#4da3ff]/30"
                               />
-                              <p className="text-xs text-facebook-text/50">How many candidate instructions to generate</p>
+                              <p className="text-xs text-white/50">How many candidate instructions to generate</p>
                             </div>
 
                             {/* Max Bootstrapped Demos */}
                             <div className="space-y-2">
-                              <Label className="text-sm font-medium text-facebook-text">
+                              <Label className="text-sm font-medium text-white">
                                 Max Bootstrapped Demos
                               </Label>
                               <Input
@@ -656,14 +500,14 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
                                 max="20"
                                 value={getEffectiveParameters(optimizer.id).max_bootstrapped_demos}
                                 onChange={(e) => updateParameter(optimizer.id, 'max_bootstrapped_demos', parseInt(e.target.value))}
-                                className="border-facebook-border"
+                                className="border-white/[0.1] bg-white/[0.05] text-white focus:border-[#4da3ff]/50 focus:ring-[#4da3ff]/30"
                               />
-                              <p className="text-xs text-facebook-text/50">Examples generated from your data</p>
+                              <p className="text-xs text-white/50">Examples generated from your data</p>
                             </div>
 
                             {/* Max Labeled Demos */}
                             <div className="space-y-2">
-                              <Label className="text-sm font-medium text-facebook-text">
+                              <Label className="text-sm font-medium text-white">
                                 Max Labeled Demos
                               </Label>
                               <Input
@@ -672,14 +516,14 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
                                 max="20"
                                 value={getEffectiveParameters(optimizer.id).max_labeled_demos}
                                 onChange={(e) => updateParameter(optimizer.id, 'max_labeled_demos', parseInt(e.target.value))}
-                                className="border-facebook-border"
+                                className="border-white/[0.1] bg-white/[0.05] text-white focus:border-[#4da3ff]/50 focus:ring-[#4da3ff]/30"
                               />
-                              <p className="text-xs text-facebook-text/50">Labeled examples to include</p>
+                              <p className="text-xs text-white/50">Labeled examples to include</p>
                             </div>
 
                             {/* Num Threads */}
                             <div className="space-y-2">
-                              <Label className="text-sm font-medium text-facebook-text">
+                              <Label className="text-sm font-medium text-white">
                                 Number of Threads
                               </Label>
                               <Input
@@ -688,14 +532,14 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
                                 max="64"
                                 value={getEffectiveParameters(optimizer.id).num_threads}
                                 onChange={(e) => updateParameter(optimizer.id, 'num_threads', parseInt(e.target.value))}
-                                className="border-facebook-border"
+                                className="border-white/[0.1] bg-white/[0.05] text-white focus:border-[#4da3ff]/50 focus:ring-[#4da3ff]/30"
                               />
-                              <p className="text-xs text-facebook-text/50">Parallel processing for faster optimization</p>
+                              <p className="text-xs text-white/50">Parallel processing for faster optimization</p>
                             </div>
 
                             {/* Max Errors */}
                             <div className="space-y-2">
-                              <Label className="text-sm font-medium text-facebook-text">
+                              <Label className="text-sm font-medium text-white">
                                 Max Errors
                               </Label>
                               <Input
@@ -704,14 +548,14 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
                                 max="50"
                                 value={getEffectiveParameters(optimizer.id).max_errors}
                                 onChange={(e) => updateParameter(optimizer.id, 'max_errors', parseInt(e.target.value))}
-                                className="border-facebook-border"
+                                className="border-white/[0.1] bg-white/[0.05] text-white focus:border-[#4da3ff]/50 focus:ring-[#4da3ff]/30"
                               />
-                              <p className="text-xs text-facebook-text/50">How many errors to tolerate during optimization</p>
+                              <p className="text-xs text-white/50">How many errors to tolerate during optimization</p>
                             </div>
 
                             {/* Seed */}
                             <div className="space-y-2">
-                              <Label className="text-sm font-medium text-facebook-text">
+                              <Label className="text-sm font-medium text-white">
                                 Random Seed
                               </Label>
                               <Input
@@ -719,16 +563,16 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
                                 min="0"
                                 value={getEffectiveParameters(optimizer.id).seed}
                                 onChange={(e) => updateParameter(optimizer.id, 'seed', parseInt(e.target.value))}
-                                className="border-facebook-border"
+                                className="border-white/[0.1] bg-white/[0.05] text-white focus:border-[#4da3ff]/50 focus:ring-[#4da3ff]/30"
                               />
-                              <p className="text-xs text-facebook-text/50">For reproducible results</p>
+                              <p className="text-xs text-white/50">For reproducible results</p>
                             </div>
 
 
                           </div>
 
-                          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                            <p className="text-sm text-blue-700">
+                          <div className="mt-4 p-3 bg-blue-500/10 border border-blue-400/30 rounded-lg">
+                            <p className="text-sm text-blue-300">
                               <strong>Note:</strong> These parameters control the core optimization behavior. The defaults work well for most cases.
                               Higher values for candidates and demos generally improve quality but increase execution time.
                             </p>
@@ -745,15 +589,14 @@ export const OptimizerSelector: React.FC<OptimizerSelectorProps> = ({
       </div>
 
       {/* Help section */}
-      <div className="mt-8 p-4 bg-facebook-blue/5 border border-facebook-blue/20 rounded-2xl">
+      <div className="mt-8 p-4 bg-[#4da3ff]/10 border border-[#4da3ff]/20 rounded-2xl">
         <div className="flex items-start gap-3">
-          <HelpCircle className="w-5 h-5 text-facebook-blue mt-0.5 flex-shrink-0" />
+          <HelpCircle className="w-5 h-5 text-[#4da3ff] mt-0.5 flex-shrink-0" />
           <div>
-            <h4 className="font-semibold text-facebook-text mb-1">Need Help Choosing?</h4>
-            <p className="text-sm text-facebook-text/70 leading-relaxed">
-              <strong>Start with Basic</strong> for quick improvements and experimentation.
-              <strong> Use Llama-Optimized</strong> for production Llama deployments and better quality results.
-              Click "Configure Advanced Parameters" on any selected optimizer to customize technical settings.
+            <h4 className="font-semibold text-white mb-1">How It Works</h4>
+            <p className="text-sm text-white/60 leading-relaxed">
+              The optimizer will test variations of your prompt against your dataset and find the version that performs best.
+              Click <strong className="text-white">"Configure Advanced Parameters"</strong> to fine-tune technical settings.
             </p>
           </div>
         </div>

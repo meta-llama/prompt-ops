@@ -9,16 +9,15 @@ from typing import Any, Dict, Optional
 
 from config import (
     DATASET_ADAPTER_MAPPING,
-    ENHANCE_SYSTEM_MESSAGE,
+    ENHANCE_SYSTEM_PROMPT,
+    FAIL_ON_ERROR,
     METRIC_MAPPING,
     MODEL_MAPPING,
-    OPENROUTER_API_KEY,
     STRATEGY_MAPPING,
 )
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from utils import (
-    create_openrouter_client,
     get_uploaded_datasets,
     load_class_dynamically,
 )
@@ -26,17 +25,15 @@ from utils import (
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Check for llama-prompt-ops availability (copy from main.py)
-try:
-    from llama_prompt_ops.core.datasets import ConfigurableJSONAdapter
-    from llama_prompt_ops.core.metrics import DSPyMetricAdapter
-    from llama_prompt_ops.core.migrator import PromptMigrator
-    from llama_prompt_ops.core.model import setup_model
-    from llama_prompt_ops.core.model_strategies import LlamaStrategy
-
-    LLAMA_PROMPT_OPS_AVAILABLE = True
-except ImportError:
-    LLAMA_PROMPT_OPS_AVAILABLE = False
+# Import shared core module with availability checks
+from core import (
+    PROMPT_OPS_AVAILABLE,
+    BasicOptimizationStrategy,
+    ConfigurableJSONAdapter,
+    DSPyMetricAdapter,
+    PromptMigrator,
+    setup_model,
+)
 
 
 # Pydantic models
@@ -49,71 +46,84 @@ class PromptResponse(BaseModel):
     optimizedPrompt: str
 
 
-async def enhance_prompt_with_openrouter(
-    request: PromptRequest, system_message: str, operation_name: str = "processing"
-):
+@router.post("/api/enhance-prompt", response_model=PromptResponse)
+async def enhance_prompt(request: PromptRequest):
     """
-    Shared function to enhance prompts using OpenRouter.
-    """
-    config = request.config or {}
+    Enhance prompt using LiteLLM with automatic provider detection.
 
-    # API key precedence: env > client supplied
-    api_key = OPENROUTER_API_KEY or config.get("openrouterApiKey")
-    if not api_key:
+    LiteLLM detects the provider from the model name and fetches API key from env:
+    - openrouter/* -> OPENROUTER_API_KEY
+    - openai/* -> OPENAI_API_KEY
+    - anthropic/* -> ANTHROPIC_API_KEY
+    - together_ai/* -> TOGETHER_API_KEY
+    """
+    from litellm import completion
+
+    config = request.config or {}
+    model = config.get("model")
+    api_base = config.get("apiBaseUrl")
+
+    # Handle legacy MODEL_MAPPING if friendly name provided
+    if model in MODEL_MAPPING:
+        model = MODEL_MAPPING[model]
+
+    if not model:
         raise HTTPException(
-            status_code=400,
-            detail="OpenRouter API key missing. Supply via UI or set OPENROUTER_API_KEY environment variable.",
+            status_code=400, detail="Model not specified in request config."
         )
 
     try:
-        # Create OpenRouter client with the API key
-        openrouter_client = create_openrouter_client(api_key)
+        import time
 
-        # Use the model from config or default to Llama 3.3 70B
-        model = config.get("model", "meta-llama/llama-3.3-70b-instruct")
-        if model in MODEL_MAPPING:
-            model = MODEL_MAPPING[model]
-
-        response = openrouter_client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": request.prompt},
-            ],
-            temperature=0.7,
+        start_time = time.monotonic()
+        logger.info(
+            f"Enhance - Model: {model}, API Base: {api_base or 'auto-detected'}"
         )
 
+        completion_kwargs = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": ENHANCE_SYSTEM_PROMPT},
+                {"role": "user", "content": request.prompt},
+            ],
+            "temperature": 0.7,
+        }
+        if api_base:
+            completion_kwargs["api_base"] = api_base
+
+        response = completion(**completion_kwargs)
+        logger.info(
+            f"Enhance response received in {time.monotonic() - start_time:.2f} seconds"
+        )
         enhanced_prompt = response.choices[0].message.content.strip()
         return {"optimizedPrompt": enhanced_prompt}
 
     except Exception as e:
-        print(f"Error in {operation_name}: {e}")
-        traceback.print_exc()
-        raise HTTPException(
-            status_code=500, detail=f"Error {operation_name} prompt: {str(e)}"
-        )
-
-
-@router.post("/api/enhance-prompt", response_model=PromptResponse)
-async def enhance_prompt(request: PromptRequest):
-    """Enhance prompt using OpenRouter."""
-    return await enhance_prompt_with_openrouter(
-        request, ENHANCE_SYSTEM_MESSAGE, "enhance"
-    )
+        logger.error(f"Error enhancing prompt: {e}")
+        raise HTTPException(status_code=500, detail=f"Error enhancing prompt: {str(e)}")
 
 
 @router.post("/api/migrate-prompt", response_model=PromptResponse)
 async def migrate_prompt(request: PromptRequest):
-    """Run llama-prompt-ops optimization based on frontend config."""
-    # Check if llama-prompt-ops is available
-    if not LLAMA_PROMPT_OPS_AVAILABLE:
-        # Fall back to OpenRouter for prompt migration
-        return await enhance_prompt_with_openrouter(
-            request, ENHANCE_SYSTEM_MESSAGE, "fallback_migrate"
-        )
+    """Run prompt-ops optimization based on frontend config."""
+    config = request.config or {}
+
+    # Get fail_on_error setting - if True, raise errors instead of falling back
+    # Priority: request config > global env var (FAIL_ON_ERROR)
+    fail_on_error = config.get("failOnError", FAIL_ON_ERROR)
+
+    # Check if prompt-ops is available
+    if not PROMPT_OPS_AVAILABLE:
+        if fail_on_error:
+            raise HTTPException(
+                status_code=500,
+                detail="prompt-ops is not available. Cannot proceed with strict mode enabled.",
+            )
+        else:
+            # Fall back to simple enhancement
+            return await enhance_prompt(request)
 
     try:
-        config = request.config or {}
 
         # API key precedence: env > client supplied
         api_key = os.getenv("OPENROUTER_API_KEY") or config.get("openrouterApiKey")
@@ -126,14 +136,16 @@ async def migrate_prompt(request: PromptRequest):
         # Set the API key in the environment so all components can access it
         if api_key and not os.getenv("OPENROUTER_API_KEY"):
             os.environ["OPENROUTER_API_KEY"] = api_key
-            print("Set OPENROUTER_API_KEY from frontend configuration")
+            logger.info("Set OPENROUTER_API_KEY from frontend configuration")
 
         # Get configuration from request or use defaults
         task_model_name = MODEL_MAPPING.get(
-            config.get("model", "Llama 3.1 8B"), "meta-llama/llama-3.1-8b-instruct"
+            config.get("model", "Llama 3.1 8B"),
+            "openrouter/meta-llama/llama-3.1-8b-instruct",
         )
         proposer_model_name = MODEL_MAPPING.get(
-            config.get("proposer", "Llama 3.1 8B"), "meta-llama/llama-3.1-8b-instruct"
+            config.get("proposer", "Llama 3.1 8B"),
+            "openrouter/meta-llama/llama-3.1-8b-instruct",
         )
         optimization_level = STRATEGY_MAPPING.get(
             config.get("strategy", "Basic"), "basic"
@@ -176,11 +188,16 @@ async def migrate_prompt(request: PromptRequest):
         else:
             metric_name = metrics_config
             metric_cfg = METRIC_MAPPING.get(metric_name)
+            # Apply user customizations for backward-compatible string format too
+            if metric_cfg and metric_name in metric_configurations:
+                user_config = metric_configurations[metric_name]
+                metric_cfg = metric_cfg.copy()
+                metric_cfg["params"] = {**metric_cfg["params"], **user_config}
 
         if not metric_cfg:
             metric_name = "exact_match"
             metric_cfg = {
-                "class": "llama_prompt_ops.core.metrics.ExactMatchMetric",
+                "class": "prompt_ops.core.metrics.ExactMatchMetric",
                 "params": {},
             }
 
@@ -188,6 +205,10 @@ async def migrate_prompt(request: PromptRequest):
         model_configurations = config.get("modelConfigurations", [])
         target_model_config = None
         optimizer_model_config = None
+
+        # Variables to store final model names
+        final_task_model_name = task_model_name
+        final_proposer_model_name = proposer_model_name
 
         if model_configurations:
             for model_config in model_configurations:
@@ -198,26 +219,37 @@ async def migrate_prompt(request: PromptRequest):
                     optimizer_model_config = model_config
 
                 if model_config.get("api_key"):
-                    provider_id = model_config["provider_id"]
+                    provider_id = model_config.get("provider_id")
                     if provider_id == "openrouter":
                         os.environ["OPENROUTER_API_KEY"] = model_config["api_key"]
                     elif provider_id == "together":
                         os.environ["TOGETHER_API_KEY"] = model_config["api_key"]
 
+            # Use custom model configs if provided
             if target_model_config:
-                target_model_name = f"{target_model_config['provider_id']}/{target_model_config['model_name']}"
+                provider_id = target_model_config.get("provider_id")
+                model_name = target_model_config.get("model_name")
+                if provider_id and model_name:
+                    final_task_model_name = f"{provider_id}/{model_name}"
             if optimizer_model_config:
-                optimizer_model_name = f"{optimizer_model_config['provider_id']}/{optimizer_model_config['model_name']}"
+                provider_id = optimizer_model_config.get("provider_id")
+                model_name = optimizer_model_config.get("model_name")
+                if provider_id and model_name:
+                    final_proposer_model_name = f"{provider_id}/{model_name}"
 
         # Instantiate components
         try:
+            # Model names should include provider prefix (e.g., openrouter/meta-llama/...)
+            task_model_full = final_task_model_name
+            proposer_model_full = final_proposer_model_name
+
             task_model = setup_model(
-                model_name=f"openrouter/{task_model_name}",
+                model_name=task_model_full,
                 api_key=api_key,
                 temperature=0.0,
             )
             proposer_model = setup_model(
-                model_name=f"openrouter/{proposer_model_name}",
+                model_name=proposer_model_full,
                 api_key=api_key,
                 temperature=0.7,
             )
@@ -234,12 +266,13 @@ async def migrate_prompt(request: PromptRequest):
             adapter_params = dataset_adapter_cfg.get("params", {}).copy()
             adapter = adapter_cls(dataset_path=dataset_info["path"], **adapter_params)
 
-            strategy = LlamaStrategy(
+            strategy = BasicOptimizationStrategy(
                 model_name=task_model_name,
                 metric=metric,
                 auto=optimization_level,
                 task_model=task_model,
                 prompt_model=proposer_model,
+                fail_on_error=fail_on_error,
             )
 
             migrator = PromptMigrator(
@@ -273,7 +306,6 @@ async def migrate_prompt(request: PromptRequest):
                 trainset=trainset,
                 valset=valset,
                 testset=testset,
-                use_llama_tips=use_llama_tips,
             )
 
             # Extract the optimized prompt
@@ -281,15 +313,19 @@ async def migrate_prompt(request: PromptRequest):
             return {"optimizedPrompt": optimized_prompt}
 
         except Exception as component_error:
-            print(f"Error during llama-prompt-ops component setup: {component_error}")
+            logger.error(f"Error during prompt-ops component setup: {component_error}")
             traceback.print_exc()
-            print("Falling back to OpenRouter for prompt migration")
-            return await enhance_prompt_with_openrouter(
-                request, ENHANCE_SYSTEM_MESSAGE, "fallback_migrate"
-            )
+            if fail_on_error:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Optimization failed: {str(component_error)}",
+                )
+            else:
+                logger.info("Falling back to simple enhancement")
+                return await enhance_prompt(request)
 
     except Exception as exc:
-        print(f"Unexpected error in migrate_prompt: {exc}")
+        logger.error(f"Unexpected error in migrate_prompt: {exc}")
         traceback.print_exc()
         raise HTTPException(
             status_code=500, detail=f"Error migrating prompt: {str(exc)}"

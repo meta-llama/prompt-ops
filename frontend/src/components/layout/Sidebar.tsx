@@ -1,5 +1,5 @@
-import React, { useState, useContext } from 'react';
-import { Play, FileText, Book, Github } from 'lucide-react';
+import { useContext } from 'react';
+import { Play, Book, Github } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AppContext } from '../../context/AppContext';
 
@@ -8,8 +8,8 @@ export const Sidebar = () => {
 
   const navItems = [
     { id: 'playground', label: 'Playground', icon: Play, path: '/', mode: 'migrate' },
-    { id: 'docs', label: 'Docs', icon: Book, mode: 'docs' },
-    { id: 'github', label: 'GitHub', icon: Github, path: 'https://github.com/meta-llama/llama-prompt-ops', external: true },
+    { id: 'docs', label: 'Docs', icon: Book, path: '/docs', mode: 'docs' },
+    { id: 'github', label: 'GitHub', icon: Github, path: 'https://github.com/meta-llama/prompt-ops', external: true },
   ];
 
   const handleNavClick = (item: any) => {
@@ -19,11 +19,16 @@ export const Sidebar = () => {
   };
 
   return (
-    <nav className="relative z-10 w-full px-8 py-6 bg-white/80 backdrop-blur-sm border-b border-facebook-border">
+    <nav className="relative z-10 w-full px-8 py-6 bg-white/[0.03] border-b border-white/[0.08]">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo/Brand */}
         <div className="flex items-center gap-3">
-          <span className="text-facebook-text font-bold text-2xl tracking-tight">llama-prompt-ops</span>
+          <Link
+            to="/"
+            className="text-white font-bold text-2xl tracking-tight hover:text-[#4da3ff] transition-colors duration-200 cursor-pointer"
+          >
+            prompt-ops
+          </Link>
         </div>
 
         {/* Navigation Links */}
@@ -47,7 +52,7 @@ export const Sidebar = () => {
                   href={item.path}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium transition-all duration-200 text-facebook-text/70 hover:text-facebook-blue hover:bg-facebook-gray/50"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium transition-all duration-200 text-white/60 hover:text-[#4da3ff] hover:bg-white/[0.05]"
                 >
                   {navContent}
                 </a>
@@ -62,8 +67,8 @@ export const Sidebar = () => {
                   onClick={() => handleNavClick(item)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium transition-all duration-200 ${
                     isActive
-                      ? 'text-white bg-facebook-blue shadow-sm'
-                      : 'text-facebook-text/70 hover:text-facebook-blue hover:bg-facebook-gray/50'
+                      ? 'text-white bg-[#4da3ff] shadow-sm'
+                      : 'text-white/60 hover:text-[#4da3ff] hover:bg-white/[0.05]'
                   }`}
                 >
                   {navContent}
@@ -77,14 +82,15 @@ export const Sidebar = () => {
                 onClick={() => handleNavClick(item)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium transition-all duration-200 ${
                   isActive
-                    ? 'text-white bg-facebook-blue shadow-sm'
-                    : 'text-facebook-text/70 hover:text-facebook-blue hover:bg-facebook-gray/50'
+                    ? 'text-white bg-[#4da3ff] shadow-sm'
+                    : 'text-white/60 hover:text-[#4da3ff] hover:bg-white/[0.05]'
                 }`}
               >
                 {navContent}
               </button>
             );
           })}
+
         </div>
       </div>
     </nav>
