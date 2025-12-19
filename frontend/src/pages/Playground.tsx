@@ -1,15 +1,12 @@
 import { useContext, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Play, Book, Github, Sun, Moon, Monitor, Lock } from 'lucide-react';
+import { Play, Book, Github, Lock } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
-import { useTheme } from '../context/ThemeContext';
 import { PromptInput } from '../components/optimization/PromptInput';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
 const Playground = () => {
   const { activeMode, setActiveMode, isModeLocked } = useContext(AppContext)!;
-  const { theme, setTheme } = useTheme();
 
   // Set page title and meta description
   useEffect(() => {
@@ -29,33 +26,33 @@ const Playground = () => {
   }, []);
 
   return (
-    <div className="min-h-screen w-full bg-background">
+    <div className="min-h-screen w-full bg-[#0a0c10]">
       {/* Top Navigation */}
-      <nav className="w-full px-8 py-6 bg-panel border-b border-border">
+      <nav className="w-full px-8 py-4 border-b border-white/[0.08]">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Logo */}
           <Link
             to="/"
-            className="text-foreground font-bold text-2xl tracking-tight hover:text-meta-blue transition-colors duration-200"
+            className="text-white font-bold text-xl tracking-tight hover:text-[#4da3ff] transition-colors duration-200"
           >
             prompt-ops
           </Link>
 
           {/* Right Nav */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Link
               to="/playground"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium text-white bg-meta-blue shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-[#0064E0]"
             >
-              <Play size={18} />
+              <Play size={16} />
               <span>Playground</span>
             </Link>
 
             <Link
               to="/docs"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium text-muted-foreground hover:text-meta-blue hover:bg-muted transition-all duration-200"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium glass-nav-link"
             >
-              <Book size={18} />
+              <Book size={16} />
               <span>Docs</span>
             </Link>
 
@@ -63,48 +60,11 @@ const Playground = () => {
               href="https://github.com/meta-llama/prompt-ops"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium text-muted-foreground hover:text-meta-blue hover:bg-muted transition-all duration-200"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium glass-nav-link"
             >
-              <Github size={18} />
+              <Github size={16} />
               <span>GitHub</span>
             </a>
-
-            {/* Theme Toggle */}
-            <div className="flex items-center gap-1 bg-muted p-1 rounded-full border border-border">
-              <button
-                onClick={() => setTheme('light')}
-                className={`p-2 rounded-full transition-colors ${
-                  theme === 'light'
-                    ? 'bg-panel text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-                title="Light mode"
-              >
-                <Sun size={16} />
-              </button>
-              <button
-                onClick={() => setTheme('dark')}
-                className={`p-2 rounded-full transition-colors ${
-                  theme === 'dark'
-                    ? 'bg-panel text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-                title="Dark mode"
-              >
-                <Moon size={16} />
-              </button>
-              <button
-                onClick={() => setTheme('system')}
-                className={`p-2 rounded-full transition-colors ${
-                  theme === 'system'
-                    ? 'bg-panel text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-                title="System preference"
-              >
-                <Monitor size={16} />
-              </button>
-            </div>
           </div>
         </div>
       </nav>
@@ -112,69 +72,54 @@ const Playground = () => {
       {/* Main Content */}
       <div className="px-8 py-12">
         <div className="max-w-5xl mx-auto">
-          {/* Hero Section */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-semibold text-foreground mb-4 tracking-tight">
-              Optimize your prompt
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Use AI-powered strategies to enhance your prompts for better results
-            </p>
-          </div>
-
-          {/* Mode Toggle */}
+          {/* Mode Toggle - Glassmorphism style */}
           <div className="flex justify-center mb-10">
-            <div className="bg-muted p-1 rounded-full border border-border relative">
+            <div className="bg-white/[0.08] backdrop-blur-xl p-1.5 rounded-full border border-white/[0.15] relative shadow-[0_8px_32px_rgba(0,0,0,0.12)] ring-1 ring-white/[0.05] ring-inset">
               <div className="grid grid-cols-2 gap-1 relative">
-                {/* Sliding indicator */}
+                {/* Sliding indicator - frosted glass style */}
                 <div
-                  className={`absolute top-0 bottom-0 rounded-full transition-all duration-300 ease-in-out bg-meta-blue ${
+                  className={`absolute top-0.5 bottom-0.5 rounded-full transition-all duration-300 ease-out bg-white/[0.15] backdrop-blur-md border border-white/[0.2] shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] ${
                     activeMode === 'migrate'
-                      ? 'left-0 right-1/2 mr-0.5'
-                      : 'left-1/2 right-0 ml-0.5'
+                      ? 'left-0.5 right-1/2 mr-0.5'
+                      : 'left-1/2 right-0 mr-0.5'
                   }`}
                 />
 
                 {/* Lock icon when mode is locked */}
                 {isModeLocked && (
-                  <div className="absolute -top-2 -right-2 bg-foreground rounded-full p-1 z-20">
-                    <Lock size={14} className="text-background" />
+                  <div className="absolute -top-2 -right-2 bg-white/90 backdrop-blur-sm rounded-full p-1 z-20 shadow-lg">
+                    <Lock size={14} className="text-[#0a0c10]" />
                   </div>
                 )}
 
-                <Button
+                <button
                   onClick={() => !isModeLocked && setActiveMode('migrate')}
-                  variant="ghost"
                   disabled={isModeLocked}
-                  className={`relative w-full px-8 py-3 text-lg font-medium z-10 transition-colors rounded-full hover:bg-transparent ${
+                  className={`relative w-full px-8 py-2.5 text-sm font-medium z-10 transition-all duration-200 rounded-full ${
                     activeMode === 'migrate'
-                      ? 'text-white hover:text-white dark:text-meta-gray-900 dark:hover:text-meta-gray-900'
-                      : 'text-foreground hover:text-foreground'
+                      ? 'text-white'
+                      : 'text-white/50 hover:text-white/80'
                   } ${isModeLocked ? 'cursor-not-allowed' : ''}`}
                 >
                   Optimize
-                </Button>
+                </button>
 
-                <Button
+                <button
                   onClick={() => !isModeLocked && setActiveMode('enhance')}
-                  variant="ghost"
                   disabled={isModeLocked}
-                  className={`relative w-full px-8 py-3 text-lg font-medium z-10 transition-colors rounded-full hover:bg-transparent ${
+                  className={`relative w-full px-8 py-2.5 text-sm font-medium z-10 transition-all duration-200 rounded-full ${
                     activeMode === 'enhance'
-                      ? 'text-white hover:text-white dark:text-meta-gray-900 dark:hover:text-meta-gray-900'
-                      : 'text-foreground hover:text-foreground'
+                      ? 'text-white'
+                      : 'text-white/50 hover:text-white/80'
                   } ${isModeLocked ? 'cursor-not-allowed' : ''}`}
                 >
                   <div className="flex items-center justify-center gap-2">
                     Enhance
-                    <Badge
-                      variant="warning"
-                      className="bg-meta-orange text-white border-meta-orange"
-                    >
-                      Experimental
-                    </Badge>
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-white/[0.1] text-white/60 border border-white/[0.1]">
+                      Beta
+                    </span>
                   </div>
-                </Button>
+                </button>
               </div>
             </div>
           </div>

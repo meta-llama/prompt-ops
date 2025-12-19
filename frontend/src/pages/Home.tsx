@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Github, Sun, Moon, Monitor, Play, Book, ArrowRight } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
+import { Github, Play, Book, ArrowRight } from 'lucide-react';
 
 // Video files to cycle through (clean, URL-safe naming)
 const videoFiles = [
@@ -15,14 +14,13 @@ const videoFiles = [
 ];
 
 const Home = () => {
-  const { theme, setTheme } = useTheme();
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const preloadRef = useRef<HTMLVideoElement>(null);
 
   // Set page title and meta description
   useEffect(() => {
-    document.title = 'prompt-ops | AI-Powered Prompt Optimization';
+    document.title = 'prompt-ops | Automatic Prompt Optimization';
     
     // Update or create meta description
     let metaDescription = document.querySelector('meta[name="description"]');
@@ -94,7 +92,7 @@ const Home = () => {
           {/* Logo */}
           <Link
             to="/"
-            className="text-white font-bold text-2xl tracking-tight hover:text-meta-blue transition-colors duration-200"
+            className="text-white font-bold text-2xl tracking-tight hover:text-[#4da3ff] transition-colors duration-200"
           >
             prompt-ops
           </Link>
@@ -126,43 +124,6 @@ const Home = () => {
               <Github size={18} />
               <span>GitHub</span>
             </a>
-
-            {/* Theme Toggle */}
-            <div className="flex items-center gap-1 bg-white/10 backdrop-blur-sm p-1 rounded-full border border-white/20">
-              <button
-                onClick={() => setTheme('light')}
-                className={`p-2 rounded-full transition-colors ${
-                  theme === 'light'
-                    ? 'bg-white/20 text-white'
-                    : 'text-white/60 hover:text-white'
-                }`}
-                title="Light mode"
-              >
-                <Sun size={16} />
-              </button>
-              <button
-                onClick={() => setTheme('dark')}
-                className={`p-2 rounded-full transition-colors ${
-                  theme === 'dark'
-                    ? 'bg-white/20 text-white'
-                    : 'text-white/60 hover:text-white'
-                }`}
-                title="Dark mode"
-              >
-                <Moon size={16} />
-              </button>
-              <button
-                onClick={() => setTheme('system')}
-                className={`p-2 rounded-full transition-colors ${
-                  theme === 'system'
-                    ? 'bg-white/20 text-white'
-                    : 'text-white/60 hover:text-white'
-                }`}
-                title="System preference"
-              >
-                <Monitor size={16} />
-              </button>
-            </div>
           </div>
         </div>
       </nav>
@@ -176,7 +137,7 @@ const Home = () => {
 
         {/* Tagline */}
         <p className="mt-6 text-xl md:text-2xl lg:text-3xl text-white/80 font-light tracking-wide animate-fade-in-up-delay-2">
-          AI-powered prompt optimization
+          Your comprehensive prompt optimization toolkit
         </p>
 
         {/* CTA Button */}
@@ -184,7 +145,7 @@ const Home = () => {
           to="/playground"
           className="mt-12 group animate-fade-in-up-delay-3"
         >
-          <div className="flex items-center gap-3 px-8 py-4 bg-meta-blue text-white text-lg font-medium rounded-full hover:bg-meta-blue-hover transition-all duration-300 animate-pulse-glow">
+          <div className="flex items-center gap-3 px-8 py-4 bg-[#0064E0] text-white text-lg font-medium rounded-full hover:bg-[#0052b8] transition-all duration-300 animate-pulse-glow">
             <span>Try it</span>
             <ArrowRight
               size={20}

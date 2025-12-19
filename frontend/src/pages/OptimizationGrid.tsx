@@ -297,7 +297,7 @@ const OptimizationGrid = () => {
           {/* Header */}
           <div className="text-center mb-6">
             <div className="flex items-center justify-center gap-4 mb-4">
-              <h1 className="text-2xl md:text-3xl font-normal text-foreground tracking-tight">
+              <h1 className="text-2xl md:text-3xl font-normal text-white tracking-tight">
                 Optimize your prompt
               </h1>
               {/* Testing Toggle Button */}
@@ -309,31 +309,31 @@ const OptimizationGrid = () => {
                 {isFormValid() ? "Clear All" : "Fill All"}
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-white/60">
               Configure your optimization workflow visually
             </p>
           </div>
 
-          {/* Mode Selector - Matching MainContent style */}
+          {/* Mode Selector - Glassmorphism style */}
           <div className="flex justify-center mb-6">
-            <div className="bg-panel p-1 rounded-xl shadow-lg border border-border relative">
+            <div className="bg-white/[0.08] backdrop-blur-xl p-1.5 rounded-full border border-white/[0.15] relative shadow-[0_8px_32px_rgba(0,0,0,0.12)] ring-1 ring-white/[0.05] ring-inset">
               <div className="grid grid-cols-2 gap-1 relative">
-                {/* Sliding indicator */}
+                {/* Sliding indicator - frosted glass style */}
                 <div
-                  className={`absolute top-0 bottom-0 rounded-lg transition-all duration-300 ease-in-out bg-meta-blue ${
+                  className={`absolute top-0.5 bottom-0.5 rounded-full transition-all duration-300 ease-out bg-white/[0.15] backdrop-blur-md border border-white/[0.2] shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] ${
                     activeMode === "migrate"
-                      ? "left-0 right-1/2 mr-0.5"
-                      : "left-1/2 right-0 ml-0.5"
+                      ? "left-0.5 right-1/2 mr-0.5"
+                      : "left-1/2 right-0 mr-0.5"
                   }`}
                 />
 
                 <Button
                   onClick={() => setActiveMode("migrate")}
                   variant="ghost"
-                  className={`relative w-full px-8 py-3 text-lg font-medium z-10 transition-all duration-300 rounded-lg hover:bg-transparent ${
+                  className={`relative w-full px-8 py-2.5 text-sm font-medium z-10 transition-all duration-200 rounded-full hover:bg-transparent ${
                     activeMode === "migrate"
-                      ? "text-white hover:text-white dark:text-meta-gray-900 dark:hover:text-meta-gray-900"
-                      : "text-foreground hover:text-foreground"
+                      ? "text-white hover:text-white"
+                      : "text-white/50 hover:text-white/80"
                   }`}
                 >
                   Optimize
@@ -342,13 +342,18 @@ const OptimizationGrid = () => {
                 <Button
                   onClick={() => setActiveMode("enhance")}
                   variant="ghost"
-                  className={`relative w-full px-8 py-3 text-lg font-medium z-10 transition-all duration-300 rounded-lg hover:bg-transparent ${
+                  className={`relative w-full px-8 py-2.5 text-sm font-medium z-10 transition-all duration-200 rounded-full hover:bg-transparent ${
                     activeMode === "enhance"
-                      ? "text-white hover:text-white dark:text-meta-gray-900 dark:hover:text-meta-gray-900"
-                      : "text-foreground hover:text-foreground"
+                      ? "text-white hover:text-white"
+                      : "text-white/50 hover:text-white/80"
                   }`}
                 >
-                  Enhance
+                  <div className="flex items-center justify-center gap-2">
+                    Enhance
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-white/[0.1] text-white/60 border border-white/[0.1]">
+                      Beta
+                    </span>
+                  </div>
                 </Button>
               </div>
             </div>
@@ -481,7 +486,7 @@ const OptimizationGrid = () => {
               </Button>
             )}
             {!isFormValid() && (
-              <p className="text-sm text-muted-foreground text-center mt-2">
+              <p className="text-sm text-white/60 text-center mt-2">
                 Complete all required fields to start optimization
               </p>
             )}
