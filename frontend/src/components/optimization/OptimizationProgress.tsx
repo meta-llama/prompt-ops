@@ -10,24 +10,24 @@ interface OptimizationProgressProps {
 
 export const OptimizationProgress: React.FC<OptimizationProgressProps> = ({ steps }) => {
   return (
-    <div className="bg-panel p-6 rounded-2xl border border-border">
+    <div className="glass-panel p-6">
       <div className="space-y-4">
         {steps.map((step) => (
           <div key={step.id} className="flex items-center gap-3">
             {step.completed ? (
-              <div className="w-6 h-6 rounded-full bg-meta-blue flex items-center justify-center">
-                <Check className="text-white dark:text-meta-gray-900" size={16} />
+              <div className="w-6 h-6 rounded-full bg-[#4da3ff] flex items-center justify-center">
+                <Check className="text-white" size={16} />
               </div>
             ) : step.inProgress ? (
-              <div className="w-6 h-6 rounded-full bg-meta-blue flex items-center justify-center animate-pulse">
-                <Hourglass className="text-white dark:text-meta-gray-900" size={16} />
+              <div className="w-6 h-6 rounded-full bg-[#4da3ff] flex items-center justify-center animate-pulse">
+                <Hourglass className="text-white" size={16} />
               </div>
             ) : (
               <div className="w-6 h-6 flex items-center justify-center">
-                <div className="w-3 h-3 bg-muted-foreground/30 rounded-full"></div>
+                <div className="w-3 h-3 bg-white/20 rounded-full"></div>
               </div>
             )}
-            <span className={`${step.completed ? 'text-foreground' : step.inProgress ? 'text-foreground' : 'text-muted-foreground'} font-medium`}>
+            <span className={`${step.completed ? 'text-white' : step.inProgress ? 'text-white' : 'text-white/50'} font-medium`}>
               {step.label}
             </span>
           </div>

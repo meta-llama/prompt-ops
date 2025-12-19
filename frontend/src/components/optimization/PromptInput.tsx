@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -9,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ArrowUp, FileJson, Loader2, Plus, Trash2, Upload, Zap, X, Settings, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
+import { ArrowUp, FileJson, Loader2, Trash2, Upload, X, Settings, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { AppContext } from '../../context/AppContext';
 import { apiUrl } from '@/lib/config';
@@ -40,8 +39,8 @@ export const PromptInput = () => {
     model: 'Llama 3.3 70B',
     proposer: 'Llama 3.3 70B',
     strategy: 'MiPro',
-    datasetAdapter: '',  // Changed from dataset to datasetAdapter
-    metrics: 'Exact Match',  // Added metrics
+    datasetAdapter: '',
+    metrics: 'Exact Match',
     useLlamaTips: true,
     openrouterApiKey: undefined
   });
@@ -49,10 +48,10 @@ export const PromptInput = () => {
   // Enhance mode settings state
   const [showEnhanceSettings, setShowEnhanceSettings] = useState(false);
   const [enhanceSettings, setEnhanceSettings] = useState({
-    apiBaseUrl: '',  // Empty means use backend default
-    apiFormat: 'openai',  // Default to OpenAI-compatible format
-    apiKey: '',  // Empty means use backend default
-    model: '',  // Empty means use backend default
+    apiBaseUrl: '',
+    apiFormat: 'openai',
+    apiKey: '',
+    model: '',
   });
   const [showApiKey, setShowApiKey] = useState(false);
 
@@ -97,7 +96,6 @@ export const PromptInput = () => {
   const handleWizardComplete = (wizardConfig: any) => {
     console.log('Wizard completed with config:', wizardConfig);
 
-    // Extract configuration from wizard and update local config state
     setConfig({
       model: wizardConfig.models?.selected?.[0]?.taskModel || 'Llama 3.3 70B',
       proposer: wizardConfig.models?.selected?.[0]?.proposerModel || 'Llama 3.3 70B',
@@ -121,18 +119,13 @@ export const PromptInput = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Check if there's already an uploaded dataset
     if (uploadedDatasets.length > 0) {
-      // Ask for confirmation before replacing the existing dataset
       if (!window.confirm('You already have an uploaded dataset. Replace it with the new one?')) {
-        // Clear file input
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
         return;
       }
-
-      // Delete the existing dataset
       await handleDatasetDelete(uploadedDatasets[0].filename);
     }
 
@@ -151,11 +144,8 @@ export const PromptInput = () => {
       }
 
       const data = await response.json();
-
-      // Refresh dataset list
       await fetchUploadedDatasets();
 
-      // Clear file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -178,7 +168,6 @@ export const PromptInput = () => {
         throw new Error('Failed to delete dataset');
       }
 
-      // Refresh dataset list
       await fetchUploadedDatasets();
     } catch (error) {
       console.error('Error deleting dataset:', error);
@@ -224,10 +213,8 @@ export const PromptInput = () => {
     setCurrentStep(0);
   };
 
-  // Add ref to store the AbortController
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Cleanup on unmount and handle page close
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (abortControllerRef.current) {
@@ -239,7 +226,6 @@ export const PromptInput = () => {
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      // Also abort on component unmount
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -249,7 +235,6 @@ export const PromptInput = () => {
   const handleOptimizePrompt = async () => {
     if (!prompt.trim() || isOptimizing) return;
 
-    // Check if dataset is uploaded and adapter is selected for migrate mode
     if (activeMode === 'migrate') {
       if (uploadedDatasets.length === 0) {
         alert('Please upload a dataset before optimizing.');
@@ -261,47 +246,21 @@ export const PromptInput = () => {
       }
     }
 
-    // Create new AbortController for this request
     abortControllerRef.current = new AbortController();
 
-    // Lock the mode selection when optimization starts
     setIsModeLocked(true);
     setIsOptimizing(true);
     setShowResults(false);
     setOriginalPrompt(prompt);
     setCurrentStep(0);
 
-    // Simulate the optimization steps with delays
-    const simulateSteps = async () => {
-      // Step 1: Analyzing original prompt
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setCurrentStep(1);
-
-      // Step 2: Processing dataset
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setCurrentStep(2);
-
-      // Step 3: Generating optimized versions
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setCurrentStep(3);
-
-      // Step 4: Evaluating performance
-      await new Promise(resolve => setTimeout(resolve, 1500));
-    };
-
     try {
-      // Start the simulation
-      //await simulateSteps();
-
-      // Connect to FastAPI backend with the appropriate endpoint based on mode
       const endpoint = activeMode === 'enhance' ? 'enhance-prompt' : 'migrate-prompt';
 
-      // Build request body with configuration
       const requestBody = activeMode === 'enhance'
         ? {
             prompt,
             config: {
-              // Only include non-empty enhance settings
               ...(enhanceSettings.apiBaseUrl && { apiBaseUrl: enhanceSettings.apiBaseUrl }),
               ...(enhanceSettings.apiFormat && { apiFormat: enhanceSettings.apiFormat }),
               ...(enhanceSettings.apiKey && { apiKey: enhanceSettings.apiKey }),
@@ -311,7 +270,6 @@ export const PromptInput = () => {
         : {
             prompt,
             config: {
-              // Use config from OnboardingWizard
               provider: "openrouter",
               ...config
             }
@@ -323,7 +281,7 @@ export const PromptInput = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
-        signal: abortControllerRef.current.signal,  // <-- Add the abort signal
+        signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
@@ -332,11 +290,8 @@ export const PromptInput = () => {
 
       const data = await response.json();
       setOptimizedPrompt(data.optimizedPrompt);
-
-      // Show results instead of updating the prompt directly
       setShowResults(true);
     } catch (error) {
-      // Don't show error toast if it was a user-initiated abort
       if (error instanceof Error && error.name === 'AbortError') {
         console.log('Optimization cancelled by user');
         toast({
@@ -354,12 +309,11 @@ export const PromptInput = () => {
     } finally {
       setIsOptimizing(false);
       setCurrentStep(0);
-      setIsModeLocked(false);  // Unlock mode on cancel too
+      setIsModeLocked(false);
       abortControllerRef.current = null;
     }
   };
 
-  // Add a cancel function
   const handleCancelOptimization = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -381,41 +335,40 @@ export const PromptInput = () => {
                 setPrompt('');
                 setOptimizedPrompt('');
                 setShowResults(false);
-                setIsModeLocked(false); // Unlock mode selection when starting new
+                setIsModeLocked(false);
               }}
-              className="bg-white hover:bg-meta-gray-100 text-meta-gray border border-meta-gray-300 px-8 py-3 rounded-full font-medium transition-colors"
+              className="bg-white/[0.05] hover:bg-white/[0.1] text-white border border-white/[0.15] px-8 py-3 rounded-full font-medium transition-colors"
             >
               Start New
             </button>
           </div>
         </div>
       ) : isOptimizing ? (
-        <div className="bg-panel rounded-3xl p-8 border border-border text-center">
-          <h2 className="text-3xl font-bold mb-2 text-foreground">Run Optimization</h2>
-          <p className="text-muted-foreground mb-8">Ready to optimize your prompt for Llama models. This process typically takes 5-10 minutes.</p>
+        <div className="glass-panel p-8 text-center">
+          <h2 className="text-3xl font-bold mb-2 text-white">Run Optimization</h2>
+          <p className="text-white/60 mb-8">Ready to optimize your prompt for Llama models. This process typically takes 5-10 minutes.</p>
 
           <div className="flex justify-center mb-8">
             <div className="w-20 h-20">
               <div className="w-full h-full rounded-full animate-spin"
                 style={{
-                  background: 'conic-gradient(from 0deg, transparent, hsl(var(--meta-blue) / 0) 10%, hsl(var(--meta-blue) / 0.2) 20%, hsl(var(--meta-blue) / 0.4) 30%, hsl(var(--meta-blue) / 0.8) 40%, hsl(var(--meta-blue)) 50%, hsl(var(--meta-blue) / 0) 60%)',
+                  background: 'conic-gradient(from 0deg, transparent, rgba(0, 100, 224, 0) 10%, rgba(0, 100, 224, 0.2) 20%, rgba(0, 100, 224, 0.4) 30%, rgba(0, 100, 224, 0.8) 40%, rgba(0, 100, 224, 1) 50%, rgba(0, 100, 224, 0) 60%)',
                   borderRadius: '50%',
-                  boxShadow: '0 0 20px hsl(var(--meta-blue) / 0.3)'
+                  boxShadow: '0 0 20px rgba(0, 100, 224, 0.3)'
                 }}>
               </div>
             </div>
           </div>
 
-          <h3 className="text-2xl font-semibold mb-2 text-foreground">Optimizing Prompt...</h3>
-          <p className="text-muted-foreground mb-8">This may take several minutes.</p>
+          <h3 className="text-2xl font-semibold mb-2 text-white">Optimizing Prompt...</h3>
+          <p className="text-white/60 mb-8">This may take several minutes.</p>
 
           <OptimizationProgress steps={optimizationSteps} />
 
-          {/* Cancel button */}
           <div className="flex justify-center mt-6">
             <button
               onClick={handleCancelOptimization}
-              className="bg-muted hover:bg-muted/80 text-foreground border border-border px-6 py-2 rounded-full font-medium transition-colors"
+              className="bg-white/[0.05] hover:bg-white/[0.1] text-white border border-white/[0.15] px-6 py-2 rounded-full font-medium transition-colors"
             >
               Cancel
             </button>
@@ -425,14 +378,14 @@ export const PromptInput = () => {
         <>
           {/* Prompt input - only show in enhance mode */}
           {activeMode === 'enhance' && (
-            <div className="relative bg-panel rounded-3xl p-6 md:p-8 border border-border mb-8">
+            <div className="relative glass-panel p-6 md:p-8 mb-8">
               {/* Header */}
               <div className="text-center mb-8 pt-4">
-                <h1 className="text-2xl md:text-3xl font-normal text-foreground mb-4 tracking-tight">
+                <h1 className="text-2xl md:text-3xl font-normal text-white mb-4 tracking-tight">
                   Prompt Enhancement
                 </h1>
-                <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-                  Enter your prompt below and configure the model to use. Click "Enhance Prompt" to improve it with AI assistance.
+                <p className="text-white/60 text-lg max-w-2xl mx-auto">
+                  Get an AI-refined version of your prompt in seconds — no dataset required
                 </p>
               </div>
 
@@ -441,49 +394,49 @@ export const PromptInput = () => {
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Your prompt..."
                 disabled={isOptimizing}
-                className={`w-full h-28 p-4 text-xl text-foreground bg-background placeholder:text-muted-foreground border border-border rounded-xl focus:ring-2 focus:ring-ring focus:border-transparent resize-none leading-relaxed ${isOptimizing ? 'opacity-75' : ''}`}
+                className={`w-full h-28 p-4 text-xl text-white bg-white/[0.05] placeholder:text-white/40 border border-white/[0.1] rounded-xl focus:ring-2 focus:ring-[#0064E0]/50 focus:border-[#0064E0]/50 resize-none leading-relaxed transition-colors ${isOptimizing ? 'opacity-75' : ''}`}
               />
 
-              {/* API Settings panel - always visible, not collapsible */}
-              <div className="mt-4 border-t border-border pt-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+              {/* API Settings panel */}
+              <div className="mt-4 border-t border-white/[0.08] pt-4">
+                <div className="flex items-center gap-2 text-sm text-white/60 mb-4">
                   <Settings size={16} />
                   <span className="font-medium">Model Configuration</span>
                 </div>
 
-                <div className="space-y-4 p-4 bg-muted rounded-lg">
+                <div className="space-y-4 p-4 bg-white/[0.03] rounded-xl border border-white/[0.08]">
                   {/* Model name input - REQUIRED */}
                   <div>
-                    <Label className="text-sm text-foreground/80 mb-1.5">
-                      Model Name <span className="text-red-500 dark:text-red-400">*</span>
+                    <Label className="text-sm text-white/80 mb-1.5">
+                      Model Name <span className="text-red-400">*</span>
                     </Label>
                     <input
                       type="text"
                       value={enhanceSettings.model}
                       onChange={(e) => setEnhanceSettings({ ...enhanceSettings, model: e.target.value })}
                       placeholder="e.g., openrouter/meta-llama/llama-4-maverick"
-                      className="w-full px-3 py-2 text-sm border border-border bg-panel text-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
+                      className="w-full px-3 py-2 text-sm border border-white/[0.1] bg-white/[0.05] text-white placeholder:text-white/40 rounded-lg focus:ring-2 focus:ring-[#0064E0]/50 focus:border-[#0064E0]/50 transition-colors"
                       disabled={isOptimizing}
                       required
                     />
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Use LiteLLM format: <code className="bg-muted px-1 rounded">provider/model-name</code> (e.g., <code className="bg-muted px-1 rounded">openrouter/meta-llama/llama-3.3-70b-instruct</code>)
+                    <div className="text-xs text-white/50 mt-1">
+                      Use LiteLLM format: <code className="bg-white/[0.1] px-1 rounded text-white/70">provider/model-name</code> (e.g., <code className="bg-white/[0.1] px-1 rounded text-white/70">openrouter/meta-llama/llama-3.3-70b-instruct</code>)
                     </div>
                   </div>
 
                   {/* Optional settings divider */}
-                  <div className="border-t border-border pt-4 mt-4">
+                  <div className="border-t border-white/[0.08] pt-4 mt-4">
                     <button
                       onClick={() => setShowEnhanceSettings(!showEnhanceSettings)}
-                      className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors"
                     >
                       {showEnhanceSettings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       <span>Advanced Settings (optional)</span>
                       {(enhanceSettings.apiBaseUrl || enhanceSettings.apiKey) && (
-                        <Badge variant="success" className="ml-2">Configured</Badge>
+                        <Badge className="ml-2 bg-emerald-500/20 text-emerald-300 border-emerald-500/30">Configured</Badge>
                       )}
                     </button>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-white/40 mt-1">
                       Only needed for custom providers that LiteLLM doesn't auto-detect
                     </p>
                   </div>
@@ -492,41 +445,41 @@ export const PromptInput = () => {
                     <div className="space-y-4 pt-2">
                       {/* API Base URL */}
                       <div>
-                        <Label className="text-sm text-foreground/80 mb-1.5">API Base URL</Label>
+                        <Label className="text-sm text-white/80 mb-1.5">API Base URL</Label>
                         <input
                           type="text"
                           value={enhanceSettings.apiBaseUrl}
                           onChange={(e) => setEnhanceSettings({ ...enhanceSettings, apiBaseUrl: e.target.value })}
                           placeholder="e.g., https://api.llama.com/compat/v1"
-                          className="w-full px-3 py-2 text-sm border border-border bg-panel text-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
+                          className="w-full px-3 py-2 text-sm border border-white/[0.1] bg-white/[0.05] text-white placeholder:text-white/40 rounded-lg focus:ring-2 focus:ring-[#0064E0]/50 focus:border-[#0064E0]/50 transition-colors"
                           disabled={isOptimizing}
                         />
-                        <div className="text-xs text-muted-foreground mt-1">
+                        <div className="text-xs text-white/50 mt-1">
                           Override the API endpoint for self-hosted or custom providers
                         </div>
                       </div>
 
                       {/* API Key input */}
                       <div>
-                        <Label className="text-sm text-foreground/80 mb-1.5">API Key</Label>
+                        <Label className="text-sm text-white/80 mb-1.5">API Key</Label>
                         <div className="relative">
                           <input
                             type={showApiKey ? "text" : "password"}
                             value={enhanceSettings.apiKey}
                             onChange={(e) => setEnhanceSettings({ ...enhanceSettings, apiKey: e.target.value })}
                             placeholder="Your API key (if not set in environment)"
-                            className="w-full px-3 py-2 pr-10 text-sm border border-border bg-panel text-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
+                            className="w-full px-3 py-2 pr-10 text-sm border border-white/[0.1] bg-white/[0.05] text-white placeholder:text-white/40 rounded-lg focus:ring-2 focus:ring-[#0064E0]/50 focus:border-[#0064E0]/50 transition-colors"
                             disabled={isOptimizing}
                           />
                           <button
                             type="button"
                             onClick={() => setShowApiKey(!showApiKey)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
                           >
                             {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1">
+                        <div className="text-xs text-white/50 mt-1">
                           Override the API key (usually set via environment variable)
                         </div>
                       </div>
@@ -538,7 +491,7 @@ export const PromptInput = () => {
                             setEnhanceSettings({ ...enhanceSettings, apiBaseUrl: '', apiKey: '' });
                             localStorage.setItem('enhanceSettings', JSON.stringify({ ...enhanceSettings, apiBaseUrl: '', apiKey: '' }));
                           }}
-                          className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 flex items-center gap-1"
+                          className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors"
                         >
                           <X size={14} />
                           Clear advanced settings
@@ -582,33 +535,34 @@ export const PromptInput = () => {
 
           {/* Configuration summary - shown after wizard completion */}
           {activeMode === 'migrate' && wizardCompleted && !showWizard && (
-            <div className="bg-panel rounded-3xl border border-border p-6 max-w-4xl mx-auto">
+            <div className="glass-panel p-6 max-w-4xl mx-auto">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-2xl font-bold text-foreground">Configuration Summary</h3>
+                <h3 className="text-2xl font-bold text-white">Configuration Summary</h3>
                 <Button
                   onClick={() => setShowWizard(true)}
                   variant="outlined"
                   size="medium"
+                  className="border-white/[0.15] text-white hover:bg-white/[0.05]"
                 >
                   Reconfigure
                 </Button>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <span className="font-medium text-muted-foreground">Dataset Adapter:</span>
-                  <p className="text-foreground">{config.datasetAdapter || 'Not selected'}</p>
+                  <span className="font-medium text-white/50">Dataset Adapter:</span>
+                  <p className="text-white">{config.datasetAdapter || 'Not selected'}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Metrics:</span>
-                  <p className="text-foreground">{config.metrics}</p>
+                  <span className="font-medium text-white/50">Metrics:</span>
+                  <p className="text-white">{config.metrics}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Optimizer:</span>
-                  <p className="text-foreground">{config.strategy}</p>
+                  <span className="font-medium text-white/50">Optimizer:</span>
+                  <p className="text-white">{config.strategy}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Model:</span>
-                  <p className="text-foreground">{config.model}</p>
+                  <span className="font-medium text-white/50">Model:</span>
+                  <p className="text-white">{config.model}</p>
                 </div>
               </div>
             </div>
@@ -618,10 +572,10 @@ export const PromptInput = () => {
 
       {/* Dataset Upload Dialog */}
       <Dialog open={showDatasetDialog} onOpenChange={setShowDatasetDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-[#0a0c10] border-white/[0.1]">
           <DialogHeader>
-            <DialogTitle>Manage Dataset</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-white">Manage Dataset</DialogTitle>
+            <DialogDescription className="text-white/60">
               {uploadedDatasets.length > 0
                 ? "View or replace your current dataset."
                 : "Upload a JSON dataset file for optimization."}
@@ -631,14 +585,14 @@ export const PromptInput = () => {
           <div className="space-y-6">
             {/* Current Dataset Section */}
             {uploadedDatasets.length > 0 && (
-              <div className="border border-meta-teal/30 bg-meta-teal/5 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-meta-teal-800 mb-2">Current Dataset</h3>
+              <div className="border border-emerald-500/30 bg-emerald-500/10 rounded-xl p-4">
+                <h3 className="text-lg font-semibold text-emerald-300 mb-2">Current Dataset</h3>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <FileJson className="w-5 h-5 mr-2 text-meta-teal" />
+                    <FileJson className="w-5 h-5 mr-2 text-emerald-400" />
                     <div>
-                      <span className="font-medium text-meta-teal-800">{uploadedDatasets[0].filename}</span>
-                      <span className="text-sm text-meta-teal-800 ml-2">
+                      <span className="font-medium text-white">{uploadedDatasets[0].filename}</span>
+                      <span className="text-sm text-white/60 ml-2">
                         ({uploadedDatasets[0].total_records} records)
                       </span>
                     </div>
@@ -647,6 +601,7 @@ export const PromptInput = () => {
                     size="medium"
                     variant="outlinedDestructive"
                     onClick={() => handleDatasetDelete(uploadedDatasets[0].filename)}
+                    className="border-red-500/30 text-red-400 hover:bg-red-500/10"
                   >
                     <Trash2 className="w-4 h-4 mr-1" />
                     Remove
@@ -656,9 +611,9 @@ export const PromptInput = () => {
                 {/* Dataset Preview */}
                 {uploadedDatasets[0].preview && uploadedDatasets[0].preview.length > 0 && (
                   <div className="mt-4">
-                    <h4 className="text-sm font-semibold text-meta-teal-800 mb-2">Preview:</h4>
-                    <div className="bg-white border border-meta-teal/30 rounded-md p-3 max-h-40 overflow-y-auto">
-                      <pre className="text-xs text-meta-gray whitespace-pre-wrap">
+                    <h4 className="text-sm font-semibold text-white/70 mb-2">Preview:</h4>
+                    <div className="bg-black/40 border border-white/[0.1] rounded-lg p-3 max-h-40 overflow-y-auto">
+                      <pre className="text-xs text-white/70 whitespace-pre-wrap font-mono">
                         {JSON.stringify(uploadedDatasets[0].preview[0], null, 2)}
                       </pre>
                     </div>
@@ -669,7 +624,7 @@ export const PromptInput = () => {
 
             {/* Upload Section */}
             <div>
-              <h3 className="text-lg font-semibold mb-3">
+              <h3 className="text-lg font-semibold text-white mb-3">
                 {uploadedDatasets.length > 0 ? "Replace Dataset" : "Upload Dataset"}
               </h3>
               <div className="flex gap-3">
@@ -685,8 +640,8 @@ export const PromptInput = () => {
                   onClick={() => fileInputRef.current?.click()}
                   className={`w-full ${
                     uploadedDatasets.length > 0
-                      ? "bg-white hover:bg-gray-50 text-gray-700 border border-gray-300"
-                      : "bg-white hover:bg-meta-gray-100 text-meta-gray border-2 border-dashed border-meta-gray-300"
+                      ? "bg-white/[0.05] hover:bg-white/[0.1] text-white border border-white/[0.15]"
+                      : "bg-white/[0.03] hover:bg-white/[0.08] text-white/80 border-2 border-dashed border-white/[0.2]"
                   }`}
                   disabled={isUploadingDataset}
                 >
@@ -703,7 +658,7 @@ export const PromptInput = () => {
                   )}
                 </Button>
               </div>
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-sm text-white/50 mt-2">
                 {uploadedDatasets.length > 0
                   ? "Uploading a new dataset will replace the current one."
                   : "Upload a JSON dataset file for evaluation examples."}
@@ -712,10 +667,10 @@ export const PromptInput = () => {
 
             {/* No Dataset Message */}
             {uploadedDatasets.length === 0 && (
-              <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
-                <FileJson className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+              <div className="text-center py-8 text-white/50 bg-white/[0.03] rounded-xl border border-white/[0.08]">
+                <FileJson className="w-12 h-12 mx-auto mb-3 text-white/20" />
                 <p>No dataset uploaded yet</p>
-                <p className="text-sm mt-1">You need a dataset to optimize prompts</p>
+                <p className="text-sm mt-1 text-white/40">You need a dataset to optimize prompts</p>
               </div>
             )}
           </div>
@@ -724,5 +679,3 @@ export const PromptInput = () => {
     </div>
   );
 };
-
-// Force module reload - 2025-01-06

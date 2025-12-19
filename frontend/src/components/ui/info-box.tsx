@@ -19,29 +19,29 @@ const variantStyles: Record<
 > = {
   info: {
     container:
-      "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800",
-    title: "text-blue-900 dark:text-blue-300",
-    icon: <Info className="w-5 h-5 text-blue-600 dark:text-blue-400" />,
+      "bg-blue-500/10 border-blue-400/30",
+    title: "text-blue-300",
+    icon: <Info className="w-5 h-5 text-blue-400" />,
   },
   warning: {
     container:
-      "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800",
-    title: "text-yellow-900 dark:text-yellow-300",
+      "bg-yellow-500/10 border-yellow-400/30",
+    title: "text-yellow-300",
     icon: (
-      <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+      <AlertTriangle className="w-5 h-5 text-yellow-400" />
     ),
   },
   success: {
     container:
-      "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
-    title: "text-green-900 dark:text-green-300",
-    icon: <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />,
+      "bg-green-500/10 border-green-400/30",
+    title: "text-green-300",
+    icon: <CheckCircle className="w-5 h-5 text-green-400" />,
   },
   error: {
     container:
-      "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800",
-    title: "text-red-900 dark:text-red-300",
-    icon: <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />,
+      "bg-red-500/10 border-red-400/30",
+    title: "text-red-300",
+    icon: <AlertCircle className="w-5 h-5 text-red-400" />,
   },
 };
 
@@ -73,7 +73,7 @@ export const InfoBox: React.FC<InfoBoxProps> = ({
           {title && (
             <h4 className={cn("font-semibold mb-1", styles.title)}>{title}</h4>
           )}
-          <div className="text-sm text-muted-foreground">{children}</div>
+          <div className="text-sm text-white/70">{children}</div>
         </div>
       </div>
     </div>

@@ -89,10 +89,10 @@ export const UseCaseSelector: React.FC<UseCaseSelectorProps> = ({
   return (
     <div className={cn("space-y-4", className)}>
       <div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">
+        <h3 className="text-lg font-semibold text-white mb-2">
           Select Your Use Case
         </h3>
-        <p className="text-sm text-muted-foreground mb-4">
+        <p className="text-sm text-white/60 mb-4">
           Choose the type that best matches your project to get relevant options in the next steps
         </p>
       </div>
@@ -109,17 +109,17 @@ export const UseCaseSelector: React.FC<UseCaseSelectorProps> = ({
           >
             {/* Use case examples */}
             <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground mb-2">
+              <p className="text-xs font-medium text-white/50 mb-2">
                 Common applications:
               </p>
               {useCase.examples.slice(0, 4).map((example, index) => (
-                <p key={index} className="text-xs text-muted-foreground flex items-center">
-                  <span className="w-1 h-1 bg-meta-blue dark:bg-meta-blue-light rounded-full mr-2 flex-shrink-0"></span>
+                <p key={index} className="text-xs text-white/60 flex items-center">
+                  <span className="w-1 h-1 bg-[#4da3ff] rounded-full mr-2 flex-shrink-0"></span>
                   {example}
                 </p>
               ))}
               {useCase.examples.length > 4 && (
-                <p className="text-xs text-muted-foreground/70 italic">
+                <p className="text-xs text-white/40 italic">
                   +{useCase.examples.length - 4} more...
                 </p>
               )}
@@ -130,11 +130,11 @@ export const UseCaseSelector: React.FC<UseCaseSelectorProps> = ({
 
       {/* Expected Format Section */}
       {selectedUseCase && useCases.find(uc => uc.id === selectedUseCase)?.expectedFormat && (
-        <div className="mt-4 p-4 bg-muted rounded-lg border border-border">
-          <h4 className="text-sm font-semibold text-foreground mb-3">
+        <div className="mt-4 p-4 bg-white/[0.05] rounded-lg border border-white/[0.1]">
+          <h4 className="text-sm font-semibold text-white mb-3">
             {useCases.find(uc => uc.id === selectedUseCase)?.expectedFormat?.title}
           </h4>
-          <pre className="text-xs text-muted-foreground bg-card p-3 rounded border border-border overflow-x-auto">
+          <pre className="text-xs text-white/70 bg-white/[0.03] p-3 rounded border border-white/[0.08] overflow-x-auto">
             <code>{useCases.find(uc => uc.id === selectedUseCase)?.expectedFormat?.structure}</code>
           </pre>
         </div>
