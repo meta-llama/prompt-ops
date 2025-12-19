@@ -347,7 +347,7 @@ export const PromptInput = () => {
       ) : isOptimizing ? (
         <div className="glass-panel p-8 text-center">
           <h2 className="text-3xl font-bold mb-2 text-white">Run Optimization</h2>
-          <p className="text-white/60 mb-8">Ready to optimize your prompt for Llama models. This process typically takes 5-10 minutes.</p>
+          <p className="text-white/70 mb-8">Ready to optimize your prompt for Llama models. This process typically takes 5-10 minutes.</p>
 
           <div className="flex justify-center mb-8">
             <div className="w-20 h-20">
@@ -362,7 +362,7 @@ export const PromptInput = () => {
           </div>
 
           <h3 className="text-2xl font-semibold mb-2 text-white">Optimizing Prompt...</h3>
-          <p className="text-white/60 mb-8">This may take several minutes.</p>
+          <p className="text-white/70 mb-8">This may take several minutes.</p>
 
           <OptimizationProgress steps={optimizationSteps} />
 
@@ -385,7 +385,7 @@ export const PromptInput = () => {
                 <h1 className="text-2xl md:text-3xl font-normal text-white mb-4 tracking-tight">
                   Prompt Enhancement
                 </h1>
-                <p className="text-white/60 text-lg max-w-2xl mx-auto">
+                <p className="text-white/70 text-lg max-w-2xl mx-auto">
                   Get an AI-refined version of your prompt in seconds — no dataset required
                 </p>
               </div>
@@ -395,13 +395,14 @@ export const PromptInput = () => {
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Your prompt..."
                 disabled={isOptimizing}
-                className={`w-full h-28 p-4 text-xl text-white bg-white/[0.05] placeholder:text-white/40 border border-white/[0.1] rounded-xl focus:ring-2 focus:ring-[#0064E0]/50 focus:border-[#0064E0]/50 resize-none leading-relaxed transition-colors ${isOptimizing ? 'opacity-75' : ''}`}
+                aria-label="Enter your prompt to enhance"
+                className={`w-full h-28 p-4 text-xl text-white bg-white/[0.05] placeholder:text-white/50 border border-white/[0.1] rounded-xl focus:ring-2 focus:ring-[#0064E0] focus:border-[#0064E0] focus:outline-none resize-none leading-relaxed transition-colors ${isOptimizing ? 'opacity-75' : ''}`}
               />
 
               {/* API Settings panel */}
               <div className="mt-4 border-t border-white/[0.08] pt-4">
-                <div className="flex items-center gap-2 text-sm text-white/60 mb-4">
-                  <Settings size={16} />
+                <div className="flex items-center gap-2 text-sm text-white/70 mb-4">
+                  <Settings size={16} aria-hidden="true" />
                   <span className="font-medium">Model Configuration</span>
                 </div>
 
@@ -416,12 +417,12 @@ export const PromptInput = () => {
                       value={enhanceSettings.model}
                       onChange={(e) => setEnhanceSettings({ ...enhanceSettings, model: e.target.value })}
                       placeholder="e.g., openrouter/meta-llama/llama-4-maverick"
-                      className="w-full px-3 py-2 text-sm border border-white/[0.1] bg-white/[0.05] text-white placeholder:text-white/40 rounded-lg focus:ring-2 focus:ring-[#0064E0]/50 focus:border-[#0064E0]/50 transition-colors"
+                      className="w-full px-3 py-2 text-sm border border-white/[0.1] bg-white/[0.05] text-white placeholder:text-white/50 rounded-lg focus:ring-2 focus:ring-[#0064E0] focus:border-[#0064E0] focus:outline-none transition-colors"
                       disabled={isOptimizing}
                       required
                     />
-                    <div className="text-xs text-white/50 mt-1">
-                      Use LiteLLM format: <code className="bg-white/[0.1] px-1 rounded text-white/70">provider/model-name</code> (e.g., <code className="bg-white/[0.1] px-1 rounded text-white/70">openrouter/meta-llama/llama-3.3-70b-instruct</code>)
+                    <div className="text-xs text-white/70 mt-1">
+                      Use LiteLLM format: <code className="bg-white/[0.1] px-1 rounded text-white/80">provider/model-name</code> (e.g., <code className="bg-white/[0.1] px-1 rounded text-white/80">openrouter/meta-llama/llama-3.3-70b-instruct</code>)
                     </div>
                   </div>
 
@@ -429,7 +430,7 @@ export const PromptInput = () => {
                   <div className="border-t border-white/[0.08] pt-4 mt-4">
                     <button
                       onClick={() => setShowEnhanceSettings(!showEnhanceSettings)}
-                      className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors"
+                      className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0064E0] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0c10] rounded"
                     >
                       {showEnhanceSettings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       <span>Advanced Settings (optional)</span>
@@ -437,7 +438,7 @@ export const PromptInput = () => {
                         <Badge className="ml-2 bg-emerald-500/20 text-emerald-300 border-emerald-500/30">Configured</Badge>
                       )}
                     </button>
-                    <p className="text-xs text-white/40 mt-1">
+                    <p className="text-xs text-white/70 mt-1">
                       Only needed for custom providers that LiteLLM doesn't auto-detect
                     </p>
                   </div>
@@ -452,10 +453,10 @@ export const PromptInput = () => {
                           value={enhanceSettings.apiBaseUrl}
                           onChange={(e) => setEnhanceSettings({ ...enhanceSettings, apiBaseUrl: e.target.value })}
                           placeholder="e.g., https://api.llama.com/compat/v1"
-                          className="w-full px-3 py-2 text-sm border border-white/[0.1] bg-white/[0.05] text-white placeholder:text-white/40 rounded-lg focus:ring-2 focus:ring-[#0064E0]/50 focus:border-[#0064E0]/50 transition-colors"
+                          className="w-full px-3 py-2 text-sm border border-white/[0.1] bg-white/[0.05] text-white placeholder:text-white/50 rounded-lg focus:ring-2 focus:ring-[#0064E0] focus:border-[#0064E0] focus:outline-none transition-colors"
                           disabled={isOptimizing}
                         />
-                        <div className="text-xs text-white/50 mt-1">
+                        <div className="text-xs text-white/70 mt-1">
                           Override the API endpoint for self-hosted or custom providers
                         </div>
                       </div>
@@ -469,18 +470,19 @@ export const PromptInput = () => {
                             value={enhanceSettings.apiKey}
                             onChange={(e) => setEnhanceSettings({ ...enhanceSettings, apiKey: e.target.value })}
                             placeholder="Your API key (if not set in environment)"
-                            className="w-full px-3 py-2 pr-10 text-sm border border-white/[0.1] bg-white/[0.05] text-white placeholder:text-white/40 rounded-lg focus:ring-2 focus:ring-[#0064E0]/50 focus:border-[#0064E0]/50 transition-colors"
+                            className="w-full px-3 py-2 pr-10 text-sm border border-white/[0.1] bg-white/[0.05] text-white placeholder:text-white/50 rounded-lg focus:ring-2 focus:ring-[#0064E0] focus:border-[#0064E0] focus:outline-none transition-colors"
                             disabled={isOptimizing}
                           />
                           <button
                             type="button"
                             onClick={() => setShowApiKey(!showApiKey)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0064E0] rounded"
+                            aria-label={showApiKey ? "Hide API key" : "Show API key"}
                           >
-                            {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                            {showApiKey ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
                           </button>
                         </div>
-                        <div className="text-xs text-white/50 mt-1">
+                        <div className="text-xs text-white/70 mt-1">
                           Override the API key (usually set via environment variable)
                         </div>
                       </div>
@@ -550,19 +552,19 @@ export const PromptInput = () => {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <span className="font-medium text-white/50">Dataset Adapter:</span>
+                  <span className="font-medium text-white/70">Dataset Adapter:</span>
                   <p className="text-white">{config.datasetAdapter || 'Not selected'}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-white/50">Metrics:</span>
+                  <span className="font-medium text-white/70">Metrics:</span>
                   <p className="text-white">{config.metrics}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-white/50">Optimizer:</span>
+                  <span className="font-medium text-white/70">Optimizer:</span>
                   <p className="text-white">{config.strategy}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-white/50">Model:</span>
+                  <span className="font-medium text-white/70">Model:</span>
                   <p className="text-white">{config.model}</p>
                 </div>
               </div>
@@ -576,7 +578,7 @@ export const PromptInput = () => {
         <DialogContent className="max-w-2xl bg-[#0a0c10] border-white/[0.1]">
           <DialogHeader>
             <DialogTitle className="text-white">Manage Dataset</DialogTitle>
-            <DialogDescription className="text-white/60">
+            <DialogDescription className="text-white/70">
               {uploadedDatasets.length > 0
                 ? "View or replace your current dataset."
                 : "Upload a JSON dataset file for optimization."}
@@ -593,7 +595,7 @@ export const PromptInput = () => {
                     <FileJson className="w-5 h-5 mr-2 text-emerald-400" />
                     <div>
                       <span className="font-medium text-white">{uploadedDatasets[0].filename}</span>
-                      <span className="text-sm text-white/60 ml-2">
+                      <span className="text-sm text-white/70 ml-2">
                         ({uploadedDatasets[0].total_records} records)
                       </span>
                     </div>
@@ -659,7 +661,7 @@ export const PromptInput = () => {
                   )}
                 </Button>
               </div>
-              <p className="text-sm text-white/50 mt-2">
+              <p className="text-sm text-white/70 mt-2">
                 {uploadedDatasets.length > 0
                   ? "Uploading a new dataset will replace the current one."
                   : "Upload a JSON dataset file for evaluation examples."}
@@ -668,10 +670,10 @@ export const PromptInput = () => {
 
             {/* No Dataset Message */}
             {uploadedDatasets.length === 0 && (
-              <div className="text-center py-8 text-white/50 bg-white/[0.03] rounded-xl border border-white/[0.08]">
-                <FileJson className="w-12 h-12 mx-auto mb-3 text-white/20" />
+              <div className="text-center py-8 text-white/70 bg-white/[0.03] rounded-xl border border-white/[0.08]">
+                <FileJson className="w-12 h-12 mx-auto mb-3 text-white/30" aria-hidden="true" />
                 <p>No dataset uploaded yet</p>
-                <p className="text-sm mt-1 text-white/40">You need a dataset to optimize prompts</p>
+                <p className="text-sm mt-1 text-white/70">You need a dataset to optimize prompts</p>
               </div>
             )}
           </div>
