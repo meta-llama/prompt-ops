@@ -35,16 +35,15 @@ const DiffView: React.FC<{
   const diffResult = useMemo(() => diffWords(original, optimized), [original, optimized]);
 
   return (
-    <div className="whitespace-pre-wrap text-foreground text-sm leading-relaxed">
+    <div className="whitespace-pre-wrap text-white/80 text-sm leading-relaxed">
       {diffResult.map((part, index) => {
-        // For the "original" side, show removed parts highlighted, skip added parts
         if (showOriginal) {
           if (part.added) return null;
           if (part.removed) {
             return (
               <span
                 key={index}
-                className="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 px-0.5 rounded line-through decoration-red-400"
+                className="bg-red-500/20 text-red-300 px-0.5 rounded line-through decoration-red-400"
               >
                 {part.value}
               </span>
@@ -53,13 +52,12 @@ const DiffView: React.FC<{
           return <span key={index}>{part.value}</span>;
         }
 
-        // For the "optimized" side, show added parts highlighted, skip removed parts
         if (part.removed) return null;
         if (part.added) {
           return (
             <span
               key={index}
-              className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 px-0.5 rounded"
+              className="bg-emerald-500/20 text-emerald-300 px-0.5 rounded"
             >
               {part.value}
             </span>
@@ -102,8 +100,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     metrics: [] as string[],
     metricConfigurations: {} as Record<string, any>,
     modelConfigurations: [] as any[],
-    modelProvider: "Llama 3.1 8B", // Keep for backward compatibility
-    selectedOptimizer: "", // Will be selected by user
+    modelProvider: "Llama 3.1 8B",
+    selectedOptimizer: "",
     optimizerConfig: null as any,
     customOptimizerParams: null as any,
   });
@@ -135,7 +133,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     setProjectCreationResult(null);
 
     try {
-      // Create the project automatically
       const wizardData = {
         prompt: { text: formData.prompt, inputs: ["question"], outputs: ["answer"] },
         useCase: formData.useCase,
@@ -188,7 +185,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   };
 
   const handleComplete = () => {
-    // Start optimization via WebSocket
     startOptimization();
   };
 
@@ -203,7 +199,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     setOptimizationProgress({ phase: "", progress: 0, message: "" });
     setOptimizationResult(null);
 
-    // Create WebSocket connection
     const ws = new WebSocket(wsUrl(`/ws/optimize/${projectCreationResult.actualProjectName}`));
     setWebsocket(ws);
 
@@ -274,7 +269,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     };
   };
 
-  // Cleanup WebSocket on component unmount
   React.useEffect(() => {
     return () => {
       if (websocket) {
@@ -288,7 +282,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Step navigation
   const goToNextStep = () => {
     if (currentStep < WIZARD_STEPS.length - 1) {
       setCurrentStep(currentStep + 1);
@@ -305,25 +298,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     setCurrentStep(stepIndex);
   };
 
-  // Check if current step is valid
   const isCurrentStepValid = () => {
     const stepId = WIZARD_STEPS[currentStep].id;
     const status = getSectionStatus(stepId);
     return status === 'complete';
   };
 
-  // Form validation (all steps)
   const isFormValid = () => {
-    // Check prompt
     if (formData.prompt.trim() === "") return false;
-
-    // Check use case
     if (formData.useCase === "") return false;
-
-    // Check dataset
     if (formData.datasetPath === "") return false;
 
-    // Check field mappings
     if (formData.useCase !== "custom") {
       const requirements =
         formData.useCase === "qa"
@@ -332,10 +317,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       if (!requirements.every((field) => formData.fieldMappings[field])) return false;
     }
 
-    // Check metrics
     if (formData.metrics.length === 0) return false;
 
-    // Check model configurations
     if (formData.modelConfigurations.length === 0) return false;
     const modelsValid = formData.modelConfigurations.every((config) => {
       const hasModel = config.model_name && config.model_name.trim() !== "";
@@ -351,13 +334,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     });
     if (!modelsValid) return false;
 
-    // Check optimizer
     if (formData.selectedOptimizer === "") return false;
 
     return true;
   };
 
-  // Section completion status
   const getSectionStatus = (sectionId: string): 'complete' | 'incomplete' | 'empty' => {
     switch (sectionId) {
       case 'prompt':
@@ -448,12 +429,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   disabled={!isAccessible}
                   className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all ${
                     isComplete
-                      ? "bg-meta-teal border-meta-teal text-white"
+                      ? "bg-emerald-500 border-emerald-500 text-white"
                       : isActive
-                      ? "bg-meta-blue border-meta-blue text-white"
+                      ? "bg-[#0064E0] border-[#0064E0] text-white"
                       : isAccessible
-                      ? "border-border bg-panel text-muted-foreground hover:border-meta-blue/50"
-                      : "border-border bg-muted text-muted-foreground/50 cursor-not-allowed"
+                      ? "border-white/[0.2] bg-white/[0.05] text-white/60 hover:border-[#0064E0]/50"
+                      : "border-white/[0.1] bg-white/[0.02] text-white/30 cursor-not-allowed"
                   }`}
                 >
                   {isComplete ? (
@@ -465,10 +446,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <span
                   className={`mt-2 text-xs text-center ${
                     isActive
-                      ? "text-foreground font-medium"
+                      ? "text-white font-medium"
                       : isComplete
-                      ? "text-meta-teal"
-                      : "text-muted-foreground"
+                      ? "text-emerald-400"
+                      : "text-white/50"
                   }`}
                 >
                   {step.title}
@@ -479,8 +460,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <div
                   className={`h-0.5 flex-1 mx-2 mt-[-32px] transition-colors ${
                     getSectionStatus(WIZARD_STEPS[index + 1].id) === 'complete'
-                      ? "bg-meta-teal"
-                      : "bg-border"
+                      ? "bg-emerald-500"
+                      : "bg-white/[0.1]"
                   }`}
                 />
               )}
@@ -491,13 +472,35 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     </div>
   );
 
+  const getStepSubtext = () => {
+    const stepId = WIZARD_STEPS[currentStep].id;
+    switch (stepId) {
+      case "prompt":
+        return "Automatically test variations and measure what performs best";
+      case "usecase":
+        return "Tell us what your prompt does so we can suggest the right setup";
+      case "dataset":
+        return "Upload test cases with inputs and expected outputs";
+      case "fieldmapping":
+        return "Map your data columns to what the optimizer needs";
+      case "metrics":
+        return "Choose how we should measure success";
+      case "models":
+        return "Pick which AI models to use for testing";
+      case "optimizer":
+        return "Configure how your prompt will be optimized";
+      default:
+        return "";
+    }
+  };
+
   const renderRequirementsHeader = () => (
     <div className="text-center mb-8 pt-4">
-      <h1 className="text-2xl md:text-3xl font-normal text-foreground mb-4 tracking-tight">
-        Prompt Optimization Wizard
+      <h1 className="text-2xl md:text-3xl font-normal text-white mb-4 tracking-tight">
+        Find the best version of your prompt
       </h1>
-      <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-        Step {currentStep + 1} of {WIZARD_STEPS.length}: {WIZARD_STEPS[currentStep].title}
+      <p className="text-white/60 text-lg max-w-2xl mx-auto">
+        {getStepSubtext()}
       </p>
     </div>
   );
@@ -512,24 +515,24 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         collapsed={false}
         onToggle={() => {}}
       >
-        <p className="text-muted-foreground text-sm">
+        <p className="text-white/60 text-sm">
           Enter the prompt you want to optimize. This is the instruction or system prompt that guides AI behavior.
         </p>
 
         <div className="space-y-3">
-          <label className="block text-sm font-medium text-foreground">
+          <label className="block text-sm font-medium text-white">
             Current Prompt
           </label>
           <textarea
             value={formData.prompt}
             onChange={(e) => updateFormData("prompt", e.target.value)}
             placeholder="Enter your prompt here..."
-            className="w-full h-32 p-4 border border-border rounded-xl focus:ring-2 focus:ring-ring focus:border-transparent resize-none bg-panel text-foreground placeholder:text-muted-foreground"
+            className="w-full h-32 p-4 border border-white/[0.1] rounded-xl focus:ring-2 focus:ring-[#0064E0]/50 focus:border-[#0064E0]/50 resize-none bg-white/[0.05] text-white placeholder:text-white/40 transition-colors"
           />
         </div>
 
         <div className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">
+          <p className="text-sm font-medium text-white/60">
             Quick Examples:
           </p>
           <div className="flex flex-wrap gap-2">
@@ -542,7 +545,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               <button
                 key={example}
                 onClick={() => updateFormData("prompt", example)}
-                className="text-xs bg-meta-blue/10 hover:bg-meta-blue/20 text-meta-blue dark:text-meta-blue-light px-3 py-1.5 rounded-full border border-meta-blue/30 dark:border-meta-blue-light/50 transition-colors"
+                className="text-xs bg-[#0064E0]/20 hover:bg-[#0064E0]/30 text-[#4da3ff] px-3 py-1.5 rounded-full border border-[#0064E0]/30 transition-colors"
               >
                 {example}
               </button>
@@ -563,7 +566,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         collapsed={false}
         onToggle={() => {}}
       >
-        <p className="text-muted-foreground text-sm">
+        <p className="text-white/60 text-sm">
           Choose the type that best matches your project to get relevant options for field mapping and metrics.
         </p>
 
@@ -620,7 +623,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             existingMappings={formData.fieldMappings}
           />
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
+          <div className="text-center py-8 text-white/50">
             <ArrowRight className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p>Upload a dataset first to configure field mappings</p>
           </div>
@@ -682,37 +685,21 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     updateFormData("selectedOptimizer", optimizer);
     updateFormData("optimizerConfig", config);
     if (customParams) {
-      // Store custom parameters separately if needed
       updateFormData("customOptimizerParams", customParams);
     }
   };
 
-  // Helper function to get optimizer parameters with fallbacks
   const getOptimizerParameters = () => {
-    // First try to get from saved config
     if (formData.optimizerConfig?.parameters) {
       return formData.optimizerConfig.parameters;
     }
 
-    // Fallback to default parameters based on selected optimizer
-    const defaultParams = {
-      basic: {
-        num_candidates: 10,
-        num_threads: 18,
-        max_labeled_demos: 5,
-        auto_mode: "basic"
-      },
-      llama: {
-        num_candidates: 10,
-        num_threads: 18,
-        max_labeled_demos: 5,
-        auto_mode: "intermediate"
-      }
+    return {
+      num_candidates: 10,
+      num_threads: 18,
+      max_labeled_demos: 5,
+      auto_mode: "basic"
     };
-
-    // Return parameters based on selected optimizer, fallback to basic if none selected
-    const selectedOptimizer = formData.selectedOptimizer || "basic";
-    return defaultParams[selectedOptimizer as keyof typeof defaultParams] || defaultParams.basic;
   };
 
   const renderOptimizerSection = () => (
@@ -735,7 +722,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     </div>
   );
 
-  // Render current step content
   const renderCurrentStep = () => {
     const stepId = WIZARD_STEPS[currentStep].id;
     switch (stepId) {
@@ -761,7 +747,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   return (
     <div className="w-full">
       {/* Main Form Container */}
-      <div className="bg-panel rounded-3xl border border-border p-6 md:p-8">
+      <div className="glass-panel p-6 md:p-8">
         {/* Header */}
         {renderRequirementsHeader()}
 
@@ -774,12 +760,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         </div>
 
         {/* Step Navigation */}
-        <div className="flex justify-between items-center mb-8 pt-6 border-t border-border">
+        <div className="flex justify-between items-center mb-8 pt-6 border-t border-white/[0.08]">
           {currentStep > 0 ? (
             <Button
               onClick={goToPreviousStep}
               variant="outlined"
               size="medium"
+              className="border-white/[0.15] text-white hover:bg-white/[0.05]"
             >
               <ChevronLeft className="w-5 h-5" />
               Previous
@@ -788,7 +775,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             <div />
           )}
 
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-white/50">
             Step {currentStep + 1} of {WIZARD_STEPS.length}
           </div>
 
@@ -837,43 +824,43 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           {projectCreationResult && (
             <div className={`mb-6 p-4 rounded-xl border ${
               projectCreationResult.success
-                ? 'bg-meta-teal/5 border-meta-teal/30'
-                : 'bg-red-500/5 border-red-500/30 dark:bg-red-400/5 dark:border-red-400/30'
+                ? 'bg-emerald-500/10 border-emerald-500/30'
+                : 'bg-red-500/10 border-red-500/30'
             }`}>
               <div className="flex items-center space-x-3 mb-3">
                 {projectCreationResult.success ? (
-                  <CheckCircle className="w-6 h-6 text-meta-teal" />
+                  <CheckCircle className="w-6 h-6 text-emerald-400" />
                 ) : (
-                  <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+                  <AlertCircle className="w-6 h-6 text-red-400" />
                 )}
-                <h3 className="font-bold text-lg text-foreground">
+                <h3 className="font-bold text-lg text-white">
                   {projectCreationResult.success ? 'Project Created Successfully!' : 'Project Creation Failed'}
                 </h3>
               </div>
 
               {projectCreationResult.success ? (
                 <div className="space-y-3">
-                  <p className="text-meta-teal">{projectCreationResult.message}</p>
+                  <p className="text-emerald-300">{projectCreationResult.message}</p>
 
                   {projectCreationResult.actualProjectName !== projectCreationResult.requestedProjectName && (
-                    <div className="bg-meta-blue/5 p-3 rounded border border-meta-blue/30">
-                      <p className="text-sm font-medium text-meta-blue mb-1">Project Name Updated:</p>
-                      <p className="text-sm text-meta-blue/80">
+                    <div className="bg-[#0064E0]/10 p-3 rounded border border-[#0064E0]/30">
+                      <p className="text-sm font-medium text-[#4da3ff] mb-1">Project Name Updated:</p>
+                      <p className="text-sm text-[#4da3ff]/80">
                         A project with the name "{projectCreationResult.requestedProjectName}" already existed,
                         so your project was created as "{projectCreationResult.actualProjectName}" instead.
                       </p>
                     </div>
                   )}
 
-                  <div className="bg-panel p-3 rounded border border-border">
-                    <p className="text-sm font-medium text-foreground mb-1">Project Location:</p>
-                    <p className="text-sm font-mono text-muted-foreground bg-muted p-2 rounded">
+                  <div className="bg-white/[0.05] p-3 rounded border border-white/[0.1]">
+                    <p className="text-sm font-medium text-white mb-1">Project Location:</p>
+                    <p className="text-sm font-mono text-white/60 bg-black/30 p-2 rounded">
                       {projectCreationResult.projectPath}
                     </p>
                   </div>
                 </div>
               ) : (
-                <p className="text-red-600 dark:text-red-400">{projectCreationResult.error}</p>
+                <p className="text-red-400">{projectCreationResult.error}</p>
               )}
             </div>
           )}
@@ -896,42 +883,42 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           {optimizing && (
             <div className="mb-6 space-y-4">
               <div className="text-center">
-                <h3 className="text-xl font-bold text-foreground mb-2">
-                  🚀 Optimizing Your Prompt...
+                <h3 className="text-xl font-bold text-white mb-2">
+                  Optimizing Your Prompt...
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-white/60">
                   This may take a few minutes. Real-time progress is shown below.
                 </p>
               </div>
 
               {/* Progress Bar */}
-              <div className="bg-panel p-4 rounded-xl border border-border shadow-sm">
+              <div className="bg-white/[0.05] p-4 rounded-xl border border-white/[0.1]">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-foreground">
+                  <span className="text-sm font-medium text-white">
                     {optimizationProgress.phase || "Initializing..."}
                   </span>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm text-white/60">
                     {Math.round(optimizationProgress.progress)}%
                   </span>
                 </div>
-                <div className="w-full bg-muted rounded-full h-2">
+                <div className="w-full bg-white/[0.1] rounded-full h-2">
                   <div
-                    className="bg-meta-blue h-2 rounded-full transition-all duration-300"
+                    className="bg-[#0064E0] h-2 rounded-full transition-all duration-300"
                     style={{ width: `${optimizationProgress.progress}%` }}
                   ></div>
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="text-sm text-white/50 mt-2">
                   {optimizationProgress.message}
                 </p>
               </div>
 
               {/* Live Logs */}
-              <div className="bg-gray-900 rounded-xl p-4 max-h-64 overflow-y-auto">
+              <div className="bg-black/40 rounded-xl p-4 max-h-64 overflow-y-auto border border-white/[0.1]">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-white font-medium">Live Optimization Logs</h4>
                   <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-meta-teal rounded-full animate-pulse"></div>
-                    <span className="text-meta-teal text-sm">Live</span>
+                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                    <span className="text-emerald-400 text-sm">Live</span>
                   </div>
                 </div>
                 <div className="space-y-1 font-mono text-sm">
@@ -945,14 +932,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                           ? "text-yellow-400"
                           : log.level === "INFO"
                           ? "text-blue-400"
-                          : "text-gray-300"
+                          : "text-white/60"
                       }`}
                     >
                       {log.message}
                     </div>
                   ))}
                   {optimizationLogs.length === 0 && (
-                    <div className="text-gray-500 italic">Waiting for logs...</div>
+                    <div className="text-white/40 italic">Waiting for logs...</div>
                   )}
                 </div>
               </div>
@@ -963,10 +950,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           {optimizationResult && (
             <div className="mb-6">
               {optimizationResult.success ? (
-                <div className="bg-meta-teal/5 border border-meta-teal/30 rounded-xl p-6">
+                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6">
                   <div className="flex items-center space-x-3 mb-4">
-                    <CheckCircle className="w-8 h-8 text-meta-teal" />
-                    <h3 className="text-xl font-bold text-meta-teal-800">
+                    <CheckCircle className="w-8 h-8 text-emerald-400" />
+                    <h3 className="text-xl font-bold text-emerald-300">
                       🎉 {optimizationResult.message || "Optimization Complete!"}
                     </h3>
                   </div>
@@ -976,11 +963,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                        <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                        <span className="text-sm font-semibold text-white/60 uppercase tracking-wide">
                           Original
                         </span>
                       </div>
-                      <div className="flex-1 border border-border bg-panel rounded-xl p-4 max-h-64 overflow-y-auto">
+                      <div className="flex-1 border border-white/[0.1] bg-white/[0.03] rounded-xl p-4 max-h-64 overflow-y-auto">
                         <DiffView
                           original={optimizationResult.originalPrompt || ""}
                           optimized={optimizationResult.optimizedPrompt || ""}
@@ -993,11 +980,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
-                        <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                        <span className="text-sm font-semibold text-white/60 uppercase tracking-wide">
                           Optimized
                         </span>
                       </div>
-                      <div className="flex-1 border border-border bg-panel rounded-xl p-4 max-h-64 overflow-y-auto">
+                      <div className="flex-1 border border-white/[0.1] bg-white/[0.03] rounded-xl p-4 max-h-64 overflow-y-auto">
                         <DiffView
                           original={optimizationResult.originalPrompt || ""}
                           optimized={optimizationResult.optimizedPrompt || ""}
@@ -1032,6 +1019,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   }}
                   variant="outlined"
                   size="medium"
+                  className="border-white/[0.15] text-white hover:bg-white/[0.05]"
                 >
                   Start New Optimization
                 </Button>

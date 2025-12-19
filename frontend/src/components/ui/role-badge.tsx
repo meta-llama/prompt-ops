@@ -127,7 +127,7 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({
       </button>
 
       {showDropdown && hasDropdownOptions && (
-        <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-xl z-50 min-w-40 shadow-lg">
+        <div className="absolute top-full left-0 mt-1 bg-[#0d1117] border border-white/[0.1] rounded-xl z-50 min-w-40 shadow-lg">
           <div className="py-1">
             {availableRoles.map((availableRole) => {
               const roleConf = roleConfig[availableRole];
@@ -138,7 +138,7 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({
                     onRoleChange?.(availableRole);
                     setShowDropdown(false);
                   }}
-                  className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors first:rounded-t-lg last:rounded-b-lg"
+                  className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-white hover:bg-white/[0.08] transition-colors first:rounded-t-lg last:rounded-b-lg"
                 >
                   {roleConf.icon}
                   <span>{roleConf.label}</span>

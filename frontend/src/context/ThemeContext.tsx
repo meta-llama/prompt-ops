@@ -1,52 +1,29 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, ReactNode } from 'react';
 
-type Theme = 'light' | 'dark' | 'system';
+// Dark-only theme - no light mode support
+type Theme = 'dark';
 
 interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
-  resolvedTheme: 'light' | 'dark';
+  resolvedTheme: 'dark';
 }
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('theme') as Theme) || 'system';
-    }
-    return 'system';
-  });
+  // Always dark mode
+  const theme: Theme = 'dark';
+  const resolvedTheme: 'dark' = 'dark';
 
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
-
+  // Always apply dark class on mount
   useEffect(() => {
     const root = document.documentElement;
+    root.classList.add('dark');
+  }, []);
 
-    const applyTheme = (isDark: boolean) => {
-      root.classList.toggle('dark', isDark);
-      setResolvedTheme(isDark ? 'dark' : 'light');
-    };
-
-    if (theme === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      applyTheme(mediaQuery.matches);
-
-      // Listen for system preference changes
-      const handler = (e: MediaQueryListEvent) => applyTheme(e.matches);
-      mediaQuery.addEventListener('change', handler);
-      return () => mediaQuery.removeEventListener('change', handler);
-    } else {
-      applyTheme(theme === 'dark');
-    }
-
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  // Save theme to localStorage when it changes
-  useEffect(() => {
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+  // setTheme is a no-op in dark-only mode
+  const setTheme = () => {};
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
