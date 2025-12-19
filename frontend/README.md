@@ -59,28 +59,25 @@ A modern React frontend interface for [prompt-ops](https://github.com/meta-llama
 
 ### Running the Application
 
-#### Option 1: Use the Development Script (Recommended)
+You'll need **two terminal windows** - one for the backend and one for the frontend.
+
+**Terminal 1 - Backend:**
 ```bash
-# From the frontend directory
-chmod +x start-dev.sh
-./start-dev.sh
+cd frontend/backend
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+uvicorn main:app --reload --port 8001
 ```
 
-#### Option 2: Manual Start
+**Terminal 2 - Frontend:**
 ```bash
-# Terminal 1: Start backend
-cd backend
-source venv/bin/activate
-python -m uvicorn main:app --reload --port 8000
-
-# Terminal 2: Start frontend
-cd ..
+cd frontend
 npm run dev
 ```
 
 The application will be available at:
 - **Frontend**: http://localhost:8080
 - **Backend API**: http://localhost:8001
+- **API Docs**: http://localhost:8001/docs
 
 ### First Run
 
@@ -110,12 +107,12 @@ Upload JSON files in this format:
 ### Common Issues
 
 **Backend won't start:**
-- Ensure you've activated the virtual environment
+- Ensure you've activated the virtual environment: `source venv/bin/activate`
 - Check that all requirements are installed: `pip install -r requirements.txt`
 - Verify your API keys are set in the `.env` file
 
 **Frontend can't connect to backend:**
-- Make sure the backend is running on port 8000
+- Make sure the backend is running on port 8001
 - Check browser console for CORS errors
 - Verify the backend URL in the frontend code
 
@@ -150,10 +147,10 @@ npm run lint
 
 ```bash
 # Start with auto-reload
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8001
 
 # Run with debug logging
-uvicorn main:app --reload --port 8000 --log-level debug
+uvicorn main:app --reload --port 8001 --log-level debug
 ```
 
 ## Project Structure
@@ -173,8 +170,7 @@ frontend/
 │   ├── context/           # React context
 │   ├── hooks/             # Custom hooks
 │   └── pages/             # Page components
-├── package.json
-└── start-dev.sh           # Development startup script
+└── package.json
 ```
 
 ## Contributing

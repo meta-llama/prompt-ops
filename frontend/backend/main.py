@@ -207,6 +207,11 @@ async def get_settings():
         "defaultValSize": DEFAULT_VAL_SIZE,
         "hasOpenRouterKey": bool(os.getenv("OPENROUTER_API_KEY")),
         "hasTogetherKey": bool(os.getenv("TOGETHER_API_KEY")),
+        # Return actual API keys for prefilling (local dev tool, keys stay local)
+        "apiKeys": {
+            "openrouter": os.getenv("OPENROUTER_API_KEY", ""),
+            "together": os.getenv("TOGETHER_API_KEY", ""),
+        },
     }
 
 

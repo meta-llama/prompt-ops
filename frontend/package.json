@@ -12,8 +12,6 @@
     "preview": "vite preview",
     "check-deps": "node check-deps.js",
     "setup": "npm install && cd backend && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt",
-    "start": "chmod +x start-dev.sh && ./start-dev.sh",
-    "backend": "cd backend && source venv/bin/activate && python main.py",
     "clean": "rm -rf node_modules backend/venv backend/uploaded_datasets/* && npm cache clean --force"
   },
   "dependencies": {
