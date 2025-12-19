@@ -44,7 +44,7 @@ export const DatasetUploader: React.FC<DatasetUploaderProps> = ({
 
   return (
     <div className={cn("space-y-4", className)}>
-      <p className="text-muted-foreground text-sm">
+      <p className="text-white/60 text-sm">
         Upload a JSON file containing your evaluation examples.
       </p>
 
@@ -54,27 +54,27 @@ export const DatasetUploader: React.FC<DatasetUploaderProps> = ({
         className={cn(
           "border-2 border-dashed rounded-xl p-8 text-center transition-colors",
           datasetPath
-            ? "border-meta-teal bg-meta-teal/5"
+            ? "border-meta-teal bg-meta-teal/10"
             : error
-            ? "border-red-500 bg-red-500/5 dark:border-red-400 dark:bg-red-400/5"
-            : "border-border bg-panel hover:border-meta-blue cursor-pointer"
+            ? "border-red-400 bg-red-400/10"
+            : "border-white/[0.15] bg-white/[0.03] hover:border-[#4da3ff] cursor-pointer"
         )}
       >
         {loading ? (
           <div className="space-y-3">
-            <div className="w-12 h-12 bg-meta-blue/10 rounded-full flex items-center justify-center mx-auto">
-              <div className="w-6 h-6 border-2 border-meta-blue border-t-transparent rounded-full animate-spin" />
+            <div className="w-12 h-12 bg-[#4da3ff]/20 rounded-full flex items-center justify-center mx-auto">
+              <div className="w-6 h-6 border-2 border-[#4da3ff] border-t-transparent rounded-full animate-spin" />
             </div>
-            <p className="text-foreground">Uploading dataset...</p>
+            <p className="text-white">Uploading dataset...</p>
           </div>
         ) : datasetPath ? (
           <div className="space-y-3">
-            <div className="w-12 h-12 bg-meta-teal/10 rounded-full flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 bg-meta-teal/20 rounded-full flex items-center justify-center mx-auto">
               <CheckCircle className="w-6 h-6 text-meta-teal" />
             </div>
             <div>
-              <p className="font-semibold text-foreground">{datasetPath}</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="font-semibold text-white">{datasetPath}</p>
+              <p className="text-sm text-white/60">
                 {uploadedFile ? (uploadedFile.size / 1024).toFixed(2) : "0"} KB
               </p>
             </div>
@@ -83,7 +83,7 @@ export const DatasetUploader: React.FC<DatasetUploaderProps> = ({
                 e.stopPropagation();
                 onRemove();
               }}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 mx-auto"
+              className="text-sm text-white/60 hover:text-white transition-colors flex items-center gap-2 mx-auto"
             >
               <Trash2 className="w-4 h-4" />
               Remove file
@@ -91,12 +91,12 @@ export const DatasetUploader: React.FC<DatasetUploaderProps> = ({
           </div>
         ) : (
           <div className="space-y-3">
-            <Database className="w-10 h-10 text-muted-foreground/50 mx-auto" />
+            <Database className="w-10 h-10 text-white/30 mx-auto" />
             <div>
-              <span className="text-meta-blue font-semibold">
+              <span className="text-[#4da3ff] font-semibold">
                 Click to upload
               </span>
-              <span className="text-muted-foreground"> or drag and drop</span>
+              <span className="text-white/60"> or drag and drop</span>
               <input
                 ref={fileInputRef}
                 id="dataset-upload"
@@ -106,11 +106,11 @@ export const DatasetUploader: React.FC<DatasetUploaderProps> = ({
                 onChange={handleFileChange}
               />
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-white/50">
               JSON files only, max 10MB
             </p>
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400 p-2 rounded">
+              <p className="text-sm text-red-400 bg-red-400/10 p-2 rounded">
                 {error}
               </p>
             )}
@@ -120,11 +120,11 @@ export const DatasetUploader: React.FC<DatasetUploaderProps> = ({
 
       {/* Dataset format helper */}
       {useCase && useCase !== "custom" && (
-        <div className="bg-meta-blue/5 border border-meta-blue/20 rounded-xl p-4">
-          <p className="text-xs font-semibold text-foreground mb-2">
+        <div className="bg-[#4da3ff]/10 border border-[#4da3ff]/20 rounded-xl p-4">
+          <p className="text-xs font-semibold text-white mb-2">
             Expected format for {useCase.toUpperCase()}:
           </p>
-          <pre className="text-xs bg-panel p-3 rounded-lg border border-border overflow-x-auto text-muted-foreground">
+          <pre className="text-xs bg-white/[0.03] p-3 rounded-lg border border-white/[0.08] overflow-x-auto text-white/70">
             {useCase === "qa"
               ? JSON.stringify(
                   [

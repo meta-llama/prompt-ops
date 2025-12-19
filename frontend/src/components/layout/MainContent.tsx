@@ -46,7 +46,7 @@ export const MainContent = () => {
       <div className="max-w-5xl mx-auto">
         {/* Hero Section - Centered */}
         <div className="text-center mb-16 pt-12">
-          <h1 className="text-3xl md:text-4xl font-normal text-foreground mb-8 tracking-tight">
+          <h1 className="text-3xl md:text-4xl font-normal text-white mb-8 tracking-tight">
             Optimize your prompt
           </h1>
         </div>
@@ -56,7 +56,7 @@ export const MainContent = () => {
         {false && !loadingProjects && projects.length > 0 && (
           <div className="mb-12">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl md:text-3xl font-normal text-foreground tracking-tight">
+              <h2 className="text-2xl md:text-3xl font-normal text-white tracking-tight">
                 Your Projects
               </h2>
               <Badge variant="outline">
@@ -68,17 +68,17 @@ export const MainContent = () => {
               {projects.map((project) => (
                 <div
                   key={project.name}
-                  className="bg-panel border border-border rounded-2xl p-6 hover:border-meta-blue/30 transition-colors"
+                  className="bg-white/[0.03] border border-white/[0.1] rounded-2xl p-6 hover:border-[#4da3ff]/30 transition-colors"
                 >
                   <div className="flex items-start gap-3 mb-4">
-                    <div className="p-2 bg-meta-blue/10 rounded-xl">
-                      <Folder className="text-meta-blue" size={24} />
+                    <div className="p-2 bg-[#4da3ff]/10 rounded-xl">
+                      <Folder className="text-[#4da3ff]" size={24} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-lg text-foreground truncate">
+                      <h3 className="font-semibold text-lg text-white truncate">
                         {project.name}
                       </h3>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                      <div className="flex items-center gap-1 text-xs text-white/60 mt-1">
                         <Calendar size={12} />
                         <span>
                           {new Date(project.modifiedAt * 1000).toLocaleDateString()}
@@ -125,35 +125,35 @@ export const MainContent = () => {
         )}
 
         {false && !loadingProjects && projects.length === 0 && (
-          <div className="mb-12 text-center p-12 bg-panel border border-border rounded-3xl">
-            <Folder className="mx-auto mb-4 text-muted-foreground/50" size={48} />
-            <h3 className="text-xl font-semibold text-muted-foreground mb-2">
+          <div className="mb-12 text-center p-12 bg-white/[0.03] border border-white/[0.1] rounded-3xl">
+            <Folder className="mx-auto mb-4 text-white/30" size={48} />
+            <h3 className="text-xl font-semibold text-white/60 mb-2">
               No projects yet
             </h3>
-            <p className="text-muted-foreground/70">
+            <p className="text-white/40">
               Create your first project to get started!
             </p>
           </div>
         )}
 
-        {/* Mode Toggle - Optimize and Enhance */}
+        {/* Mode Toggle - Optimize and Enhance (Glassmorphism) */}
         <div className="flex justify-center mb-8">
-          <div className="bg-muted p-1 rounded-full border border-border relative">
+          <div className="bg-white/[0.08] backdrop-blur-xl p-1.5 rounded-full border border-white/[0.15] relative shadow-[0_8px_32px_rgba(0,0,0,0.12)] ring-1 ring-white/[0.05] ring-inset">
             {/* Container using CSS Grid for equal button widths */}
             <div className="grid grid-cols-2 gap-1 relative">
-              {/* Sliding indicator */}
+              {/* Sliding indicator - frosted glass style */}
               <div
-                className={`absolute top-0 bottom-0 rounded-full transition-all duration-300 ease-in-out bg-meta-blue ${
+                className={`absolute top-0.5 bottom-0.5 rounded-full transition-all duration-300 ease-out bg-white/[0.15] backdrop-blur-md border border-white/[0.2] shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] ${
                   activeMode === 'migrate'
-                    ? 'left-0 right-1/2 mr-0.5'
-                    : 'left-1/2 right-0 ml-0.5'
+                    ? 'left-0.5 right-1/2 mr-0.5'
+                    : 'left-1/2 right-0 mr-0.5'
                 }`}
               />
 
               {/* Lock icon when mode is locked */}
               {isModeLocked && (
-                <div className="absolute -top-2 -right-2 bg-foreground rounded-full p-1 z-20">
-                  <Lock size={14} className="text-background" />
+                <div className="absolute -top-2 -right-2 bg-white/90 backdrop-blur-sm rounded-full p-1 z-20 shadow-lg">
+                  <Lock size={14} className="text-[#0a0c10]" />
                 </div>
               )}
 
@@ -161,10 +161,10 @@ export const MainContent = () => {
                 onClick={() => !isModeLocked && setActiveMode('migrate')}
                 variant="ghost"
                 disabled={isModeLocked}
-                className={`relative w-full px-8 py-3 text-lg font-medium z-10 transition-colors rounded-full hover:bg-transparent ${
+                className={`relative w-full px-8 py-2.5 text-sm font-medium z-10 transition-all duration-200 rounded-full hover:bg-transparent ${
                   activeMode === 'migrate'
-                    ? 'text-white hover:text-white dark:text-meta-gray-900 dark:hover:text-meta-gray-900'
-                    : 'text-foreground hover:text-foreground'
+                    ? 'text-white hover:text-white'
+                    : 'text-white/50 hover:text-white/80'
                 } ${isModeLocked ? 'cursor-not-allowed' : ''}`}
               >
                 Optimize
@@ -174,20 +174,17 @@ export const MainContent = () => {
                 onClick={() => !isModeLocked && setActiveMode('enhance')}
                 variant="ghost"
                 disabled={isModeLocked}
-                className={`relative w-full px-8 py-3 text-lg font-medium z-10 transition-colors rounded-full hover:bg-transparent ${
+                className={`relative w-full px-8 py-2.5 text-sm font-medium z-10 transition-all duration-200 rounded-full hover:bg-transparent ${
                   activeMode === 'enhance'
-                    ? 'text-white hover:text-white dark:text-meta-gray-900 dark:hover:text-meta-gray-900'
-                    : 'text-foreground hover:text-foreground'
+                    ? 'text-white hover:text-white'
+                    : 'text-white/50 hover:text-white/80'
                 } ${isModeLocked ? 'cursor-not-allowed' : ''}`}
               >
                 <div className="flex items-center justify-center gap-2">
                   Enhance
-                  <Badge
-                    variant="warning"
-                    className="bg-meta-orange text-white border-meta-orange"
-                  >
-                    Experimental
-                  </Badge>
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-white/[0.1] text-white/60 border border-white/[0.1]">
+                    Beta
+                  </span>
                 </div>
               </Button>
             </div>

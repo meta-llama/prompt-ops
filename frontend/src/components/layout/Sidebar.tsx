@@ -1,12 +1,10 @@
 import { useContext } from 'react';
-import { Play, Book, Github, Sun, Moon, Monitor } from 'lucide-react';
+import { Play, Book, Github } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AppContext } from '../../context/AppContext';
-import { useTheme } from '../../context/ThemeContext';
 
 export const Sidebar = () => {
   const { activeMode, setActiveMode } = useContext(AppContext)!;
-  const { theme, setTheme } = useTheme();
 
   const navItems = [
     { id: 'playground', label: 'Playground', icon: Play, path: '/', mode: 'migrate' },
@@ -21,13 +19,13 @@ export const Sidebar = () => {
   };
 
   return (
-    <nav className="relative z-10 w-full px-8 py-6 bg-panel border-b border-border">
+    <nav className="relative z-10 w-full px-8 py-6 bg-white/[0.03] border-b border-white/[0.08]">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo/Brand */}
         <div className="flex items-center gap-3">
           <Link
             to="/"
-            className="text-foreground font-bold text-2xl tracking-tight hover:text-meta-blue transition-colors duration-200 cursor-pointer"
+            className="text-white font-bold text-2xl tracking-tight hover:text-[#4da3ff] transition-colors duration-200 cursor-pointer"
           >
             prompt-ops
           </Link>
@@ -54,7 +52,7 @@ export const Sidebar = () => {
                   href={item.path}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium transition-all duration-200 text-muted-foreground hover:text-meta-blue hover:bg-muted"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium transition-all duration-200 text-white/60 hover:text-[#4da3ff] hover:bg-white/[0.05]"
                 >
                   {navContent}
                 </a>
@@ -69,8 +67,8 @@ export const Sidebar = () => {
                   onClick={() => handleNavClick(item)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium transition-all duration-200 ${
                     isActive
-                      ? 'text-white bg-meta-blue shadow-sm dark:text-meta-gray-900'
-                      : 'text-muted-foreground hover:text-meta-blue hover:bg-muted'
+                      ? 'text-white bg-[#4da3ff] shadow-sm'
+                      : 'text-white/60 hover:text-[#4da3ff] hover:bg-white/[0.05]'
                   }`}
                 >
                   {navContent}
@@ -84,8 +82,8 @@ export const Sidebar = () => {
                 onClick={() => handleNavClick(item)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium transition-all duration-200 ${
                   isActive
-                    ? 'text-white bg-meta-blue shadow-sm dark:text-meta-gray-900'
-                    : 'text-muted-foreground hover:text-meta-blue hover:bg-muted'
+                    ? 'text-white bg-[#4da3ff] shadow-sm'
+                    : 'text-white/60 hover:text-[#4da3ff] hover:bg-white/[0.05]'
                 }`}
               >
                 {navContent}
@@ -93,36 +91,6 @@ export const Sidebar = () => {
             );
           })}
 
-          {/* Theme Toggle */}
-          <div className="flex items-center gap-1 bg-muted p-1 rounded-full border border-border">
-            <button
-              onClick={() => setTheme('light')}
-              className={`p-2 rounded-full transition-colors ${
-                theme === 'light' ? 'bg-panel text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
-              title="Light mode"
-            >
-              <Sun size={16} />
-            </button>
-            <button
-              onClick={() => setTheme('dark')}
-              className={`p-2 rounded-full transition-colors ${
-                theme === 'dark' ? 'bg-panel text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
-              title="Dark mode"
-            >
-              <Moon size={16} />
-            </button>
-            <button
-              onClick={() => setTheme('system')}
-              className={`p-2 rounded-full transition-colors ${
-                theme === 'system' ? 'bg-panel text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
-              title="System preference"
-            >
-              <Monitor size={16} />
-            </button>
-          </div>
         </div>
       </div>
     </nav>
