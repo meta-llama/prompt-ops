@@ -279,8 +279,13 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
 
   // Notify parent of configuration changes
   useEffect(() => {
-    onConfigurationChange(configurations);
-  }, [configurations]); // Remove onConfigurationChange from dependencies to prevent infinite loop
+    // Merge useDefaultKey flag into each configuration before passing up
+    const configurationsWithDefaultKeyFlag = configurations.map((config) => ({
+      ...config,
+      useDefaultKey: useDefaultKey[config.id] || false,
+    }));
+    onConfigurationChange(configurationsWithDefaultKeyFlag);
+  }, [configurations, useDefaultKey]); // Remove onConfigurationChange from dependencies to prevent infinite loop
 
   const handleProviderToggle = (providerId: string) => {
     setSelectedProviders((prev) => {

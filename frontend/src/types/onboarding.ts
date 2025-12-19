@@ -117,6 +117,7 @@ export interface ModelConfig {
   model_prefix?: string;
   auth_method?: "api_key" | "bearer_token" | "custom_headers";
   custom_headers?: Record<string, string>;
+  useDefaultKey?: boolean;  // Whether this config uses the default API key from .env
 }
 
 /**
@@ -161,4 +162,3 @@ export interface MetricConfig {
   cons: string[];
   recommendedFor: string[];
 }
-

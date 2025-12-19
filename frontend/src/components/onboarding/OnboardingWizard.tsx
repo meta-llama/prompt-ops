@@ -365,7 +365,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       const hasModel = config.model_name && config.model_name.trim() !== "";
       const provider = config.provider_id;
       const needsApiKey = ["openrouter", "together"].includes(provider);
-      const hasApiKey = !needsApiKey || (config.api_key && config.api_key.trim() !== "");
+      const hasApiKey = !needsApiKey || (config.api_key && config.api_key.trim() !== "") || config.useDefaultKey;
       const hasValidRole =
         formData.modelConfigurations.length === 1 ||
         config.role === "both" ||
@@ -401,7 +401,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           const hasModel = config.model_name && config.model_name.trim() !== "";
           const provider = config.provider_id;
           const needsApiKey = ["openrouter", "together"].includes(provider);
-          const hasApiKey = !needsApiKey || (config.api_key && config.api_key.trim() !== "");
+          const hasApiKey = !needsApiKey || (config.api_key && config.api_key.trim() !== "") || config.useDefaultKey;
           return hasModel && hasApiKey;
         });
         return modelsValid ? 'complete' : 'incomplete';
