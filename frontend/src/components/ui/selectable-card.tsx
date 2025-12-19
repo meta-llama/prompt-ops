@@ -38,15 +38,15 @@ export const SelectableCard: React.FC<SelectableCardProps> = ({
       className={cn(
         "relative p-6 rounded-xl border-2 text-left transition-colors w-full",
         selected
-          ? "border-meta-blue dark:border-meta-blue-light bg-meta-blue/5 dark:bg-meta-blue/10"
-          : "border-border bg-card hover:border-muted-foreground/50",
+          ? "border-[#4da3ff] bg-[#4da3ff]/10"
+          : "border-white/[0.1] bg-white/[0.03] hover:border-white/[0.2]",
         className
       )}
     >
       {/* Selection indicator */}
       {selected && showCheckmark && (
-        <div className="absolute top-3 right-3 w-6 h-6 bg-meta-blue dark:bg-meta-blue-light rounded-full flex items-center justify-center">
-          <Check className="w-4 h-4 text-white dark:text-meta-gray-900" />
+        <div className="absolute top-3 right-3 w-6 h-6 bg-[#4da3ff] rounded-full flex items-center justify-center">
+          <Check className="w-4 h-4 text-white" />
         </div>
       )}
 
@@ -60,17 +60,17 @@ export const SelectableCard: React.FC<SelectableCardProps> = ({
         className={cn(
           "w-12 h-12 rounded-lg flex items-center justify-center mb-4",
           selected
-            ? "bg-meta-blue dark:bg-meta-blue-light text-white dark:text-meta-gray-900"
-            : "bg-muted text-muted-foreground"
+            ? "bg-[#4da3ff] text-white"
+            : "bg-white/[0.08] text-white/60"
         )}
       >
         {icon}
       </div>
 
       {/* Content */}
-      <h4 className="font-semibold text-foreground mb-2">{title}</h4>
+      <h4 className="font-semibold text-white mb-2">{title}</h4>
       {description && (
-        <p className="text-sm text-muted-foreground mb-3">{description}</p>
+        <p className="text-sm text-white/60 mb-3">{description}</p>
       )}
 
       {/* Additional content */}

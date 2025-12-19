@@ -40,7 +40,7 @@ export const WizardSection: React.FC<WizardSectionProps> = ({
     <div className={cn("space-y-4", className)}>
       {/* Section Header */}
       <div
-        className="w-full flex items-center p-4 bg-muted rounded-xl border border-border"
+        className="w-full flex items-center p-4 bg-white/[0.05] rounded-xl border border-white/[0.1]"
       >
         <div className="flex items-center space-x-3">
           <div
@@ -55,7 +55,7 @@ export const WizardSection: React.FC<WizardSectionProps> = ({
               icon
             )}
           </div>
-          <h3 className="text-lg font-bold text-foreground">{title}</h3>
+          <h3 className="text-lg font-bold text-white">{title}</h3>
           {status === "complete" && <Badge variant="success">Complete</Badge>}
           {status === "incomplete" && (
             <Badge variant="warning">In Progress</Badge>
