@@ -462,7 +462,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // Render progress stepper
   const renderStepper = () => (
     <div className="mb-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         {WIZARD_STEPS.map((step, index) => {
           const Icon = step.icon;
           const isActive = index === currentStep;
@@ -505,13 +505,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               </div>
 
               {index < WIZARD_STEPS.length - 1 && (
-                <div
-                  className={`h-0.5 flex-1 mx-2 mt-[-32px] transition-colors ${
-                    getSectionStatus(WIZARD_STEPS[index + 1].id) === 'complete'
-                      ? "bg-emerald-500"
-                      : "bg-white/[0.1]"
-                  }`}
-                />
+                <div className="flex items-center pt-[24px]">
+                  <div
+                    className={`h-0.5 flex-1 mx-2 transition-colors ${
+                      getSectionStatus(WIZARD_STEPS[index + 1].id) === 'complete'
+                        ? "bg-emerald-500"
+                        : "bg-white/[0.1]"
+                    }`}
+                  />
+                </div>
               )}
             </React.Fragment>
           );
