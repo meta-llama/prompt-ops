@@ -210,6 +210,34 @@ async def get_settings():
     }
 
 
+@app.get("/api/api-keys/openrouter")
+async def get_openrouter_key():
+    """
+    Return the OpenRouter API key status from environment (masked for security).
+    Frontend uses this to indicate default key is available, but never receives the actual key.
+    Backend will use the env var when frontend doesn't provide an explicit key.
+    """
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        return {
+            "hasKey": False,
+            "maskedKey": None,
+        }
+
+    # Mask the key: show first 7 and last 4 characters for user feedback
+    if len(api_key) <= 11:
+        masked = api_key[:3] + "*" * (len(api_key) - 3)
+    else:
+        masked = api_key[:7] + "*" * (len(api_key) - 11) + api_key[-4:]
+
+    return {
+        "hasKey": True,
+        "maskedKey": masked,
+        # NOTE: We deliberately do NOT send the full key for security reasons.
+        # Backend routes will use os.getenv("OPENROUTER_API_KEY") when no key is provided.
+    }
+
+
 @app.get("/api/configurations", response_model=ConfigResponse)
 async def get_configurations():
     """Return available configuration options for the frontend."""
@@ -323,9 +351,21 @@ async def test_model_connection(request: ModelConnectionTestRequest):
         if request.api_base:
             completion_kwargs["api_base"] = request.api_base
 
-        # Add API key if provided
-        if request.api_key:
+        # Add API key if provided (and not empty), otherwise fallback to env var for OpenRouter
+        # Important: We must explicitly set the API key to test the provided one,
+        # as LiteLLM may fallback to environment variables automatically
+        if request.api_key and request.api_key.strip():
             completion_kwargs["api_key"] = request.api_key
+        elif request.provider_id == "openrouter":
+            # Use environment variable if no explicit key provided
+            env_key = os.getenv("OPENROUTER_API_KEY")
+            if env_key:
+                completion_kwargs["api_key"] = env_key
+            else:
+                return {
+                    "success": False,
+                    "message": "Authentication required - please provide an API key",
+                }
 
         # Add custom headers if provided (for custom auth methods)
         if request.auth_method == "custom_headers" and request.custom_headers:
@@ -337,13 +377,16 @@ async def test_model_connection(request: ModelConnectionTestRequest):
                 "X-Title": "Prompt Ops",
             }
 
+        # Disable caching for test connections - we need fresh results every time
+        completion_kwargs["cache"] = {"no-cache": True}
+
         # Make the test request using LiteLLM
         response = await acompletion(**completion_kwargs)
 
         # If we get here, connection was successful
         return {"success": True, "message": "Connection successful!"}
 
-    except litellm.exceptions.Timeout:
+    except litellm.exceptions.Timeout as e:
         return {"success": False, "message": "Connection timeout"}
     except litellm.exceptions.APIConnectionError as e:
         return {
@@ -364,7 +407,7 @@ async def test_model_connection(request: ModelConnectionTestRequest):
         return {"success": False, "message": _extract_error_message(e)}
     except Exception as e:
         # Catch-all for any other errors
-        logger.error(f"Unexpected error testing model connection: {e}")
+        logger.error(f"Unexpected error testing connection: {type(e).__name__}: {e}")
         return {"success": False, "message": _extract_error_message(e)}
 
 
@@ -469,9 +512,7 @@ async def get_docs_structure():
                             "description": (
                                 frontmatter.get("description") if frontmatter else None
                             ),
-                            "order": (
-                                frontmatter.get("order") if frontmatter else 999
-                            ),
+                            "order": (frontmatter.get("order") if frontmatter else 999),
                             "icon": frontmatter.get("icon") if frontmatter else None,
                         }
                         items.append(doc_entry)

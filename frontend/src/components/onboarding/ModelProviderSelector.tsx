@@ -147,6 +147,27 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
     Record<string, string>
   >({});
   const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({});
+  const [hasDefaultOpenRouterKey, setHasDefaultOpenRouterKey] = useState<boolean>(false);
+  const [defaultKeyMasked, setDefaultKeyMasked] = useState<string>("");
+  const [useDefaultKey, setUseDefaultKey] = useState<Record<string, boolean>>({});
+
+  // Fetch default OpenRouter API key status from backend on mount
+  useEffect(() => {
+    const fetchDefaultKeyStatus = async () => {
+      try {
+        const response = await fetch(apiUrl("/api/api-keys/openrouter"));
+        const data = await response.json();
+        if (data.hasKey) {
+          setHasDefaultOpenRouterKey(true);
+          setDefaultKeyMasked(data.maskedKey || "");
+        }
+      } catch (error) {
+        console.error("Failed to fetch default OpenRouter key status:", error);
+      }
+    };
+
+    fetchDefaultKeyStatus();
+  }, []);
 
   // Smart defaults based on use case
   useEffect(() => {
@@ -176,12 +197,18 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
         if (!provider) return;
 
         // Check if we already have any configuration for this provider
-        const hasExistingConfig = existingConfigs.some(
+        const existingConfig = existingConfigs.find(
           (config) => config.provider_id === providerId
         );
 
+        // If config exists for OpenRouter but doesn't have a key set and default is available,
+        // mark it to use the default (backend will use env var)
+        if (existingConfig && providerId === "openrouter" && !existingConfig.api_key && hasDefaultOpenRouterKey) {
+          setUseDefaultKey(prev => ({ ...prev, [existingConfig.id]: true }));
+        }
+
         // Only add default configuration if none exists for this provider
-        if (!hasExistingConfig) {
+        if (!existingConfig) {
           // Determine the best default role for this provider
           const globalTarget = newConfigs.find(
             (c) => c.role === "target" || c.role === "both"
@@ -218,13 +245,17 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
             return; // Skip adding default config
           }
 
+          // For OpenRouter with default key available: leave api_key empty (backend will use env var)
+          // For other providers or when no default: user must enter their key
+          const defaultApiKey = "";
+
           newConfigs.push({
             id: `${providerId}-${Date.now()}`,
             provider_id: providerId,
             model_name: provider.popular_models[0],
             role: defaultRole,
             api_base: provider.api_base,
-            api_key: "",
+            api_key: defaultApiKey,
             temperature: 0.0,
             max_tokens: 4096,
             // Custom provider fields
@@ -233,12 +264,18 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
             auth_method: providerId === "custom" ? "api_key" : undefined,
             custom_headers: providerId === "custom" ? {} : undefined,
           });
+
+          // Mark OpenRouter configs to use default key if available
+          if (providerId === "openrouter" && hasDefaultOpenRouterKey) {
+            const configId = `${providerId}-${Date.now()}`;
+            setUseDefaultKey(prev => ({ ...prev, [configId]: true }));
+          }
         }
       });
 
       return newConfigs;
     });
-  }, [selectedProviders]);
+  }, [selectedProviders, hasDefaultOpenRouterKey]);
 
   // Notify parent of configuration changes
   useEffect(() => {
@@ -275,13 +312,36 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
       return newConfigs;
     });
 
+    // Handle API key field changes for useDefaultKey flag
+    if (field === "api_key") {
+      const config = configurations.find((c) => c.id === configId);
+      if (value && value.trim()) {
+        // User entered a custom key
+        setUseDefaultKey(prev => ({ ...prev, [configId]: false }));
+      } else if (!value || !value.trim()) {
+        // User cleared the field - if OpenRouter with default available, revert to default
+        if (config?.provider_id === "openrouter" && hasDefaultOpenRouterKey) {
+          setUseDefaultKey(prev => ({ ...prev, [configId]: true }));
+        }
+      }
+    }
+
     // Clear error messages when connection-related fields are changed
     const connectionFields = ["model_name", "api_key", "api_base", "custom_headers", "auth_method"];
     if (connectionFields.includes(field)) {
       const config = configurations.find((c) => c.id === configId);
       if (config) {
         const configKey = `${config.provider_id}-${config.role}-${config.id}`;
-        setConnectionStatus((prev) => ({ ...prev, [configKey]: "untested" }));
+        console.log(`Clearing connection status for ${configKey} (field: ${field})`);
+        setConnectionStatus((prev) => {
+          console.log("Previous status:", prev[configKey]);
+          const newStatus: Record<string, "success" | "error" | "untested"> = {
+            ...prev,
+            [configKey]: "untested" as const
+          };
+          console.log("New status:", newStatus[configKey]);
+          return newStatus;
+        });
         setConnectionErrors((prev) => ({ ...prev, [configKey]: "" }));
       }
     }
@@ -316,13 +376,16 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
       return;
     }
 
+    // For OpenRouter: leave api_key empty, backend will use env var
+    const defaultApiKey = "";
+
     const newConfig: ModelConfig = {
       id: `${providerId}-${role}-${Date.now()}`,
       provider_id: providerId,
       model_name: provider.popular_models[0],
       role: role,
       api_base: provider.api_base,
-      api_key: "",
+      api_key: defaultApiKey,
       temperature: 0.0,
       max_tokens: 4096,
       // Custom provider fields
@@ -333,6 +396,11 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
     };
 
     setConfigurations((prevConfigs) => [...prevConfigs, newConfig]);
+
+    // Mark OpenRouter configs to use default key if available
+    if (providerId === "openrouter" && hasDefaultOpenRouterKey) {
+      setUseDefaultKey(prev => ({ ...prev, [newConfig.id]: true }));
+    }
   };
 
   const removeConfiguration = (configId: string) => {
@@ -552,51 +620,39 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
     return { canAddTarget, canAddOptimizer, canAddBoth };
   };
 
+  // Helper to check if Test Connection button should be enabled
+  const canTestConnection = (config: ModelConfig): boolean => {
+    const hasApiKey = config.api_key && config.api_key.length > 0;
+    const provider = PROVIDER_CONFIGS.find((p) => p.id === config.provider_id);
+    const requiresAuth = provider?.requires_signup || config.provider_id === "custom";
+    const usingDefaultOpenRouter =
+      config.provider_id === "openrouter" &&
+      useDefaultKey[config.id] &&
+      hasDefaultOpenRouterKey;
+
+    // For custom headers, check if headers are provided
+    if (config.auth_method === "custom_headers") {
+      return config.custom_headers && Object.keys(config.custom_headers).length > 0;
+    }
+
+    // For custom providers, check required fields
+    if (config.provider_id === "custom") {
+      return !!(config.api_base && config.model_name && config.custom_provider_name && (hasApiKey || !requiresAuth));
+    }
+
+    // For providers requiring auth, need either a custom key or default key
+    if (requiresAuth) {
+      return hasApiKey || usingDefaultOpenRouter;
+    }
+
+    return true;
+  };
+
   const testConnection = async (config: ModelConfig) => {
     const configKey = `${config.provider_id}-${config.role}-${config.id}`;
     setTestingConnections((prev) => ({ ...prev, [configKey]: true }));
 
     try {
-      // Basic validation first
-      const hasApiKey = config.api_key && config.api_key.length > 0;
-      const provider = PROVIDER_CONFIGS.find(
-        (p) => p.id === config.provider_id
-      );
-
-      // Check if authentication is required
-      const requiresAuth =
-        provider?.requires_signup || config.provider_id === "custom";
-
-      if (
-        requiresAuth &&
-        !hasApiKey &&
-        config.auth_method !== "custom_headers"
-      ) {
-        throw new Error("Authentication required - please provide an API key");
-      }
-
-      // For custom headers, check if headers are provided
-      if (
-        config.auth_method === "custom_headers" &&
-        (!config.custom_headers ||
-          Object.keys(config.custom_headers).length === 0)
-      ) {
-        throw new Error("Custom headers required");
-      }
-
-      // For custom providers, check if required fields are filled
-      if (config.provider_id === "custom") {
-        if (
-          !config.api_base ||
-          !config.model_name ||
-          !config.custom_provider_name
-        ) {
-          throw new Error(
-            "Please fill in all required fields for custom provider"
-          );
-        }
-      }
-
       // Perform actual API test
       await performActualAPITest(config);
 
@@ -1146,13 +1202,16 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                             {canAddBoth && (
                               <button
                                 onClick={() => {
+                                  // For OpenRouter: leave api_key empty, backend will use env var
+                                  const defaultApiKey = "";
+
                                   const newConfig: ModelConfig = {
                                     id: `${providerId}-both-${Date.now()}`,
                                     provider_id: providerId,
                                     model_name: provider.popular_models[0],
                                     role: "both",
                                     api_base: provider.api_base,
-                                    api_key: "",
+                                    api_key: defaultApiKey,
                                     temperature: 0.0,
                                     max_tokens: 4096,
                                     custom_provider_name:
@@ -1172,6 +1231,11 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                     ...prev,
                                     newConfig,
                                   ]);
+
+                                  // Mark OpenRouter configs to use default key if available
+                                  if (providerId === "openrouter" && hasDefaultOpenRouterKey) {
+                                    setUseDefaultKey(prev => ({ ...prev, [newConfig.id]: true }));
+                                  }
                                 }}
                                 className="text-sm bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600 transition-colors flex items-center space-x-1"
                               >
@@ -1319,8 +1383,9 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
 
                               <button
                                 onClick={() => testConnection(config)}
-                                disabled={testingConnections[configKey]}
-                                className="text-sm bg-meta-blue text-white px-3 py-1 rounded-full hover:bg-meta-blue-800 transition-colors disabled:opacity-50"
+                                disabled={testingConnections[configKey] || !canTestConnection(config)}
+                                className="text-sm bg-meta-blue text-white px-3 py-1 rounded-full hover:bg-meta-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={!canTestConnection(config) ? "Please provide an API key or ensure all required fields are filled" : ""}
                               >
                                 {testingConnections[configKey]
                                   ? "Testing..."
@@ -1554,7 +1619,19 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                           ? "text"
                                           : "password"
                                       }
-                                      value={config.api_key || ""}
+                                      value={
+                                        config.api_key ||
+                                        (config.provider_id === "openrouter" && useDefaultKey[config.id] && defaultKeyMasked
+                                          ? defaultKeyMasked
+                                          : "")
+                                      }
+                                      onFocus={(e) => {
+                                        // When user focuses to override default, clear the masked value
+                                        if (config.provider_id === "openrouter" && useDefaultKey[config.id] && !config.api_key) {
+                                          // Don't actually clear yet, just select all so they can type to replace
+                                          e.target.select();
+                                        }
+                                      }}
                                       onChange={(e) => {
                                         handleConfigChange(
                                           config.id,
@@ -1568,6 +1645,8 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                             "bearer_token"
                                             ? "Enter your bearer token"
                                             : "Enter your API key"
+                                          : config.provider_id === "openrouter" && useDefaultKey[config.id] && defaultKeyMasked
+                                          ? "Click to override default key"
                                           : "Enter your API key"
                                       }
                                       className="w-full p-3 border border-white/[0.1] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4da3ff]/30 focus:border-[#4da3ff]/50 bg-white/[0.05] text-white pr-10 placeholder:text-white/40"
@@ -1588,6 +1667,52 @@ export const ModelProviderSelector: React.FC<ModelProviderSelectorProps> = ({
                                         <Eye className="w-4 h-4" />
                                       )}
                                     </button>
+                                  </div>
+                                )}
+                                {/* Helper text for OpenRouter default key */}
+                                {config.provider_id === "openrouter" && (
+                                  <div className="text-xs mt-2 flex items-center justify-between">
+                                    <div className="flex items-center space-x-1">
+                                      {useDefaultKey[config.id] && !config.api_key && hasDefaultOpenRouterKey ? (
+                                        <>
+                                          <CheckCircle className="w-3 h-3 text-green-400" />
+                                          <span className="text-green-400/70">
+                                            Using default API key from backend .env
+                                          </span>
+                                        </>
+                                      ) : config.api_key ? (
+                                        <>
+                                          <CheckCircle className="w-3 h-3 text-blue-400" />
+                                          <span className="text-blue-400/70">
+                                            Using custom API key (overriding default)
+                                          </span>
+                                        </>
+                                      ) : hasDefaultOpenRouterKey ? (
+                                        <>
+                                          <CheckCircle className="w-3 h-3 text-green-400" />
+                                          <span className="text-green-400/70">
+                                            Ready to use default API key from backend .env
+                                          </span>
+                                        </>
+                                      ) : (
+                                        <span className="text-yellow-400/70">
+                                          No API key configured - enter your OpenRouter API key
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Reset to Default button - only show when using custom key and default is available */}
+                                    {config.api_key && hasDefaultOpenRouterKey && (
+                                      <button
+                                        onClick={() => {
+                                          handleConfigChange(config.id, "api_key", "");
+                                          setUseDefaultKey(prev => ({ ...prev, [config.id]: true }));
+                                        }}
+                                        className="text-xs bg-white/[0.05] hover:bg-white/[0.1] text-white/70 hover:text-white px-2 py-1 rounded border border-white/[0.1] hover:border-white/[0.2] transition-all flex items-center space-x-1"
+                                      >
+                                        <span>Reset to Default</span>
+                                      </button>
+                                    )}
                                   </div>
                                 )}
                               </div>
