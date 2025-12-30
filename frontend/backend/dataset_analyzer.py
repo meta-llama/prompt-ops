@@ -1,0 +1,500 @@
+"""
+Dataset Analysis Service for Dynamic Field Mapping
+
+This service analyzes uploaded dataset files to detect field structures,
+classify field types, and suggest field mappings for different use cases.
+"""
+
+import csv
+import json
+import logging
+from collections import Counter
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+import pandas as pd
+import yaml
+
+logger = logging.getLogger(__name__)
+
+
+class FieldInfo:
+    """Information about a detected field in the dataset."""
+
+    def __init__(
+        self,
+        name: str,
+        field_type: str,
+        sample_values: List[Any],
+        coverage: float = 0.0,  # percentage of records that have this field
+        populated_count: int = 0,  # number of records with non-null values
+        total_count: int = 0,  # total number of records analyzed
+    ):
+        self.name = name
+        self.field_type = field_type  # 'string', 'array', 'object', 'number', 'boolean'
+        self.sample_values = sample_values
+        self.coverage = coverage  # 0.0 to 1.0 - what % of records have this field
+        self.populated_count = populated_count  # how many records have this field
+        self.total_count = total_count  # total records analyzed
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "type": self.field_type,
+            "samples": self.sample_values,
+            "coverage": self.coverage,
+            "populated_count": self.populated_count,
+            "total_count": self.total_count,
+        }
+
+
+class DatasetAnalyzer:
+    """Analyzes dataset files and provides field mapping suggestions."""
+
+    def __init__(self):
+        pass
+
+    def analyze_file(self, file_path: str, sample_size: int = 10) -> Dict[str, Any]:
+        """
+        Analyze a dataset file and return field information.
+
+        Args:
+            file_path: Path to the dataset file
+            sample_size: Number of samples to analyze
+
+        Returns:
+            Dictionary containing field analysis results
+        """
+        try:
+            # Load dataset records
+            dataset_records = self._load_data(file_path)
+            if not dataset_records:
+                return {"error": "Could not load or parse file"}
+
+            # For accurate coverage calculation, analyze up to 100 records
+            coverage_sample_size = min(len(dataset_records), 100)
+            coverage_records = dataset_records[:coverage_sample_size]
+
+            # Use smaller sample for field type analysis and sample values
+            analysis_records = (
+                dataset_records[:sample_size]
+                if len(dataset_records) > sample_size
+                else dataset_records
+            )
+
+            # Analyze fields with full dataset size for accurate coverage
+            detected_fields = self._analyze_fields(
+                coverage_records, len(dataset_records)
+            )
+
+            return {
+                "total_records": len(dataset_records),
+                "sample_size": len(analysis_records),
+                "fields": [field.to_dict() for field in detected_fields],
+                "suggestions": {},
+                "sample_data": analysis_records[:3],  # Show first 3 records
+            }
+
+        except Exception as e:
+            logger.error(f"Error analyzing file {file_path}: {str(e)}")
+            return {"error": f"Analysis failed: {str(e)}"}
+
+    def _load_data(self, file_path: str) -> List[Dict[str, Any]]:
+        """Load data from file based on extension."""
+        path = Path(file_path)
+        extension = path.suffix.lower()
+
+        try:
+            if extension == ".json":
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    return data if isinstance(data, list) else [data]
+
+            elif extension == ".csv":
+                df = pd.read_csv(file_path)
+                return df.to_dict("records")
+
+            elif extension in [".yaml", ".yml"]:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = yaml.safe_load(f)
+                    return data if isinstance(data, list) else [data]
+
+            else:
+                raise ValueError(f"Unsupported file format: {extension}")
+
+        except Exception as e:
+            logger.error(f"Error loading file {file_path}: {str(e)}")
+            return []
+
+    def _analyze_fields(
+        self, sample_records: List[Dict[str, Any]], total_dataset_size: int
+    ) -> List[FieldInfo]:
+        """Analyze fields in the dataset sample."""
+        if not sample_records:
+            return []
+
+        field_value_collector = {}
+        analyzed_sample_size = len(sample_records)
+
+        # First pass: collect all field values for type detection
+        for record in sample_records:
+            self._extract_fields_recursive(
+                record, field_value_collector, track_coverage=False
+            )
+
+        # Second pass: count field presence for completeness calculation
+        field_presence_counts = {}
+        for record in sample_records:
+            # Get all fields present in this record
+            present_fields = set()
+            self._get_record_fields(record, present_fields)
+
+            # Increment count for each field found
+            for field_path in present_fields:
+                if field_path not in field_presence_counts:
+                    field_presence_counts[field_path] = 0
+                field_presence_counts[field_path] += 1
+
+        # Convert to FieldInfo objects
+        detected_fields = []
+        for field_path, field_data in field_value_collector.items():
+            field_type = self._determine_field_type(field_data["values"])
+            sample_values = self._get_sample_values(field_data["values"])
+
+            # Calculate coverage: proportion of records containing this field
+            records_with_field = field_presence_counts.get(field_path, 0)
+
+            # Extrapolate coverage to full dataset
+            if analyzed_sample_size > 0:
+                sample_coverage_ratio = records_with_field / analyzed_sample_size
+                estimated_total_records_with_field = int(
+                    sample_coverage_ratio * total_dataset_size
+                )
+                coverage = min(sample_coverage_ratio, 1.0)  # Cap at 100%
+            else:
+                estimated_total_records_with_field = 0
+                coverage = 0.0
+
+            detected_fields.append(
+                FieldInfo(
+                    name=field_path,
+                    field_type=field_type,
+                    sample_values=sample_values,
+                    coverage=coverage,
+                    populated_count=estimated_total_records_with_field,
+                    total_count=total_dataset_size,
+                )
+            )
+
+        return detected_fields
+
+    def _extract_fields_recursive(
+        self,
+        obj: Any,
+        field_info: Dict[str, Any],
+        prefix: str = "",
+        track_coverage: bool = False,
+    ):
+        """Recursively extract fields from nested objects for value sampling and type detection."""
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                field_path = f"{prefix}.{key}" if prefix else key
+
+                if field_path not in field_info:
+                    field_info[field_path] = {"values": []}
+
+                if isinstance(value, (dict, list)):
+                    self._extract_fields_recursive(
+                        value, field_info, field_path, track_coverage
+                    )
+                else:
+                    # Only add meaningful values to samples
+                    if self._has_meaningful_value(value):
+                        field_info[field_path]["values"].append(value)
+
+        elif isinstance(obj, list) and obj:
+            # Handle arrays - analyze first few elements
+            if prefix not in field_info:
+                field_info[prefix] = {"values": []}
+
+            for i, item in enumerate(obj[:3]):  # Sample first 3 array elements
+                if isinstance(item, dict):
+                    self._extract_fields_recursive(
+                        item, field_info, prefix, track_coverage
+                    )
+                else:
+                    # Handle arrays of primitives
+                    field_info[prefix]["values"].extend(
+                        obj[:10]
+                    )  # Sample first 10 items
+                    break
+
+    def _has_meaningful_value(self, value: Any) -> bool:
+        """Check if a value is meaningful (not None, empty string, or empty collection)."""
+        if value is None:
+            return False
+        if isinstance(value, str) and value.strip() == "":
+            return False
+        if isinstance(value, (list, dict)) and len(value) == 0:
+            return False
+        return True
+
+    def _get_record_fields(self, obj: Any, field_set: set, prefix: str = ""):
+        """Get all field paths present in a single record (for completeness calculation)."""
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                field_path = f"{prefix}.{key}" if prefix else key
+
+                # Only count this field if it has meaningful value
+                if self._has_meaningful_value(value):
+                    field_set.add(field_path)
+
+                # Recursively check nested structures
+                if isinstance(value, (dict, list)):
+                    self._get_record_fields(value, field_set, field_path)
+
+        elif isinstance(obj, list) and obj:
+            # For arrays, if the array is not empty, count it as present
+            if prefix:
+                field_set.add(prefix)
+
+            # Also check elements for nested fields
+            for item in obj[:3]:  # Sample first 3 elements
+                if isinstance(item, dict):
+                    self._get_record_fields(item, field_set, prefix)
+
+    def _determine_field_type(self, values: List[Any]) -> str:
+        """Determine the type of a field based on its values."""
+        if not values:
+            return "unknown"
+
+        # Sample values to determine type
+        sample_values = values[:20]  # Look at first 20 values
+
+        type_counts = Counter()
+        for value in sample_values:
+            if isinstance(value, str):
+                type_counts["string"] += 1
+            elif isinstance(
+                value, bool
+            ):  # Check bool BEFORE int/float (bool is subclass of int)
+                type_counts["boolean"] += 1
+            elif isinstance(value, (int, float)):
+                type_counts["number"] += 1
+            elif isinstance(value, list):
+                type_counts["array"] += 1
+            elif isinstance(value, dict):
+                type_counts["object"] += 1
+            else:
+                type_counts["unknown"] += 1
+
+        # Return the most common type
+        return type_counts.most_common(1)[0][0] if type_counts else "unknown"
+
+    def _get_sample_values(self, values: List[Any], max_samples: int = 5) -> List[Any]:
+        """Get sample values for display."""
+        if not values:
+            return []
+
+        # Filter out None values and get diverse samples
+        filtered_values = [v for v in values if v is not None]
+
+        # Get unique values up to max_samples
+        unique_values = []
+        seen = set()
+        for value in filtered_values:
+            if len(unique_values) >= max_samples:
+                break
+
+            # Convert to string for hashing
+            value_str = str(value)[:100]  # Truncate long values
+            if value_str not in seen:
+                seen.add(value_str)
+                unique_values.append(
+                    value if len(str(value)) <= 100 else str(value)[:100] + "..."
+                )
+
+        return unique_values
+
+    def generate_adapter_config(
+        self, mappings: Dict[str, str], use_case: str
+    ) -> Dict[str, Any]:
+        """Generate ConfigurableJSONAdapter configuration from field mappings."""
+        config = {
+            "use_case": use_case,
+            "mappings": mappings,
+            "field_mapping": self._get_use_case_field_mapping(use_case, mappings),
+        }
+
+        if use_case == "qa":
+            config["input_field"] = mappings.get("question", "question")
+            config["golden_output_field"] = mappings.get("answer", "answer")
+
+        elif use_case == "rag":
+            config["question_field"] = mappings.get("query", "query")
+            config["context_field"] = mappings.get("context", "context")
+            config["golden_answer_field"] = mappings.get("answer", "answer")
+
+        elif use_case == "custom":
+            # For custom use case, create a flexible mapping
+            input_fields = {
+                k: v
+                for k, v in mappings.items()
+                if k not in ["id", "metadata", "answer"]
+            }
+            config["input_fields"] = input_fields
+            config["golden_output_field"] = mappings.get("answer", "answer")
+
+        return config
+
+    def _get_use_case_field_mapping(
+        self, use_case: str, mappings: Dict[str, str]
+    ) -> Dict[str, Dict[str, str]]:
+        """Get field mapping structure for a use case."""
+        use_case_mapping = {
+            "qa": {
+                "inputs": ["question"],
+                "outputs": ["answer"],
+                "metadata": ["id", "metadata"],
+            },
+            "rag": {
+                "inputs": ["query", "context"],
+                "outputs": ["answer"],
+                "metadata": ["id", "metadata"],
+            },
+            "custom": {
+                "inputs": [],
+                "outputs": ["answer"],
+                "metadata": ["id", "metadata"],
+            },
+        }
+
+        field_mapping = use_case_mapping.get(use_case, use_case_mapping["custom"])
+
+        # Create actual field mapping based on user's mappings
+        result = {"inputs": {}, "outputs": {}, "metadata": {}}
+
+        for target_field, source_field in mappings.items():
+            if target_field in field_mapping["inputs"]:
+                result["inputs"][target_field] = source_field
+            elif target_field in field_mapping["outputs"]:
+                result["outputs"][target_field] = source_field
+            elif target_field in field_mapping["metadata"]:
+                result["metadata"][target_field] = source_field
+            else:
+                # For custom use case, use smart placement
+                if use_case == "custom" and target_field not in ["id", "metadata"]:
+                    # For custom, put answer-like fields in outputs, everything else in inputs
+                    if any(
+                        keyword in target_field.lower()
+                        for keyword in ["answer", "response", "output", "result"]
+                    ):
+                        result["outputs"][target_field] = source_field
+                    else:
+                        result["inputs"][target_field] = source_field
+                else:
+                    result["metadata"][target_field] = source_field
+
+        return result
+
+    def preview_transformation(
+        self,
+        file_path: str,
+        mappings: Dict[str, str],
+        use_case: str,
+        sample_size: int = 5,
+    ) -> Dict[str, Any]:
+        """Preview how the data will be transformed with given mappings."""
+        try:
+            # Load sample data
+            data = self._load_data(file_path)
+            if not data:
+                return {"error": "Could not load file"}
+
+            sample_data = data[:sample_size]
+
+            # Generate adapter config
+            adapter_config = self.generate_adapter_config(mappings, use_case)
+
+            # Transform sample data
+            transformed_data = []
+            for record in sample_data:
+                transformed_record = self._transform_record(record, mappings, use_case)
+                transformed_data.append(transformed_record)
+
+            return {
+                "original_data": sample_data,
+                "transformed_data": transformed_data,
+                "adapter_config": adapter_config,
+            }
+
+        except Exception as e:
+            logger.error(f"Error previewing transformation: {str(e)}")
+            return {"error": f"Preview failed: {str(e)}"}
+
+    def _transform_record(
+        self, record: Dict[str, Any], mappings: Dict[str, str], use_case: str
+    ) -> Dict[str, Any]:
+        """Transform a single record according to mappings based on use case."""
+        transformed = {"inputs": {}, "outputs": {}, "metadata": {}}
+
+        # Define use case field mappings
+        use_case_mapping = {
+            "qa": {
+                "inputs": ["question"],
+                "outputs": ["answer"],
+                "metadata": ["id", "metadata"],  # everything else goes to metadata
+            },
+            "rag": {
+                "inputs": ["query", "context"],
+                "outputs": ["answer"],
+                "metadata": ["id", "metadata"],
+            },
+            "custom": {
+                "inputs": [],  # For custom, we'll put non-standard fields in inputs
+                "outputs": ["answer"],  # Common output field
+                "metadata": ["id", "metadata"],
+            },
+        }
+
+        # Get the mapping for this use case
+        field_mapping = use_case_mapping.get(use_case, use_case_mapping["custom"])
+
+        # Apply mappings based on use case
+        for target_field, source_field in mappings.items():
+            value = self._get_nested_value(record, source_field)
+
+            if target_field in field_mapping["inputs"]:
+                transformed["inputs"][target_field] = value
+            elif target_field in field_mapping["outputs"]:
+                transformed["outputs"][target_field] = value
+            elif target_field in field_mapping["metadata"]:
+                transformed["metadata"][target_field] = value
+            else:
+                # For custom use case or unmapped fields, use smart placement
+                if use_case == "custom" and target_field not in ["id", "metadata"]:
+                    # For custom, put answer-like fields in outputs, everything else in inputs
+                    if any(
+                        keyword in target_field.lower()
+                        for keyword in ["answer", "response", "output", "result"]
+                    ):
+                        transformed["outputs"][target_field] = value
+                    else:
+                        transformed["inputs"][target_field] = value
+                else:
+                    transformed["metadata"][target_field] = value
+
+        return transformed
+
+    def _get_nested_value(self, obj: Dict[str, Any], field_path: str) -> Any:
+        """Get value from nested object using dot notation."""
+        keys = field_path.split(".")
+        value = obj
+
+        for key in keys:
+            if isinstance(value, dict) and key in value:
+                value = value[key]
+            else:
+                return None
+
+        return value

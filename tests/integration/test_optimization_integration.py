@@ -11,7 +11,7 @@ try:
     from prompt_ops.core.datasets import ConfigurableJSONAdapter
     from prompt_ops.core.metrics import FacilityMetric
     from prompt_ops.core.model import ModelAdapter
-    from prompt_ops.core.model_strategies import LlamaStrategy
+    from prompt_ops.core.prompt_strategies import BasicOptimizationStrategy
 
     OPTIMIZATION_COMPONENTS_AVAILABLE = True
 except ImportError as e:
@@ -33,7 +33,7 @@ class TestOptimizationIntegration:
     """Integration tests for the optimization process."""
 
     def test_llama_strategy_run(self, facility_prompt_path, mock_model_response):
-        """Test the LlamaStrategy run method from model_strategies."""
+        """Test the BasicOptimizationStrategy run method."""
         # Read the system prompt
         with open(facility_prompt_path, "r") as f:
             system_prompt = f.read()
@@ -43,7 +43,7 @@ class TestOptimizationIntegration:
         mock_model.generate.return_value = mock_model_response
 
         # Create the strategy with the mock model
-        strategy = LlamaStrategy(model=mock_model)
+        strategy = BasicOptimizationStrategy(model=mock_model)
 
         # Mock the base_strategy.run method to return a dictionary
         mock_result = {"prompt": "Optimized prompt", "score": 0.9}
@@ -87,7 +87,7 @@ class TestOptimizationIntegration:
         metric = FacilityMetric()
 
         # Create strategy with mocked base_strategy
-        strategy = LlamaStrategy(model=mock_model, metric=metric)
+        strategy = BasicOptimizationStrategy(model=mock_model, metric=metric)
 
         # Mock the base_strategy
         mock_result = {"prompt": "Optimized prompt", "score": 0.8}
@@ -133,7 +133,7 @@ class TestOptimizationIntegration:
         metric = FacilityMetric()
 
         # Create strategy with mocked base_strategy
-        strategy = LlamaStrategy(model=mock_model, metric=metric)
+        strategy = BasicOptimizationStrategy(model=mock_model, metric=metric)
 
         # Mock the base_strategy
         mock_result = {"prompt": "Optimized prompt for end-to-end test", "score": 0.9}

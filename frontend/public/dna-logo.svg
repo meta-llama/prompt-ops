@@ -1,0 +1,27 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="favicon-dna" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Scaled up DNA helix - fills more of the space -->
+  <path d="M 8 2 Q 12 7 8 12 Q 4 17 8 22 Q 12 27 8 32" 
+        stroke="url(#favicon-dna)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M 24 2 Q 20 7 24 12 Q 28 17 24 22 Q 20 27 24 32" 
+        stroke="url(#favicon-dna)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  
+  <!-- Connecting lines - wider spacing -->
+  <line x1="8" y1="5" x2="24" y2="5" stroke="#3b82f6" stroke-width="2" opacity="0.4"/>
+  <line x1="8" y1="10" x2="24" y2="10" stroke="#3b82f6" stroke-width="2" opacity="0.7"/>
+  <line x1="8" y1="16" x2="24" y2="16" stroke="#3b82f6" stroke-width="2" opacity="1"/>
+  <line x1="8" y1="22" x2="24" y2="22" stroke="#3b82f6" stroke-width="2" opacity="0.7"/>
+  <line x1="8" y1="27" x2="24" y2="27" stroke="#3b82f6" stroke-width="2" opacity="0.4"/>
+  
+  <!-- Larger dots -->
+  <circle cx="8" cy="10" r="2" fill="#3b82f6"/>
+  <circle cx="24" cy="10" r="2" fill="#3b82f6"/>
+  <circle cx="8" cy="22" r="2" fill="#3b82f6"/>
+  <circle cx="24" cy="22" r="2" fill="#3b82f6"/>
+</svg>

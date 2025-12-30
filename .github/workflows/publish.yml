@@ -40,7 +40,7 @@ jobs:
         echo "Package version: $VERSION"
 
         # Check if this version already exists on PyPI
-        if pip index versions llama-prompt-ops 2>/dev/null | grep -q "$VERSION"; then
+        if pip index versions prompt-ops 2>/dev/null | grep -q "$VERSION"; then
           echo "Error: Version $VERSION already exists on PyPI"
           exit 1
         fi

@@ -1,0 +1,276 @@
+/* Clash Display Font */
+@import url('https://api.fontshare.com/v2/css?f[]=clash-display@200,300,400,500,600,700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. */
+
+@layer base {
+  /* Dark-only theme - using dark values as default */
+  :root,
+  .dark {
+    /* Dark backgrounds - matching #0a0c10 cinematic theme */
+    --background: 220 20% 4%;         /* #0a0c10 - cinematic dark */
+    --foreground: 210 27% 96%;        /* Meta Gray 100 - light text */
+
+    --card: 220 15% 8%;               /* Slightly elevated dark card */
+    --card-foreground: 210 27% 96%;
+
+    --popover: 220 15% 8%;
+    --popover-foreground: 210 27% 96%;
+
+    /* Primary: Meta Blue */
+    --primary: 213 100% 44%;          /* Meta Blue #0064E0 */
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: Dark gray for subtle backgrounds */
+    --secondary: 220 15% 12%;
+    --secondary-foreground: 210 27% 96%;
+
+    /* Muted: For less emphasis on dark bg */
+    --muted: 220 15% 12%;
+    --muted-foreground: 210 20% 60%;  /* Lighter gray for readable muted text */
+
+    /* Accent: Meta Teal for highlights */
+    --accent: 172 100% 41%;           /* Meta Teal #00D2BE */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders: Subtle white borders for glass effect */
+    --border: 220 15% 18%;            /* Subtle dark border */
+    --input: 220 15% 12%;             /* Dark input background */
+    --ring: 213 100% 44%;             /* Meta Blue for focus rings */
+
+    --radius: 0.5rem;
+
+    /* Sidebar - darker than main bg */
+    --sidebar-background: 220 20% 3%;
+    --sidebar-foreground: 210 27% 96%;
+    --sidebar-primary: 213 100% 44%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 15% 12%;
+    --sidebar-accent-foreground: 210 27% 96%;
+    --sidebar-border: 220 15% 18%;
+    --sidebar-ring: 213 100% 44%;
+
+    /* Meta brand colors - brighter for dark backgrounds */
+    --meta-blue: 213 100% 60%;           /* Brighter blue */
+    --meta-blue-hover: 213 100% 70%;     /* Even brighter for hover */
+    --meta-teal: 172 100% 45%;           /* Brighter teal */
+    --meta-teal-hover: 172 100% 55%;
+    --meta-purple: 249 100% 78%;         /* Brighter purple */
+    --meta-purple-text: 249 100% 78%;
+    --meta-orange: 28 96% 62%;           /* Brighter orange */
+    --meta-orange-text: 28 96% 62%;
+    --meta-pink: 330 94% 78%;            /* Brighter pink */
+
+    /* Panel/card backgrounds - glass-like on dark */
+    --panel: 220 15% 8%;                 /* Elevated from bg */
+    --panel-hover: 220 15% 12%;          /* Lighter on hover */
+    --panel-muted: 220 15% 10%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html, body {
+    overscroll-behavior: none;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Clash Display', system-ui, sans-serif;
+  }
+
+  /* Custom scrollbar styling for dark theme */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+/* Hero animations */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 30px rgba(0, 100, 224, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 60px rgba(0, 100, 224, 0.8);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 1.2s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-up-delay-1 {
+  animation: fade-in-up 1s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-up-delay-2 {
+  animation: fade-in-up 1s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-up-delay-3 {
+  animation: fade-in-up 1s cubic-bezier(0.16, 1, 0.3, 1) 0.45s forwards;
+  opacity: 0;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Video background utilities */
+.video-overlay {
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.4) 0%,
+    rgba(0, 0, 0, 0.2) 50%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+}
+
+/* Glass panel utilities for docs and dark pages */
+.glass-panel {
+  @apply bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl;
+}
+
+.glass-panel-solid {
+  @apply bg-white/[0.06] backdrop-blur-xl border border-white/[0.1] rounded-2xl;
+}
+
+.glass-input {
+  @apply bg-white/[0.05] border border-white/[0.1] rounded-xl text-white placeholder:text-white/40;
+  @apply focus:border-white/20 focus:ring-1 focus:ring-white/10 focus:bg-white/[0.08];
+}
+
+.glass-nav-link {
+  @apply text-white/70 hover:text-white hover:bg-white/[0.08] transition-all duration-200;
+}
+
+.glass-nav-link-active {
+  @apply text-white bg-white/[0.1];
+}
+
+/* Dark theme prose for docs markdown */
+.prose-dark {
+  @apply text-white/80;
+}
+
+.prose-dark h1,
+.prose-dark h2,
+.prose-dark h3,
+.prose-dark h4 {
+  @apply text-white font-semibold;
+}
+
+.prose-dark p {
+  @apply text-white/70 leading-relaxed;
+}
+
+.prose-dark a {
+  @apply text-[#4da3ff] hover:text-[#7dbdff] underline decoration-[#4da3ff]/30 hover:decoration-[#4da3ff];
+}
+
+.prose-dark code {
+  @apply bg-white/[0.1] text-[#a5d6ff] px-1.5 py-0.5 rounded text-sm font-mono;
+}
+
+.prose-dark pre {
+  background-color: #050608;
+  @apply border border-white/[0.08] rounded-xl p-4 overflow-x-auto;
+}
+
+.prose-dark pre code {
+  @apply bg-transparent p-0;
+}
+
+.prose-dark blockquote {
+  @apply border-l-2 border-[#4da3ff]/50 pl-4 italic text-white/60;
+}
+
+.prose-dark ul,
+.prose-dark ol {
+  @apply text-white/70 space-y-1;
+}
+
+.prose-dark li {
+  @apply leading-relaxed;
+}
+
+.prose-dark table {
+  @apply w-full border-collapse;
+}
+
+.prose-dark th {
+  @apply border border-white/[0.1] px-4 py-2 bg-white/[0.05] text-white font-medium text-left;
+}
+
+.prose-dark td {
+  @apply border border-white/[0.1] px-4 py-2 text-white/70;
+}
+
+.prose-dark hr {
+  @apply border-white/[0.1] my-8;
+}

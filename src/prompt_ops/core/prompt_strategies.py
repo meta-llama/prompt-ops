@@ -47,6 +47,7 @@ class BaseStrategy(ABC):
         metric: Optional[Callable] = None,
         num_threads: int = 18,
         model_family: str = None,
+        fail_on_error: bool = False,
     ):
         """
         Initialize the strategy.
@@ -57,6 +58,9 @@ class BaseStrategy(ABC):
             num_threads: Number of threads to use for parallel processing
             model_family: Model family to optimize for (e.g., "llama")
                          If None, will be inferred from model_name
+            fail_on_error: If True, raise OptimizationError on failure instead
+                          of falling back to original prompt. Default is False
+                          for backward compatibility.
         """
         self.model_name = model_name
         self.metric = metric
@@ -66,6 +70,7 @@ class BaseStrategy(ABC):
 
         # Set model family if provided, otherwise leave as None (model-agnostic)
         self.model_family = model_family
+        self.fail_on_error = fail_on_error
 
     @abstractmethod
     def run(self, prompt_data: Dict[str, Any]) -> Any:
@@ -105,6 +110,7 @@ class BasicOptimizationStrategy(BaseStrategy):
         num_threads: int = 18,
         metric: Optional[Callable] = None,
         model_family: str = None,
+        fail_on_error: bool = False,
         # MIPROv2 specific parameters
         max_bootstrapped_demos: int = 4,
         max_labeled_demos: int = 5,
@@ -176,9 +182,13 @@ class BasicOptimizationStrategy(BaseStrategy):
             task_model_name: Name of the task model
             prompt_model_name: Name of the prompt model
 
+            # Error handling
+            fail_on_error: If True, raise OptimizationError on failure instead
+                          of falling back to original prompt
+
             **kwargs: Additional configuration parameters
         """
-        super().__init__(model_name, metric, num_threads, model_family)
+        super().__init__(model_name, metric, num_threads, model_family, fail_on_error)
 
         # Store task and prompt models
         self.task_model = kwargs.get("task_model")
@@ -421,6 +431,8 @@ class BasicOptimizationStrategy(BaseStrategy):
 
             # Create a custom compile method that injects our tip directly
             original_propose_instructions = None
+            # Capture fail_on_error for use in nested function (inner 'self' shadows outer)
+            strategy_fail_on_error = self.fail_on_error
             if (
                 hasattr(self, "proposer_kwargs")
                 and self.proposer_kwargs
@@ -500,6 +512,10 @@ class BasicOptimizationStrategy(BaseStrategy):
                         # Log the result for debugging
                         if result is None:
                             logging.error("Instruction proposer returned None")
+                            if strategy_fail_on_error:
+                                raise OptimizationError(
+                                    "Instruction proposer returned None - no valid instructions generated"
+                                )
                             # Create a fallback result
                             if len(args) >= 2:
                                 program = args[1]
@@ -523,6 +539,11 @@ class BasicOptimizationStrategy(BaseStrategy):
                     except Exception as e:
                         logging.error(f"Error in custom_propose_instructions: {str(e)}")
                         logging.error(traceback.format_exc())
+
+                        if strategy_fail_on_error:
+                            raise OptimizationError(
+                                f"Instruction proposal failed: {str(e)}"
+                            )
 
                         # Create a fallback result
                         if len(args) >= 2:
@@ -630,6 +651,11 @@ class BasicOptimizationStrategy(BaseStrategy):
                         )
                         logging.error("4. Incompatible DSPy version")
 
+                        if self.fail_on_error:
+                            raise OptimizationError(
+                                f"Instruction proposal phase failed: {str(e)}"
+                            )
+
                         # Create a fallback
                         logging.warning("Falling back to original prompt")
                         optimized_program = None
@@ -656,6 +682,10 @@ class BasicOptimizationStrategy(BaseStrategy):
 
             # Check if optimization was successful
             if optimized_program is None:
+                if self.fail_on_error:
+                    raise OptimizationError(
+                        "Optimizer returned None - optimization failed without producing a result"
+                    )
                 logging.warning(
                     "Optimizer returned None. Falling back to original prompt."
                 )
@@ -693,6 +723,7 @@ class PDOStrategy(BaseStrategy):
         metric: Optional[Callable] = None,
         num_threads: int = 18,
         model_family: str = None,
+        fail_on_error: bool = True,  # PDO defaults to True (strict mode)
         # PDO-specific parameters
         total_rounds: int = 100,
         num_duels_per_round: int = 3,
@@ -737,9 +768,11 @@ class PDOStrategy(BaseStrategy):
             prompt_model: ModelAdapter for evaluation/judging
             task_model_name: Name of task model (for display)
             prompt_model_name: Name of prompt model (for display)
+            fail_on_error: If True, raise OptimizationError on failure. Defaults to True
+                          for PDO as it doesn't have fallback behavior.
             **kwargs: Additional parameters
         """
-        super().__init__(model_name, metric, num_threads, model_family)
+        super().__init__(model_name, metric, num_threads, model_family, fail_on_error)
 
         # Create or store models - PDO uses LiteLLMModelAdapter for lightweight text generation
         if task_model is None:

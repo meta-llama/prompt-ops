@@ -11,7 +11,8 @@ for evaluating the quality of optimized prompts.
 """
 
 import json
-import logging  # Keep existing logging import for warnings/errors
+import logging
+import re
 from abc import ABC, abstractmethod
 from typing import (
     Any,
@@ -20,16 +21,15 @@ from typing import (
     Generic,
     List,
     Optional,
-    Type,
     TypeVar,
     Union,
-    get_type_hints,
 )
 
 import dspy
 
 from prompt_ops.core.model import ModelAdapter
-from prompt_ops.core.utils.logging import get_logger  # Added import
+from prompt_ops.core.utils import extract_value, parse_json
+from prompt_ops.core.utils.logging import get_logger
 
 T = TypeVar("T", bound=Any)
 U = TypeVar("U", bound=Any)
@@ -45,6 +45,17 @@ class MetricBase(ABC, Generic[T, U]):
     It also supports different input types, including raw values, dictionaries,
     or structured objects like DSPy examples.
     """
+
+    def __init__(self):
+        """Initialize the metric with a logger."""
+        self._logger = None
+
+    @property
+    def logger(self):
+        """Lazy-load logger to avoid initialization overhead."""
+        if self._logger is None:
+            self._logger = get_logger()
+        return self._logger
 
     @abstractmethod
     def __call__(
@@ -71,23 +82,9 @@ class MetricBase(ABC, Generic[T, U]):
         """Return the name of the metric."""
         return self.__class__.__name__
 
-    def extract_value(self, obj: Any, key: str, default: Any = None) -> Any:
-        """
-        Extract a value from an object, which could be a dictionary or an object with attributes.
-
-        Args:
-            obj: The object to extract from
-            key: The key or attribute name to extract
-            default: Default value if the key doesn't exist
-
-        Returns:
-            The extracted value or the default
-        """
-        if hasattr(obj, key):
-            return getattr(obj, key)
-        elif isinstance(obj, dict) and key in obj:
-            return obj[key]
-        return default
+    # Use the shared extract_value utility from utils module
+    # This is aliased here for backward compatibility and convenience
+    extract_value = staticmethod(extract_value)
 
 
 class DSPyMetricAdapter(MetricBase):
@@ -188,9 +185,6 @@ class DSPyMetricAdapter(MetricBase):
         # Input field descriptions (used for building custom signatures)
         self.input_field_descriptions = {}
 
-        # Initialize logger
-        self.logger = get_logger()  # Added logger initialization
-
         # Initialize signature template if a built-in name is provided
         if signature_name and signature_name in self.SIGNATURES:
             template = self.SIGNATURES[signature_name]
@@ -269,14 +263,6 @@ and {self.score_range[1]} means identical in meaning.
         # Clamp to the target range
         return max(min_norm, min(max_norm, normalized))
 
-    def extract_value(self, obj, key, default=None):
-        """Extract a value from an object, handling different object types."""
-        if hasattr(obj, key):
-            return getattr(obj, key)
-        elif isinstance(obj, dict) and key in obj:
-            return obj[key]
-        return default
-
     def __call__(self, gold: Any, pred: Any, trace: bool = False, **kwargs) -> float:
         """
         Evaluate the prediction against the ground truth using DSPy.
@@ -294,9 +280,9 @@ and {self.score_range[1]} means identical in meaning.
             inputs = {}
             for adapter_key, sig_key in self.input_mapping.items():
                 if adapter_key == "gold":
-                    inputs[sig_key] = self.extract_value(gold, "answer", gold)
+                    inputs[sig_key] = extract_value(gold, "answer", gold)
                 elif adapter_key == "pred":
-                    inputs[sig_key] = self.extract_value(pred, "answer", pred)
+                    inputs[sig_key] = extract_value(pred, "answer", pred)
                 else:
                     # Handle custom mappings
                     inputs[sig_key] = kwargs.get(adapter_key, None)
@@ -404,9 +390,9 @@ class ExactMatchMetric(MetricBase):
             case_sensitive: Whether to perform case-sensitive matching
             strip_whitespace: Whether to strip whitespace before comparing
         """
+        super().__init__()
         self.case_sensitive = case_sensitive
         self.strip_whitespace = strip_whitespace
-        self.logger = get_logger()  # Added logger initialization
 
     def __call__(
         self, gold: Any, pred: Any, trace: bool = False, **kwargs
@@ -481,7 +467,27 @@ def json_evaluation_metric(
                 )  # Replaced print with logger.debug
             return {"precision": 0.0, "recall": 0.0, "f1": 0.0}
 
-    # Flatten both JSONs
+    # Flatten both JSONs into key paths
+    def _flatten_keys(obj: Any, prefix: str = "") -> List[str]:
+        keys = []
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                key = f"{prefix}.{k}" if prefix else k
+                if isinstance(v, (dict, list)) and v:
+                    keys.extend(_flatten_keys(v, key))
+                else:
+                    keys.append(key)
+        elif isinstance(obj, list):
+            for i, v in enumerate(obj):
+                key = f"{prefix}[{i}]"
+                if isinstance(v, (dict, list)) and v:
+                    keys.extend(_flatten_keys(v, key))
+                else:
+                    keys.append(key)
+        else:
+            keys.append(prefix)
+        return keys
+
     gold_keys = set(_flatten_keys(gold))
     pred_keys = set(_flatten_keys(pred))
 
@@ -517,39 +523,6 @@ def json_evaluation_metric(
     return {"precision": precision, "recall": recall, "f1": f1}
 
 
-def _flatten_keys(obj: Any, prefix: str = "") -> List[str]:
-    """
-    Recursively flatten a nested dictionary or list into a list of key paths.
-
-    Args:
-        obj: The object to flatten
-        prefix: Current key prefix
-
-    Returns:
-        List of flattened key paths
-    """
-    keys = []
-
-    if isinstance(obj, dict):
-        for k, v in obj.items():
-            key = f"{prefix}.{k}" if prefix else k
-            if isinstance(v, (dict, list)) and v:  # Only recurse if non-empty
-                keys.extend(_flatten_keys(v, key))
-            else:
-                keys.append(key)
-    elif isinstance(obj, list):
-        for i, v in enumerate(obj):
-            key = f"{prefix}[{i}]"
-            if isinstance(v, (dict, list)) and v:  # Only recurse if non-empty
-                keys.extend(_flatten_keys(v, key))
-            else:
-                keys.append(key)
-    else:
-        keys.append(prefix)
-
-    return keys
-
-
 class FacilityMetric(MetricBase):
     """
     A specialized metric for evaluating facility categorization predictions.
@@ -570,9 +543,9 @@ class FacilityMetric(MetricBase):
             strict_json: Whether to use strict JSON parsing (no code block extraction).
             **kwargs: Additional parameters for customization.
         """
+        super().__init__()
         self.output_field = output_field
         self.strict_json = strict_json
-        self.logger = get_logger()  # Added logger initialization
 
     def __call__(
         self, gold: Any, pred: Any, trace: bool = False, **kwargs
@@ -591,10 +564,10 @@ class FacilityMetric(MetricBase):
             Either a dictionary containing metric scores (if trace=True) or a single float score
         """
         # Extract ground truth using a priority-based approach
-        ground_truth = self.extract_value(gold, self.output_field)
+        ground_truth = extract_value(gold, self.output_field)
 
         # Extract prediction value
-        prediction_value = self.extract_value(pred, "answer") or pred
+        prediction_value = extract_value(pred, "answer") or pred
 
         # Get the full evaluation results
         results = self.evaluate(ground_truth, prediction_value, **kwargs)
@@ -603,93 +576,6 @@ class FacilityMetric(MetricBase):
         if trace:
             return results
         return float(results.get("total", 0.0))
-
-    def extract_value(self, obj: Any, key: str, default: Any = None) -> Any:
-        """
-        Extract a value from different object types.
-
-        Args:
-            obj: The object to extract from
-            key: The key to extract
-            default: Default value if key is not found
-
-        Returns:
-            The extracted value or default
-        """
-        # Check for outputs attribute (DSPy Example objects)
-        if hasattr(obj, "outputs") and hasattr(obj.outputs, "get"):
-            value = obj.outputs.get(key)
-            if value is not None:
-                return value
-
-        # Check for direct attribute
-        if hasattr(obj, key):
-            return getattr(obj, key)
-
-        # Check dictionary-like access
-        if isinstance(obj, dict) and key in obj:
-            return obj[key]
-
-        # Check for text attribute (common in Prediction objects)
-        if hasattr(obj, "text"):
-            return obj.text
-
-        # Fall back to string representation if nothing else works
-        if hasattr(obj, "__str__") and not isinstance(obj, (str, bytes, bytearray)):
-            return str(obj)
-
-        return obj
-
-    @staticmethod
-    def parse_json(input_string: str):
-        """
-        Attempts to parse the given string as JSON. If direct parsing fails,
-        it tries to extract a JSON snippet from code blocks formatted as:
-            ```json
-            ... JSON content ...
-            ```
-        or any code block delimited by triple backticks and then parses that content.
-
-        Parameters:
-            input_string (str): The input string which may contain JSON.
-
-        Returns:
-            The parsed JSON object.
-
-        Raises:
-            ValueError: If parsing fails even after attempting to extract a JSON snippet.
-        """
-        # Try to parse the string directly.
-        try:
-            return json.loads(input_string)
-        except json.JSONDecodeError as err:
-            error = err  # Proceed to try extracting a JSON snippet.
-
-        # Define patterns to search for a JSON code block.
-        import re
-
-        patterns = [
-            re.compile(
-                r"```json\s*(.*?)\s*```", re.DOTALL | re.IGNORECASE
-            ),  # code block with "json" label
-            re.compile(
-                r"```(.*?)```", re.DOTALL
-            ),  # any code block delimited by triple backticks
-        ]
-
-        # Attempt extraction using each pattern in order.
-        for pattern in patterns:
-            match = pattern.search(input_string)
-            if match:
-                json_candidate = match.group(1).strip()
-                try:
-                    return json.loads(json_candidate)
-                except json.JSONDecodeError:
-                    # Continue trying if extraction from the code block didn't result in valid JSON.
-                    continue
-
-        # If all attempts fail, raise an error.
-        raise error
 
     def evaluate(self, ground_truth: Any, predictions: Any, **kwargs) -> Dict[str, Any]:
         """
@@ -718,7 +604,7 @@ class FacilityMetric(MetricBase):
                 else (
                     json.loads(ground_truth)
                     if self.strict_json
-                    else self.parse_json(ground_truth)
+                    else parse_json(ground_truth)
                 )
             )
             pred = (
@@ -727,7 +613,7 @@ class FacilityMetric(MetricBase):
                 else (
                     json.loads(predictions)
                     if self.strict_json
-                    else self.parse_json(predictions)
+                    else parse_json(predictions)
                 )
             )
         except (json.JSONDecodeError, ValueError):
@@ -819,7 +705,7 @@ class StandardJSONMetric(MetricBase):
                 f"Invalid evaluation mode: {evaluation_mode}. Must be 'selected_fields_comparison' or 'full_json_comparison'."
             )
 
-        self.logger = get_logger()  # Added logger initialization
+        super().__init__()
 
         # Set up fields to evaluate
         if isinstance(output_fields, dict):
@@ -859,10 +745,10 @@ class StandardJSONMetric(MetricBase):
             Either a dictionary containing metric scores (if trace=True) or a single float score
         """
         # Extract ground truth using a priority-based approach
-        ground_truth = self.extract_value(gold, self.output_field)
+        ground_truth = extract_value(gold, self.output_field)
 
         # Extract prediction value
-        prediction_value = self.extract_value(pred, "answer") or pred
+        prediction_value = extract_value(pred, "answer") or pred
 
         # Get the full evaluation results
         results = self.evaluate(ground_truth, prediction_value, trace=trace, **kwargs)
@@ -871,92 +757,6 @@ class StandardJSONMetric(MetricBase):
         if trace:
             return results
         return float(results.get("total", 0.0))
-
-    def _extract_value(self, obj, field_name):
-        """
-        Extract a value from an object using a consistent approach.
-
-        Args:
-            obj: The object to extract from (can be Example, Prediction, dict, etc.)
-            field_name: The name of the field to extract
-
-        Returns:
-            The extracted value or None if not found
-        """
-        # Check for outputs attribute (DSPy Example objects)
-        if hasattr(obj, "outputs") and hasattr(obj.outputs, "get"):
-            value = obj.outputs.get(field_name)
-            if value is not None:
-                return value
-
-        # Check for direct attribute
-        if hasattr(obj, field_name):
-            return getattr(obj, field_name)
-
-        # Check dictionary-like access
-        if isinstance(obj, dict) and field_name in obj:
-            return obj[field_name]
-
-        # Check for text attribute (common in Prediction objects)
-        if hasattr(obj, "text"):
-            return obj.text
-
-        # Fall back to string representation if nothing else works
-        if hasattr(obj, "__str__") and not isinstance(obj, (str, bytes, bytearray)):
-            return str(obj)
-
-        return obj
-
-    @staticmethod
-    def parse_json(input_string: str):
-        """
-        Attempts to parse the given string as JSON. If direct parsing fails,
-        it tries to extract a JSON snippet from code blocks formatted as:
-            ```json
-            ... JSON content ...
-            ```
-        or any code block delimited by triple backticks and then parses that content.
-
-        Parameters:
-            input_string (str): The input string which may contain JSON.
-
-        Returns:
-            The parsed JSON object.
-
-        Raises:
-            ValueError: If parsing fails even after attempting to extract a JSON snippet.
-        """
-        # Try to parse the string directly.
-        try:
-            return json.loads(input_string)
-        except json.JSONDecodeError as err:
-            error = err  # Proceed to try extracting a JSON snippet.
-
-        # Define patterns to search for a JSON code block.
-        import re
-
-        patterns = [
-            re.compile(
-                r"```json\s*(.*?)\s*```", re.DOTALL | re.IGNORECASE
-            ),  # code block with "json" label
-            re.compile(
-                r"```(.*?)```", re.DOTALL
-            ),  # any code block delimited by triple backticks
-        ]
-
-        # Attempt extraction using each pattern in order.
-        for pattern in patterns:
-            match = pattern.search(input_string)
-            if match:
-                json_candidate = match.group(1).strip()
-                try:
-                    return json.loads(json_candidate)
-                except json.JSONDecodeError:
-                    # Continue trying if extraction from the code block didn't result in valid JSON.
-                    continue
-
-        # If all attempts fail, raise an error.
-        raise error
 
     def flatten_json(self, json_obj: Any, parent: str = "", sep: str = ".") -> dict:
         """
@@ -984,24 +784,6 @@ class StandardJSONMetric(MetricBase):
             items[parent] = json_obj
         return items
 
-    def extract_value(self, obj: Any, key: str, default: Any = None) -> Any:
-        """
-        Extract a value from different object types.
-
-        Args:
-            obj: The object to extract from
-            key: The key to extract
-            default: Default value if key is not found
-
-        Returns:
-            The extracted value or default
-        """
-        if hasattr(obj, key):
-            return getattr(obj, key)
-        elif isinstance(obj, dict) and key in obj:
-            return obj[key]
-        return default
-
     def evaluate_flattened(
         self, ground_truth: Any, predictions: Any, **kwargs
     ) -> Dict[str, Any]:
@@ -1028,7 +810,7 @@ class StandardJSONMetric(MetricBase):
                 else (
                     json.loads(ground_truth)
                     if self.strict_json
-                    else self.parse_json(ground_truth)
+                    else parse_json(ground_truth)
                 )
             )
             pred = (
@@ -1037,7 +819,7 @@ class StandardJSONMetric(MetricBase):
                 else (
                     json.loads(predictions)
                     if self.strict_json
-                    else self.parse_json(predictions)
+                    else parse_json(predictions)
                 )
             )
         except (json.JSONDecodeError, ValueError):
@@ -1126,7 +908,7 @@ class StandardJSONMetric(MetricBase):
                 else (
                     json.loads(ground_truth)
                     if self.strict_json
-                    else self.parse_json(ground_truth)
+                    else parse_json(ground_truth)
                 )
             )
             pred = (
@@ -1135,7 +917,7 @@ class StandardJSONMetric(MetricBase):
                 else (
                     json.loads(predictions)
                     if self.strict_json
-                    else self.parse_json(predictions)
+                    else parse_json(predictions)
                 )
             )
         except (json.JSONDecodeError, ValueError):

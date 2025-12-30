@@ -27,6 +27,13 @@ import click
 import yaml
 from dotenv import load_dotenv
 
+try:
+    import litellm
+
+    LITELLM_AVAILABLE = True
+except ImportError:
+    LITELLM_AVAILABLE = False
+
 # Import template utilities
 from prompt_ops.templates import get_template_content, get_template_path
 
@@ -64,6 +71,40 @@ def check_api_key(api_key_env, dotenv_path=".env"):
         sys.exit(1)
 
     return api_key
+
+
+def validate_litellm_environment(model_name):
+    """Validate that the environment is properly configured for the model using LiteLLM.
+
+    Args:
+        model_name: The full model name with provider prefix (e.g., "openrouter/model")
+
+    Returns:
+        bool: True if environment is valid, False otherwise
+    """
+    if not LITELLM_AVAILABLE:
+        return True  # Skip validation if litellm not available
+
+    try:
+        # Use LiteLLM's validate_environment to check for required env vars
+        result = litellm.validate_environment(model_name)
+
+        if result.get("keys_in_environment", False):
+            click.echo(f"✓ Environment validated for model: {model_name}")
+            return True
+        else:
+            missing_keys = result.get("missing_keys", [])
+            if missing_keys:
+                click.echo(
+                    f"Warning: Missing environment variables: {', '.join(missing_keys)}",
+                    err=True,
+                )
+                click.echo(f"LiteLLM expects these for model '{model_name}'", err=True)
+            return False
+    except Exception as e:
+        # If validation fails, just warn but don't block execution
+        click.echo(f"Warning: Could not validate environment: {str(e)}", err=True)
+        return True
 
 
 # Helper function for real-time output
@@ -108,16 +149,32 @@ def cli():
 @click.option(
     "--model",
     default="openrouter/meta-llama/llama-3.3-70b-instruct",
-    help="Model to use for prompt optimization",
+    help="Model to use for prompt optimization (use provider/model format, e.g. openrouter/model, groq/model)",
 )
 @click.option(
     "--api-key-env",
-    default="OPENROUTER_API_KEY",
-    help="Name of the environment variable for the API key",
+    default=None,
+    help="Name of the environment variable for the API key (optional - inferred from model if not specified)",
 )
 def create(project_name, output_dir, model, api_key_env):
     """Create a new prompt optimization project with all necessary files."""
     project_dir = os.path.join(output_dir, project_name)
+
+    # Infer API key environment variable from model if not specified
+    if not api_key_env:
+        provider = model.split("/")[0] if "/" in model else "openai"
+        provider_to_key = {
+            "openrouter": "OPENROUTER_API_KEY",
+            "openai": "OPENAI_API_KEY",
+            "anthropic": "ANTHROPIC_API_KEY",
+            "groq": "GROQ_API_KEY",
+            "cerebras": "CEREBRAS_API_KEY",
+            "together": "TOGETHER_API_KEY",
+            "cohere": "COHERE_API_KEY",
+        }
+        api_key_env = provider_to_key.get(
+            provider.lower(), f"{provider.upper()}_API_KEY"
+        )
 
     try:
         # Check if directory already exists
@@ -158,7 +215,7 @@ def create(project_name, output_dir, model, api_key_env):
                 "strict_json": False,
                 "output_field": "answer",
             },
-            "optimization": {"strategy": "basic"},
+            "optimization": {"strategy": "basic", "num_threads": 2},
         }
 
         with open(os.path.join(project_dir, "config.yaml"), "w") as f:
@@ -229,7 +286,6 @@ A prompt optimization project created with prompt-ops.
         echo_flush("\nTo get started:")
         echo_flush(f"1. cd {project_name}")
         echo_flush(f"2. Edit the .env file to add your {api_key_env}")
-        echo_flush(f"   You can get an API key at: https://openrouter.ai/")
         echo_flush("3. Run: prompt-ops migrate")
 
     except Exception as e:
@@ -465,7 +521,7 @@ def get_models_from_config(config_dict, override_model_name=None, api_key=None):
         adapter_type = model_config.get("adapter_type", "dspy")
 
     # Get API configuration
-    api_base = model_config.get("api_base", "https://openrouter.ai/api/v1")
+    api_base = model_config.get("api_base")
     max_tokens = model_config.get("max_tokens", 2048)
     temperature = model_config.get("temperature", 0.0)
     cache = model_config.get("cache", False)
@@ -538,7 +594,7 @@ def get_model_from_config(config_dict, override_model_name=None, api_key=None):
             )
         ),
         adapter_type=adapter_type,
-        api_base=model_config.get("api_base", "https://openrouter.ai/api/v1"),
+        api_base=model_config.get("api_base"),
         api_key=api_key,
         max_tokens=model_config.get("max_tokens", 2048),
         temperature=model_config.get("temperature", 0.0),
@@ -759,8 +815,8 @@ def load_config(config_path):
 )
 @click.option(
     "--api-key-env",
-    default="OPENROUTER_API_KEY",
-    help="Environment variable name for the API key",
+    default=None,
+    help="Environment variable name for the API key (optional - LiteLLM will auto-detect based on model)",
 )
 @click.option(
     "--dotenv-path", default=".env", help="Path to the .env file containing API keys"
@@ -807,8 +863,15 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
     for logger_name in external_loggers:
         logging.getLogger(logger_name).setLevel(getattr(logging, external_log_level))
 
-    # Get API key using the extracted function
-    api_key = check_api_key(api_key_env, dotenv_path)
+    # Get API key using the extracted function, or let LiteLLM auto-detect
+    if api_key_env:
+        api_key = check_api_key(api_key_env, dotenv_path)
+    else:
+        # Load .env file if it exists, but don't check for specific keys
+        if os.path.exists(dotenv_path):
+            load_dotenv(dotenv_path)
+            click.echo(f"Loaded environment variables from {dotenv_path}")
+        api_key = None  # LiteLLM will auto-detect based on model
 
     # Load configuration
     try:
@@ -837,6 +900,16 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
     task_model, prompt_model, task_model_name, proposer_model_name = (
         get_models_from_config(config_dict, model, api_key)
     )
+
+    # Validate environment for the task model using LiteLLM
+    try:
+        validate_litellm_environment(task_model_name)
+    except Exception as e:
+        click.echo(f"Warning: Environment validation failed: {str(e)}", err=True)
+        click.echo(
+            "Continuing anyway - LiteLLM will error if credentials are actually missing.",
+            err=True,
+        )
 
     # Create metric based on config - use task_model for metric
     try:
@@ -887,7 +960,7 @@ def migrate(config, model, output_dir, save_yaml, api_key_env, dotenv_path, log_
 
     # Get prompt from config (support both 'system_prompt' and legacy 'prompt' keys)
     prompt_config = config_dict.get("system_prompt", config_dict.get("prompt", {}))
-    prompt_file = prompt_config.get("file", None)
+    prompt_file = prompt_config.get("file")
     prompt_text = prompt_config.get("text", "")
 
     # Load prompt text from file if specified and text is not provided

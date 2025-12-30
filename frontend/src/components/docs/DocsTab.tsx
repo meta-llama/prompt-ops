@@ -1,0 +1,267 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Book, Search, FileText, Code, Settings, ChevronRight, Loader2, Zap, BookOpen } from 'lucide-react';
+import { DocsContent } from './DocsContent';
+import { DocsSidebar } from './DocsSidebar';
+import { apiUrl } from '@/lib/config';
+import type { DocItem } from '@/types';
+
+export type { DocItem } from '@/types';
+
+// Map icon names from backend to actual icon components
+const iconMap: Record<string, React.ElementType> = {
+  book: Book,
+  'book-open': BookOpen,
+  settings: Settings,
+  code: Code,
+  'file-text': FileText,
+  zap: Zap,
+};
+
+// Map categories to default icons
+const categoryIconMap: Record<string, React.ElementType> = {
+  'Basics': Book,
+  'Guides': FileText,
+  'Intermediate': Settings,
+  'Advanced': Code,
+};
+
+export const DocsTab = () => {
+  const { docId } = useParams<{ docId?: string }>();
+  const navigate = useNavigate();
+  const [selectedDoc, setSelectedDoc] = useState<DocItem | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [docsStructure, setDocsStructure] = useState<DocItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch docs structure from API
+  useEffect(() => {
+    const fetchDocsStructure = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(apiUrl('/api/docs/structure'));
+        if (!response.ok) {
+          throw new Error('Failed to fetch documentation structure');
+        }
+        const data = await response.json();
+        
+        if (data.success && data.docs) {
+          // Map backend response to DocItem format with icons
+          const docs: DocItem[] = data.docs.map((doc: {
+            id: string;
+            title: string;
+            path: string;
+            category: string;
+            description?: string;
+            icon?: string;
+          }) => ({
+            id: doc.id,
+            title: doc.title,
+            path: doc.path,
+            category: doc.category,
+            description: doc.description,
+            icon: doc.icon ? iconMap[doc.icon] : categoryIconMap[doc.category] || FileText,
+          }));
+          setDocsStructure(docs);
+        }
+      } catch (err) {
+        console.error('Failed to fetch docs structure:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load documentation');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDocsStructure();
+  }, []);
+
+  // Load RunLLM widget when component mounts
+  useEffect(() => {
+    const loadRunLLMWidget = () => {
+      // Check if script already exists
+      if (document.getElementById('runllm-widget-script')) {
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.type = 'module';
+      script.id = 'runllm-widget-script';
+      script.src = 'https://widget.runllm.com';
+      script.setAttribute('version', 'stable');
+      script.setAttribute('crossorigin', 'true');
+      script.setAttribute('runllm-keyboard-shortcut', 'Mod+j');
+      script.setAttribute('runllm-name', 'prompt-ops Assistant');
+      script.setAttribute('runllm-position', 'BOTTOM_RIGHT');
+      // RunLLM Assistant ID from https://app.runllm.com/assistant/1149
+      script.setAttribute('runllm-assistant-id', '1149');
+      script.setAttribute('runllm-theme-color', '#0064E0');
+      script.setAttribute('runllm-floating-button-text', 'Ask AI');
+      script.setAttribute('runllm-disclaimer', 'This AI assistant can help you navigate the prompt-ops documentation.');
+      script.async = true;
+
+      document.head.appendChild(script);
+    };
+
+    loadRunLLMWidget();
+
+    // Cleanup function to remove the script when component unmounts
+    return () => {
+      const script = document.getElementById('runllm-widget-script');
+      if (script) {
+        document.head.removeChild(script);
+      }
+    };
+  }, []);
+
+  // Sync selectedDoc with URL parameter
+  useEffect(() => {
+    if (docId && docsStructure.length > 0) {
+      const doc = docsStructure.find(d => d.id === docId);
+      if (doc) {
+        setSelectedDoc(doc);
+      }
+    } else {
+      setSelectedDoc(null);
+    }
+  }, [docId, docsStructure]);
+
+  // Handler to update both state and URL when selecting a doc
+  const handleSelectDoc = (doc: DocItem) => {
+    setSelectedDoc(doc);
+    navigate(`/docs/${doc.id}`);
+  };
+
+  const filteredDocs = docsStructure.filter(doc =>
+    doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    doc.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const categories = Array.from(new Set(docsStructure.map(doc => doc.category)));
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-[#4da3ff]" />
+          <p className="text-white/60">Loading documentation...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="glass-panel p-8 text-center max-w-md">
+          <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+            <FileText className="w-6 h-6 text-red-400" />
+          </div>
+          <h3 className="text-lg font-medium text-white mb-2">Failed to load documentation</h3>
+          <p className="text-white/60 text-sm">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex gap-6 px-8 py-6 max-w-7xl mx-auto">
+      {/* Sidebar */}
+      <div className={`transition-all duration-300 ${sidebarOpen ? 'w-72' : 'w-0'} flex-shrink-0`}>
+        <DocsSidebar
+          docs={filteredDocs}
+          categories={categories}
+          selectedDoc={selectedDoc}
+          onSelectDoc={handleSelectDoc}
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
+      </div>
+
+      {/* Content Area */}
+      <div className="flex-1 min-w-0 overflow-hidden">
+        {selectedDoc ? (
+          <DocsContent doc={selectedDoc} />
+        ) : (
+          <DocsOverview docs={docsStructure} onSelectDoc={handleSelectDoc} />
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Overview component showing doc categories when no specific doc is selected
+const DocsOverview = ({ docs, onSelectDoc }: { docs: DocItem[], onSelectDoc: (doc: DocItem) => void }) => {
+  const categories = Array.from(new Set(docs.map(doc => doc.category)));
+
+  return (
+    <div className="h-full glass-panel overflow-y-auto p-8 animate-fade-in">
+      <div className="space-y-8">
+        {/* Welcome Header */}
+        <div className="text-center py-6">
+          <div className="w-16 h-16 rounded-2xl bg-white/[0.05] border border-white/[0.1] flex items-center justify-center mx-auto mb-4">
+            <Book className="w-8 h-8 text-[#4da3ff]" />
+          </div>
+          <h2 className="text-2xl font-semibold text-white mb-2">
+            Documentation
+          </h2>
+          <p className="text-white/60 max-w-md mx-auto">
+            Select a document from the sidebar or browse by category below.
+            <span className="block mt-2 text-sm text-[#4da3ff]">
+              Press ⌘J to ask AI for help
+            </span>
+          </p>
+        </div>
+
+        {/* Category Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {categories.map(category => {
+            const categoryDocs = docs.filter(doc => doc.category === category);
+            return (
+              <div
+                key={category}
+                className="glass-panel-solid p-5 hover:bg-white/[0.08] transition-all duration-300"
+              >
+                <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+                  {category === 'Basics' && <Book className="w-4 h-4 text-[#4da3ff]" />}
+                  {category === 'Guides' && <FileText className="w-4 h-4 text-[#4da3ff]" />}
+                  {category === 'Intermediate' && <Settings className="w-4 h-4 text-[#4da3ff]" />}
+                  {category === 'Advanced' && <Code className="w-4 h-4 text-[#4da3ff]" />}
+                  {category}
+                </h3>
+                <div className="space-y-1">
+                  {categoryDocs.map(doc => (
+                    <button
+                      key={doc.id}
+                      onClick={() => onSelectDoc(doc)}
+                      className="w-full text-left p-3 rounded-xl hover:bg-white/[0.08] transition-all duration-200 group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium text-white/90 group-hover:text-white transition-colors text-sm">
+                            {doc.title}
+                          </h4>
+                          {doc.description && (
+                            <p className="text-xs text-white/50 mt-0.5 group-hover:text-white/60 transition-colors">
+                              {doc.description}
+                            </p>
+                          )}
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-white/30 group-hover:text-[#4da3ff] group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
