@@ -1,5 +1,9 @@
 <h1 align="center"> Prompt Ops </h1>
 
+<p align="center">
+  <b>English</b> · <a href="https://github.com/meta-llama/prompt-ops/blob/main/README.zh.md">简体中文</a>
+</p>
+
 ### 🎉 New: Prompt Duel Optimizer (PDO) Published!
 
 We've published a new paper on **PDO (Prompt Duel Optimizer)** - an efficient label-free prompt optimization method using dueling bandits and Thompson sampling. PDO achieves state-of-the-art results on BIG-bench Hard and MS MARCO benchmarks.
